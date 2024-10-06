@@ -187,7 +187,7 @@ labels = []  # To store corresponding labels (positive/negative)
 current_image = None  # To hold the current image for drawing
 
 # Video frames directory
-video_dir = "videos/road_imgs"
+video_dir = "../videos/road_imgs"
 
 # Device selection and setup
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -262,7 +262,7 @@ def image_moves_copy(rep, frame_names_1, batch_size, video_dir="videos/Temp"):
 # Main process function with interactive point collection
 def repeated(rep):
     global batch_size, ImageCount, points, labels, current_image
-    video_dir = "videos/Temp"
+    video_dir = "../videos/Temp"
 
     # Prepare video frame names
     frame_names = sorted(
@@ -309,7 +309,7 @@ def repeated(rep):
 
     # Store the output segmentation results
     video_segments = {}
-    rendered_dir = "./rendered_frames"
+    rendered_dir = "../rendered_frames"
     os.makedirs(rendered_dir, exist_ok=True)
 
     for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):

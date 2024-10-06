@@ -11,7 +11,7 @@ from PIL import Image
 
 # Initialize global variables
 image_counter = 1
-batch_size = 180
+batch_size = 50
 
 points_collection_list = []
 labels_collection_list = []
@@ -125,7 +125,7 @@ def process_batch(batch_index, batch_number):
 
     # Store the output segmentation results
     video_segments = {}
-    rendered_frames_dir = "./rendered_frames"
+    rendered_frames_dir = "../rendered_frames"
     os.makedirs(rendered_frames_dir, exist_ok=True)
 
     for frame_idx, object_ids, mask_logits in sam2_predictor.propagate_in_video(inference_state):

@@ -13,18 +13,23 @@ import torch
 
 # Load SAM 2 predictor
 from sam2.build_sam import build_sam2_video_predictor
+from videos import multithreaded_video_frame_extractor as video2imgs_
 
-# Initialize variables
-batch_size = 40
+val = 0
+count = 0
+batch_size = 100
+videoNumber = 52
 image_counter = 0
+video2imgs_.VIDEO_NUMBER = videoNumber
+video2imgs_.main(videoNumber)
 is_drawing = False
 current_frame = None
 selected_points = []
 selected_labels = []
+current_class_label = 1
 points_collection_list = []
 labels_collection_list = []
-current_class_label = 1  # Default class label
-label_colors = {1: (0, 0, 255), 2: (255, 0, 0), 3: (0, 255, 0)}  # Colors for classes
+label_colors = {1: (0, 0, 255), 2: (255, 0, 0), 3: (0, 255, 0)}
 
 # Video frames directory
 frames_directory = "videos/road_imgs"
@@ -63,7 +68,7 @@ def show_zoom_view(frame, x, y, zoom_factor=4, zoom_size=200):
 
 
 def click_event(event, x, y, flags, param):
-    global selected_points, selected_labels, current_frame, is_drawing, current_class_label
+    global selected_points, selected_labels, current_frame, is_drawing, current_class_label, val, count
     if event == cv2.EVENT_LBUTTONDOWN:
         is_drawing = True
         selected_points.append([x, y])
@@ -89,7 +94,7 @@ def click_event(event, x, y, flags, param):
         selected_points.append([x, y])
         selected_labels.append(-current_class_label)  # 0 is for background points
         cv2.circle(current_frame, (x, y), 4, (0, 0, 255), -1)
-    cv2.imshow("Frame", current_frame)
+    cv2.imshow(f"Frame{count}/{val}", current_frame)
 
 
 def clear_directory(directory):
@@ -198,22 +203,19 @@ def process_batch(batch_number):
             # Convert mask to uint8 if it's boolean
             if out_mask.dtype == np.bool_:
                 out_mask = out_mask.astype(np.uint8)
-
             # Squeeze the mask to remove singleton dimension if necessary
             out_mask = out_mask.squeeze()
             # Resize the mask to fit the frame
             out_mask_resized = cv2.resize(out_mask, (frame.shape[1], frame.shape[0]))
-
             # Combine the mask into the full mask using bitwise OR
             full_mask = full_mask + out_mask_resized
-
         # Save the combined full mask image
         color_mask_image = mask2colorMaskImg(full_mask)
-        cv2.imwrite(os.path.join(rendered_frames_dir, f"road4_{image_counter:05d}.png"), color_mask_image)
+        cv2.imwrite(os.path.join(rendered_frames_dir, f"road{videoNumber}_{image_counter:05d}.png"), color_mask_image)
         image_counter = image_counter + 1
 
 
-def save_points_and_labels(points_collection, labels_collection, filename="points_labels.json"):
+def save_points_and_labels(points_collection, labels_collection, filename=f"points_labels_video{videoNumber}.json"):
     with open(filename, 'w') as f:
         json.dump({"points": points_collection, "labels": labels_collection}, f)
 
@@ -230,10 +232,8 @@ def mask2colorMaskImg(mask):
         [0, 255, 255],  # 6: Cyan
         [255, 0, 255]  # 7: Magenta
     ], dtype=np.uint8)
-
     # Ensure the mask is of type int and map it to colors
     mask_image = colors[mask]
-
     return mask_image
 
 
@@ -247,7 +247,7 @@ def get_color_map(num_colors):
 
 
 # Function to collect user points for multiple objects
-def load_points_and_labels(filename="points_labels.json"):
+def load_points_and_labels(filename=f"points_labels_video{videoNumber}.json"):
     with open(filename, 'r') as f:
         data = json.load(f)
     return data["points"], data["labels"]
@@ -260,7 +260,8 @@ def load_user_points():
 
 def collect_user_points():
     global points_collection_list, labels_collection_list, selected_points
-    global selected_labels, current_frame, current_class_label
+    global selected_labels, current_frame, current_class_label, val, count
+    count = 1
     window_width = 200
     window_height = 200
     selected_points = []
@@ -272,11 +273,10 @@ def collect_user_points():
     for frame_path in batch_frames:
         current_class_label = 1
         current_frame = cv2.imread(frame_path)
-
-        cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
-        cv2.imshow(f"Frame", current_frame)
-        cv2.setMouseCallback(f"Frame", click_event)
-
+        val = len(batch_frames)
+        cv2.namedWindow(f"Frame{count}/{len(batch_frames)}", cv2.WINDOW_NORMAL)
+        cv2.imshow(f"Frame{count}/{len(batch_frames)}", current_frame)
+        cv2.setMouseCallback(f"Frame{count}/{len(batch_frames)}", click_event)
         while True:
             key = cv2.waitKey(0)
             if key == 13:  # Enter key
@@ -308,14 +308,15 @@ def collect_user_points():
             elif key == ord('r'):
                 selected_points = []
                 selected_labels = []
-                # current_frame = cv2.imread(frame_path)
                 current_frame = cv2.imread(frame_path)
                 # current_frame = cv2.resize(current_frame, (window_width, window_height), interpolation=cv2.INTER_AREA)
         cv2.destroyAllWindows()
-    save_points_and_labels(points_collection_list, labels_collection_list)
+    save_points_and_labels(points_collection_list, labels_collection_list, f"points_labels_video{videoNumber}.json")
 
 
 # Get frame names and start processing in batches
+
+color_map = get_color_map(9)
 frame_paths = sorted(
     [os.path.join(frames_directory, p) for p in os.listdir(frames_directory) if
      os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", '.png']],
@@ -323,23 +324,19 @@ frame_paths = sorted(
         'inf')
 )
 
-color_map = get_color_map(9)
-
-if os.path.exists("points_labels_video18.json") and False:
+if os.path.exists(f"points_labels_video{videoNumber}.json") and True:
     load_user_points()
 else:
-    # Thread to collect user points while processing
     collect_user_points_thread = threading.Thread(target=collect_user_points)
     collect_user_points_thread.start()
-temp_directory = "videos/Temp"
 batch_index = 0
-while batch_index < len(frame_paths):
+temp_directory = "videos/Temp"
+while batch_index < len(frame_paths) and True:
     while len(points_collection_list) <= batch_index // batch_size:
         time.sleep(1)
-    print(f"Processing batch {batch_index // batch_size + 1}/{max(len(frame_paths) // batch_size, 1)}")
+    print(f"Processing batch {(batch_index + 1) // batch_size + 1}/{(len(frame_paths) // batch_size) + 1}")
     move_and_copy_frames(batch_index, frame_paths, batch_size, target_directory=temp_directory)
     process_batch(batch_index // batch_size)
     batch_index = batch_index + batch_size
     print('-' * 28, "completed", '-' * 28)
-
-collect_user_points_thread.join()
+# collect_user_points_thread.join()

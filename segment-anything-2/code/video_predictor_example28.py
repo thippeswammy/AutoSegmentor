@@ -89,7 +89,7 @@ def process_batch(batch_index, batch_number):
     points_np = np.array(points_collection_list[batch_number], dtype=np.float32)
     labels_np = np.array(labels_collection_list[batch_number], np.int32)
 
-    rendered_frames_dir = "./rendered_frames"
+    rendered_frames_dir = "../rendered_frames"
     os.makedirs(rendered_frames_dir, exist_ok=True)
     ann_frame_idx = 0
 

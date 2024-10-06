@@ -26,7 +26,7 @@ model_cfg = "sam2_hiera_l.yaml"
 predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint, device=device)
 
 # Initialization and state setup
-video_dir = "videos/Temp"
+video_dir = "../videos/Temp"
 frame_names = sorted(
     [p for p in os.listdir(video_dir) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg"]],
     key=lambda p: int(os.path.splitext(p)[0])
@@ -57,8 +57,7 @@ def collect_points(event, x, y, flags, param):
 
 
 # Setup OpenCV window and mouse callback for point collection
-cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
-cv2.setWindowProperty("Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)  # Set to full-screen mode
+cv2.namedWindow("Frame")
 cv2.setMouseCallback("Frame", collect_points)
 
 # Load the first frame for point collection
@@ -97,7 +96,7 @@ if points and labels:
 
     # Run propagation and save frames
     video_segments = {}
-    rendered_dir = "./rendered_frames"
+    rendered_dir = "../rendered_frames"
     os.makedirs(rendered_dir, exist_ok=True)
 
     for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):
@@ -133,11 +132,11 @@ if points and labels:
 
                 # Save the blended image
                 blended_image.save(os.path.join(rendered_dir, f"rendered_frame_{ImageCount:05d}.png"))
-                ImageCount += 1
+                ImageCount = +1
             else:
                 # If no mask is available for this frame, save the original frame
                 image.save(os.path.join(rendered_dir, f"rendered_frame_{ImageCount:05d}.png"))
-                ImageCount += 1
+                ImageCount = +1
     print("Rendering completed!")
 else:
     print("No points were selected. Exiting.")
