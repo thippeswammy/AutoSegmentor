@@ -93,7 +93,7 @@ def process_batch(batch_index, batch_number):
     labels_np = np.array(labels_collection_list[batch_number], np.int32)
 
     video_segments = {}
-    rendered_frames_dir = "./rendered_frames"
+    rendered_frames_dir = "../rendered_frames"
     os.makedirs(rendered_frames_dir, exist_ok=True)
     ann_frame_idx = 0
     ann_obj_id = 1

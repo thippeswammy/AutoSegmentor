@@ -146,7 +146,7 @@ where `-q:v` generates high-quality JPEG frames and `-start_number 0` asks ffmpe
 """
 
 # `video_dir` a directory of JPEG frames with filenames like `<frame_index>.jpg`
-video_dir = "videos/Temp"
+video_dir = "../videos/Temp"
 
 # scan all the JPEG frame names in this directory
 frame_names = [

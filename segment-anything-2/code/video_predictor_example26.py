@@ -13,11 +13,28 @@ from PIL import Image
 image_counter = 1
 batch_size = 50
 
+# List of class labels
+class_labels = {
+    1: "Label 1",
+    2: "Label 2",
+    3: "Label 3",
+    4: "Label 4",
+    5: "Label 5",
+    6: "Label 6",
+    7: "Label 7",
+    8: "Label 8",
+    9: "Label 9",
+    10: "Label 10"
+}  # Add more labels as needed
+
+current_class_label = 1  # Default label
+
 points_collection_list = []
 labels_collection_list = []
 selected_points = []  # To store clicked points
 selected_labels = []  # To store corresponding labels (positive/negative)
 current_frame = None  # To hold the current image for drawing
+is_drawing = False  # To track whether the user is drawing
 
 # Video frames directory
 frames_directory = "videos/road_imgs1"
@@ -40,25 +57,52 @@ sam2_checkpoint = "../checkpoints/sam2_hiera_large.pt"
 model_config = "sam2_hiera_l.yaml"
 sam2_predictor = build_sam2_video_predictor(model_config, sam2_checkpoint, device=device)
 
+# Define colors for each label (BGR format)
+label_colors = {
+    1: (0, 255, 0),  # Green
+    2: (255, 0, 0),  # Blue
+    3: (0, 0, 255),  # Red
+    4: (255, 255, 0),  # Cyan
+    5: (255, 0, 255),  # Magenta
+    6: (0, 255, 255),  # Yellow
+    7: (128, 0, 128),  # Purple
+    8: (0, 128, 128),  # Teal
+    9: (128, 128, 0),  # Olive
+}
+
 
 # Mouse callback function for interactive point collection
 def click_event(event, x, y, flags, param):
-    global selected_points, selected_labels, current_frame
-    # Left-click adds a positive point
+    global selected_points, selected_labels, current_frame, is_drawing, current_class_label
+    # Left-click begins drawing points for the selected class label
     if event == cv2.EVENT_LBUTTONDOWN:
+        is_drawing = True
         selected_points.append([x, y])
-        selected_labels.append(1)
-        # print(f"Positive point: ({x}, {y})")
-        cv2.circle(current_frame, (x, y), 5, (0, 255, 0), -1)  # Draw green circle
+        selected_labels.append(current_class_label)  # Assign the current class label to the point
+        cv2.circle(current_frame, (x, y), 5, label_colors[current_class_label], -1)  # Draw color based on label
 
-    # Right-click adds a negative point
+    elif event == cv2.EVENT_MOUSEMOVE and is_drawing:
+        selected_points.append([x, y])
+        selected_labels.append(current_class_label)  # Assign the current class label to the point
+        cv2.circle(current_frame, (x, y), 2, label_colors[current_class_label], -1)  # Draw small point
+
+    # Stop drawing when left-click is released
+    elif event == cv2.EVENT_LBUTTONUP:
+        is_drawing = False
+
+    # Right-click to add negative points (non-object area)
     elif event == cv2.EVENT_RBUTTONDOWN:
         selected_points.append([x, y])
-        selected_labels.append(0)
-        # print(f"Negative point: ({x}, {y})")
-        cv2.circle(current_frame, (x, y), 5, (0, 0, 255), -1)  # Draw red circle
-    # Update the image display
-    cv2.imshow(f"Frame", current_frame)
+        selected_labels.append(0)  # Assign 0 for negative points
+        cv2.circle(current_frame, (x, y), 5, (0, 0, 255), -1)  # Draw red circle for negative points
+    cv2.imshow("Frame", current_frame)
+
+
+def change_class_label(new_label):
+    global current_class_label
+    if new_label in class_labels:
+        current_class_label = new_label
+        print(f"Switched to Class: {class_labels[current_class_label]}")
 
 
 # Clear the directory before saving new frames
@@ -125,7 +169,7 @@ def process_batch(batch_index, batch_number):
 
     # Store the output segmentation results
     video_segments = {}
-    rendered_frames_dir = "./rendered_frames"
+    rendered_frames_dir = "../rendered_frames"
     os.makedirs(rendered_frames_dir, exist_ok=True)
 
     for frame_idx, object_ids, mask_logits in sam2_predictor.propagate_in_video(inference_state):
@@ -189,6 +233,26 @@ def collect_user_points():
                 selected_points.clear()
                 selected_labels.clear()
                 break
+            if key == ord('q'):
+                return  # Quit the program
+            elif key == ord('1'):
+                change_class_label(1)
+            elif key == ord('2'):
+                change_class_label(2)
+            elif key == ord('3'):
+                change_class_label(3)
+            elif key == ord('4'):
+                change_class_label(4)
+            elif key == ord('5'):
+                change_class_label(5)
+            elif key == ord('6'):
+                change_class_label(6)
+            elif key == ord('7'):
+                change_class_label(7)
+            elif key == ord('8'):
+                change_class_label(8)
+            elif key == ord('9'):
+                change_class_label(9)
         cv2.destroyAllWindows()
 
 

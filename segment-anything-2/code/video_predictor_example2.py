@@ -24,7 +24,7 @@ model_cfg = "sam2_hiera_l.yaml"
 predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint, device=device)
 
 # Initialization and state setup
-video_dir = "videos/Temp"
+video_dir = "../videos/Temp"
 frame_names = sorted(
     [p for p in os.listdir(video_dir) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg"]],
     key=lambda p: int(os.path.splitext(p)[0])
@@ -49,7 +49,7 @@ _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
 
 # Run propagation and save frames
 video_segments = {}
-rendered_dir = "./rendered_frames"
+rendered_dir = "../rendered_frames"
 os.makedirs(rendered_dir, exist_ok=True)
 
 for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):

@@ -214,7 +214,7 @@ def image_moves_copy(rep, frame_names_1, batch_size, video_dir="videos/bedroom")
 
 def repeated(rep):
     global batch_size, ImageCount
-    video_dir = "videos/Temp"
+    video_dir = "../videos/Temp"
 
     # Prepare video frame names in sorted order
     frame_names = sorted(
@@ -240,7 +240,7 @@ def repeated(rep):
     )
 
     video_segments = {}
-    rendered_dir = "./rendered_frames"
+    rendered_dir = "../rendered_frames"
     os.makedirs(rendered_dir, exist_ok=True)
 
     # Process video frames
