@@ -21,7 +21,7 @@ def clear_directory(directory):
 
 def main(val=VIDEO_NUMBER):
     video_path = f'D:\downloadFiles\\front_3\\video{val}.mp4'
-    output_dir = 'F:\RunningProjects\SAM2\segment-anything-2\\videos\\road_imgs'
+    output_dir = '/segment-anything-2/videos/road_imgs_1'
     os.makedirs(output_dir, exist_ok=True)
     clear_directory(output_dir)  # Load the video
     cap = cv2.VideoCapture(video_path)  # Get the total number of frames in the video
@@ -73,6 +73,6 @@ if __name__ == "__main__":
     video49 = road49 ==> 80
     video50 = road50 ==> 80
     video51 = road51 ==> 80
-    video52 = road52 ==> 80
+    video52 = road52 ==> 100
     
 '''

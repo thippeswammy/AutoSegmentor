@@ -22,7 +22,7 @@ import cv2
 cv2.namedWindow("Combined Image", cv2.WINDOW_NORMAL)
 for i in range(0, 1000):
     # Load the original image and the color mask
-    original = cv2.imread(f'road_imgs/road3_{i:05d}.png')
+    original = cv2.imread(f'road_imgs_1/road3_{i:05d}.png')
     mask = cv2.imread(f'../rendered_frames/road3_{i:05d}.png')  # Load as color
 
     # Ensure the mask is in the same size as the original image

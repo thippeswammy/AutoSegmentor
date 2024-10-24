@@ -187,7 +187,7 @@ labels = []  # To store corresponding labels (positive/negative)
 current_image = None  # To hold the current image for drawing
 
 # Video frames directory
-video_dir = "../videos/road_imgs"
+video_dir = "../videos/road_imgs_1"
 
 # Device selection and setup
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")

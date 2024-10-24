@@ -17,8 +17,8 @@ from videos import multithreaded_video_frame_extractor as video2imgs_
 
 val = 0
 count = 0
-batch_size = 100
-videoNumber = 52
+batch_size = 10
+videoNumber = 1
 image_counter = 0
 video2imgs_.VIDEO_NUMBER = videoNumber
 video2imgs_.main(videoNumber)
@@ -340,3 +340,9 @@ while batch_index < len(frame_paths) and True:
     batch_index = batch_index + batch_size
     print('-' * 28, "completed", '-' * 28)
 # collect_user_points_thread.join()
+
+
+
+
+
+

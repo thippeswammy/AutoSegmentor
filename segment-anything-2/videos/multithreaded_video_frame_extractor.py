@@ -6,8 +6,8 @@ import cv2
 from tqdm import tqdm
 
 # Configuration
-VIDEO_NUMBER = 39
-NUM_THREADS = 8  # Number of threads for multithreading
+VIDEO_NUMBER = 5
+NUM_THREADS = 16  # Number of threads for multithreading
 VIDEO_PATH_TEMPLATE = r'D:\downloadFiles\front_3\video{}.mp4'
 OUTPUT_DIR = r'F:\RunningProjects\SAM2\segment-anything-2\videos\road_imgs'
 
@@ -61,7 +61,7 @@ def process_video_in_parallel(video_number, video_path, output_dir, num_threads)
     frames_per_thread = total_frames // num_threads
     frame_ranges = [(i * frames_per_thread, (i + 1) * frames_per_thread if i != num_threads - 1 else total_frames)
                     for i in range(num_threads)]
-
+    # frame_ranges = frame_ranges[:1]
     # Initialize the progress bar
     with tqdm(total=total_frames, desc='Extracting Frames', unit='frame') as progress_bar:
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -86,5 +86,5 @@ def main(video_number=VIDEO_NUMBER):
     process_video_in_parallel(video_number, video_path, OUTPUT_DIR, NUM_THREADS)
 
 
-# if __name__ == "__main__":
-#     main(34)
+if __name__ == "__main__":
+    main(VIDEO_NUMBER)
