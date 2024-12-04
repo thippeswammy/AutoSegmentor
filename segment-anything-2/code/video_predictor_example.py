@@ -67,6 +67,7 @@ if using_colab:
 
 import os
 
+import re
 import matplotlib.pyplot as plt
 # if using Apple MPS, fall back to CPU for unsupported ops
 # os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -153,7 +154,13 @@ frame_names = [
     p for p in os.listdir(video_dir)
     if os.path.splitext(p)[-1] in [".jpg", ".jpeg", ".JPG", ".JPEG"]
 ]
-frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))
+frame_names = sorted(
+            [p for p in os.listdir(video_dir) if
+             os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", '.png']],
+            key=lambda p: int(re.search(r'(\d+)', os.path.splitext(p)[0]).group())
+            if re.search(r'(\d+)', os.path.splitext(p)[0]) else float('inf')
+        )
+# frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))
 
 # take a look the first video frame
 frame_idx = 0
@@ -192,9 +199,9 @@ ann_frame_idx = 0  # the frame index we interact with
 ann_obj_id = 1  # give a unique id to each object we interact with (it can be any integers)
 
 # Let's add a positive click at (x, y) = (210, 350) to get started
-points = np.array([[210, 350]], dtype=np.float32)
+points = np.array([[401, 61], [408, 176], [395, 293], [261, 191], [231, 277], [218, 337]], dtype=np.float32)
 # for labels, `1` means positive click and `0` means negative click
-labels = np.array([1], np.int32)
+labels = np.array([1, 1, 1, 1, 1, 1], np.int32)
 _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
     inference_state=inference_state,
     frame_idx=ann_frame_idx,

@@ -33,9 +33,9 @@ inference_state = predictor.init_state(video_path=video_dir)
 predictor.reset_state(inference_state)
 
 # Example segmentation points
-points = np.array([[210, 350], [250, 220]], dtype=np.float32)
+points = np.array([[401, 61], [408, 176], [395, 293], [261, 191], [231, 277], [218, 337]], dtype=np.float32)
 # for labels, `1` means positive click and `0` means negative click
-labels = np.array([1, 1], np.int32)
+labels = np.array([1, 1, 1, 1, 1, 1], np.int32)
 ann_frame_idx = 0
 ann_obj_id = 1
 
@@ -49,7 +49,7 @@ _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
 
 # Run propagation and save frames
 video_segments = {}
-rendered_dir = "../rendered_frames"
+rendered_dir = "../../rendered_frames"
 os.makedirs(rendered_dir, exist_ok=True)
 
 for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):

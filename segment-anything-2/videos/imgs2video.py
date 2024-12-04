@@ -3,7 +3,7 @@ import os
 import cv2
 
 # Folder containing images
-image_folder = '../rendered_frames'
+image_folder = 'F:\RunningProjects\SAM2\segment-anything-2\\videos\Images'
 
 # Output video file name
 video_name = f'output1_video.mp4'

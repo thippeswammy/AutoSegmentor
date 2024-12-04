@@ -88,3 +88,34 @@ def main(video_number=VIDEO_NUMBER):
 
 if __name__ == "__main__":
     main(VIDEO_NUMBER)
+
+'''
+    video18 = road1 ==> 40
+    video19 = road2 ==> 40
+    video2  = road3 ==> 40
+    video23 = road4 ==> 40
+
+    video31 = road31 ==> 80
+    video32 = road32 ==> 80
+    video33 = road33 ==> 80
+    video34 = road34 ==> 80
+    video35 = road35 ==> 80
+    video36 = road36 ==> 80
+    video37 = road37 ==> 80
+    video38 = road38 ==> 80
+    video39 = road39 ==> 80
+    video40 = road40 ==> 80
+    video41 = road41 ==> 80
+    video42 = road42 ==> 80
+    video43 = road43 ==> 80
+    video44 = road44 ==> 80
+    video45 = road45 ==> 80
+    video46 = road46 ==> 80
+    video47 = road47 ==> 80
+    video48 = road48 ==> 80
+    video49 = road49 ==> 80
+    video50 = road50 ==> 80
+    video51 = road51 ==> 80
+    video52 = road52 ==> 100
+
+'''

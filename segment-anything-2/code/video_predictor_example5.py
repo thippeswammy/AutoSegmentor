@@ -112,7 +112,7 @@ for RoundImg in range(0, len(frame_names), batch_size):
             }
 
         # Save the rendered frames
-        rendered_dir = "../rendered_frames"
+        rendered_dir = "rendered_frames"
         os.makedirs(rendered_dir, exist_ok=True)
 
         with autocast_context:
