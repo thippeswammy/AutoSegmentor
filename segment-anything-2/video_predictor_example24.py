@@ -55,7 +55,7 @@ class VideoFrameProcessor:
         self.sam2_predictor = self.build_predictor()
         extractor = FrameExtractor(self.video_number, prefixFileName=self.prefixFileName,
                                    limitedImages=images_ending_count, video_path_template=self.video_path_template)
-        # extractor.run()
+        extractor.run()
         self.is_drawing = is_drawing
         self.window_size = window_size
         self.label_colors = label_colors
@@ -356,5 +356,5 @@ if __name__ == "__main__":
     hours, remainder = divmod(elapsed_time, 3600)
     minutes, seconds = divmod(remainder, 60)
     print(f"Processing time: {int(hours)} hr, {int(minutes)} min, {seconds:.2f} sec")
-    print(f"FPS: {total_frames / elapsed_time:.2f}")
-    print(f"FPS: {total_frames / elapsed_time:.2f}")
+    print(f"FPS: {len(processor.frame_paths) / elapsed_time:.2f}")
+    print(f"FPS: {len(processor.frame_paths) / elapsed_time:.2f}")
