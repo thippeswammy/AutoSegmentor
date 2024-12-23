@@ -24,7 +24,7 @@ print("CUDA is available:", torch.cuda.is_available())
 #     zip_ref.extractall('videos')
 
 # Create directories if they don't exist
-# os.makedirs('../checkpoints/', exist_ok=True)
+# os.makedirs('../checkpoints/'), exist_ok=True)
 
 # Download the checkpoint file using Python
 # checkpoint_url = 'https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_large.pt'

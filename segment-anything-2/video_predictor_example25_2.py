@@ -88,13 +88,6 @@ class VideoFrameProcessor:
             self.model_config, self.sam2_checkpoint, device=self.device
         )
 
-    def get_color_map(self, num_colors):
-        colors = []
-        for _ in range(num_colors):
-            color = np.random.randint(0, 256, size=3).tolist()
-            colors.append(color)
-        return colors
-
     def save_points_and_labels(self, points_collection, labels_collection, filename=None):
         """Saves the collected points and labels to a JSON file."""
         if filename is None:
@@ -109,6 +102,26 @@ class VideoFrameProcessor:
             data = json.load(f)
         return data["points"], data["labels"]
 
+    def load_user_points(self):
+        self.points_collection_list, self.labels_collection_list = self.load_points_and_labels()
+
+    def get_frame_paths(self):
+        if not os.path.exists(self.frames_directory):
+            logging.error(f"Frames directory '{self.frames_directory}' does not exist.")
+            raise FileNotFoundError(f"Directory '{self.frames_directory}' not found.")
+
+        paths = [os.path.join(self.frames_directory, p) for p in os.listdir(self.frames_directory)
+                 if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", '.png']]
+        return sorted(paths, key=lambda p: int(re.search(r'(\d+)', os.path.splitext(p)[0]).group())
+        if re.search(r'(\d+)', os.path.splitext(p)[0]) else float('inf'))
+
+    def get_color_map(self, num_colors):
+        colors = []
+        for _ in range(num_colors):
+            color = np.random.randint(0, 256, size=3).tolist()
+            colors.append(color)
+        return colors
+
     def gpu_memory_usage(self, ind=0):
         # for gpu in gpus[inf]:
         #     print(f"GPU Name: {gpu.name}")
@@ -118,10 +131,7 @@ class VideoFrameProcessor:
         #     print(f"GPU Memory Utilization: {gpu.memoryUtil * 100}%")
         return self.gpus[ind]
 
-    def load_user_points(self):
-        self.points_collection_list, self.labels_collection_list = self.load_points_and_labels()
-
-    def mask2colorMaskImg(self, mask):
+    def mask_2_color_mask_img(self, mask):
         colors = np.array([
             [0, 0, 0],  # Black (Background)
             [0, 0, 255],  # Red
@@ -136,16 +146,6 @@ class VideoFrameProcessor:
         ], dtype=np.uint8)
         mask_image = colors[mask]
         return mask_image
-
-    def get_frame_paths(self):
-        if not os.path.exists(self.frames_directory):
-            logging.error(f"Frames directory '{self.frames_directory}' does not exist.")
-            raise FileNotFoundError(f"Directory '{self.frames_directory}' not found.")
-
-        paths = [os.path.join(self.frames_directory, p) for p in os.listdir(self.frames_directory)
-                 if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", '.png']]
-        return sorted(paths, key=lambda p: int(re.search(r'(\d+)', os.path.splitext(p)[0]).group())
-        if re.search(r'(\d+)', os.path.splitext(p)[0]) else float('inf'))
 
     def move_and_copy_frames(self, batch_index):
         frames_to_copy = self.frame_paths[batch_index:batch_index + self.batch_size]
@@ -167,6 +167,110 @@ class VideoFrameProcessor:
                     print(f"Failed to delete {file_path}. Reason: {e}")
         else:
             print(f"Directory {directory} does not exist.")
+
+    def change_class_label(self, label):
+        """Changes the current class label."""
+        self.current_class_label = label
+        # logging.info(f"Class label changed to: {self.current_class_label}")
+
+    def collect_user_points(self):
+        """Allows the user to interactively collect points on frames."""
+        logging.info("Starting user point collection...")
+        self.points_collection_list = []
+        self.labels_collection_list = []
+        cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("Zoom View", self.window_size[0], self.window_size[1])
+        frames_batch_paths = [self.frame_paths[i] for i in range(0, len(self.frame_paths), self.batch_size)]
+        for frame_path in frames_batch_paths:
+            self.current_class_label = 1
+            self.current_frame = cv2.imread(frame_path)
+            cv2.namedWindow(f"Frame", cv2.WINDOW_NORMAL)
+            cv2.imshow(f"Frame", self.current_frame)
+            cv2.setMouseCallback(f"Frame", self.click_event)
+            while True:
+                key = cv2.waitKey(0)
+                if key == 13:  # Enter key
+                    self.points_collection_list.append(self.selected_points[:])
+                    self.labels_collection_list.append(self.selected_labels[:])
+                    self.selected_points.clear()
+                    self.selected_labels.clear()
+                    break
+                if key == ord('q'):
+                    logging.info("User exited point collection with 'q'.")
+                    return
+                elif key == ord('1'):
+                    logging.warning("User reset points for the current frame.")
+                    self.change_class_label(1)
+                elif key == ord('2'):
+                    self.change_class_label(2)
+                elif key == ord('3'):
+                    self.change_class_label(3)
+                elif key == ord('4'):
+                    self.change_class_label(4)
+                elif key == ord('5'):
+                    self.change_class_label(5)
+                elif key == ord('6'):
+                    self.change_class_label(6)
+                elif key == ord('7'):
+                    self.change_class_label(7)
+                elif key == ord('8'):
+                    self.change_class_label(8)
+                elif key == ord('9'):
+                    self.change_class_label(9)
+                elif key == ord('r'):
+                    self.selected_points = []
+                    self.selected_labels = []
+                    self.current_frame = cv2.imread(frame_path)
+                    # current_frame = cv2.resize(current_frame, (window_width, window_height), interpolation=cv2.INTER_AREA)
+        cv2.destroyAllWindows()
+        logging.info("User point collection completed. Saving points and labels.")
+        self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
+
+    def click_event(self, event, x, y, flags, param):
+        """Mouse callback to collect points on the frame."""
+        if event == cv2.EVENT_LBUTTONDOWN:
+            # logging.info(f"Point selected: ({x}, {y}), Label: {self.current_class_label}")
+            self.is_drawing = True
+            self.selected_points.append([x, y])
+            self.selected_labels.append(self.current_class_label)  # Assign the current class label to the point
+            cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label],
+                       -1)  # Draw color based on label
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.is_drawing:
+                self.selected_points.append([x, y])
+                self.selected_labels.append(self.current_class_label)
+                cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
+            zoom_view = self.show_zoom_view(self.current_frame, x, y)
+            cv2.imshow("Zoom View", zoom_view)  # Update the zoom view
+            # Keep the Zoom View window on top
+            try:
+                zoom_window = gw.getWindowsWithTitle("Zoom View")[0]
+                zoom_window.activate()  # Bring it to the front
+            except IndexError:
+                pass  # Zoom window is not available
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.is_drawing = False
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            self.selected_points.append([x, y])
+            self.selected_labels.append(self.current_class_label)  # 0 is for background points
+            cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
+        cv2.imshow(f"Frame", self.current_frame)
+
+    def show_zoom_view(self, frame, x, y, zoom_factor=4, zoom_size=200):
+        height, width = frame.shape[:2]
+        half_zoom = zoom_size // 2
+        x_start = max(x - half_zoom // zoom_factor, 0)
+        x_end = min(x + half_zoom // zoom_factor, width)
+        y_start = max(y - half_zoom // zoom_factor, 0)
+        y_end = min(y + half_zoom // zoom_factor, height)
+        zoomed_area = frame[y_start:y_end, x_start:x_end]
+        zoomed_area_resized = cv2.resize(zoomed_area, (zoom_size, zoom_size), interpolation=cv2.INTER_LINEAR)
+        zoom_view = np.zeros((zoom_size, zoom_size, 3), dtype=np.uint8)
+        zoom_view[:zoom_size, :zoom_size] = zoomed_area_resized
+        scaled_x = zoom_size // 2
+        scaled_y = zoom_size // 2
+        cv2.circle(zoom_view, (scaled_x, scaled_y), 5, (0, 255, 0), -1)
+        return zoom_view
 
     def process_batch(self, batch_number):
         frame_filenames = sorted(
@@ -229,7 +333,7 @@ class VideoFrameProcessor:
                 out_mask_resized = out_mask_resized * out_obj_id
                 full_mask = full_mask + out_mask_resized
             # Save the combined full mask image
-            color_mask_image = self.mask2colorMaskImg(full_mask)
+            color_mask_image = self.mask_2_color_mask_img(full_mask)
             cv2.imwrite(
                 os.path.join(
                     self.rendered_frames_dirs[
@@ -237,110 +341,6 @@ class VideoFrameProcessor:
                 color_mask_image)
             present_count = present_count + 1
         self.image_counter = present_count
-
-    def collect_user_points(self):
-        """Allows the user to interactively collect points on frames."""
-        logging.info("Starting user point collection...")
-        self.points_collection_list = []
-        self.labels_collection_list = []
-        cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Zoom View", self.window_size[0], self.window_size[1])
-        frames_batch_paths = [self.frame_paths[i] for i in range(0, len(self.frame_paths), self.batch_size)]
-        for frame_path in frames_batch_paths:
-            self.current_class_label = 1
-            self.current_frame = cv2.imread(frame_path)
-            cv2.namedWindow(f"Frame", cv2.WINDOW_NORMAL)
-            cv2.imshow(f"Frame", self.current_frame)
-            cv2.setMouseCallback(f"Frame", self.click_event)
-            while True:
-                key = cv2.waitKey(0)
-                if key == 13:  # Enter key
-                    self.points_collection_list.append(self.selected_points[:])
-                    self.labels_collection_list.append(self.selected_labels[:])
-                    self.selected_points.clear()
-                    self.selected_labels.clear()
-                    break
-                if key == ord('q'):
-                    logging.info("User exited point collection with 'q'.")
-                    return
-                elif key == ord('1'):
-                    logging.warning("User reset points for the current frame.")
-                    self.change_class_label(1)
-                elif key == ord('2'):
-                    self.change_class_label(2)
-                elif key == ord('3'):
-                    self.change_class_label(3)
-                elif key == ord('4'):
-                    self.change_class_label(4)
-                elif key == ord('5'):
-                    self.change_class_label(5)
-                elif key == ord('6'):
-                    self.change_class_label(6)
-                elif key == ord('7'):
-                    self.change_class_label(7)
-                elif key == ord('8'):
-                    self.change_class_label(8)
-                elif key == ord('9'):
-                    self.change_class_label(9)
-                elif key == ord('r'):
-                    self.selected_points = []
-                    self.selected_labels = []
-                    self.current_frame = cv2.imread(frame_path)
-                    # current_frame = cv2.resize(current_frame, (window_width, window_height), interpolation=cv2.INTER_AREA)
-        cv2.destroyAllWindows()
-        logging.info("User point collection completed. Saving points and labels.")
-        self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
-
-    def change_class_label(self, label):
-        """Changes the current class label."""
-        self.current_class_label = label
-        # logging.info(f"Class label changed to: {self.current_class_label}")
-
-    def show_zoom_view(self, frame, x, y, zoom_factor=4, zoom_size=200):
-        height, width = frame.shape[:2]
-        half_zoom = zoom_size // 2
-        x_start = max(x - half_zoom // zoom_factor, 0)
-        x_end = min(x + half_zoom // zoom_factor, width)
-        y_start = max(y - half_zoom // zoom_factor, 0)
-        y_end = min(y + half_zoom // zoom_factor, height)
-        zoomed_area = frame[y_start:y_end, x_start:x_end]
-        zoomed_area_resized = cv2.resize(zoomed_area, (zoom_size, zoom_size), interpolation=cv2.INTER_LINEAR)
-        zoom_view = np.zeros((zoom_size, zoom_size, 3), dtype=np.uint8)
-        zoom_view[:zoom_size, :zoom_size] = zoomed_area_resized
-        scaled_x = zoom_size // 2
-        scaled_y = zoom_size // 2
-        cv2.circle(zoom_view, (scaled_x, scaled_y), 5, (0, 255, 0), -1)
-        return zoom_view
-
-    def click_event(self, event, x, y, flags, param):
-        """Mouse callback to collect points on the frame."""
-        if event == cv2.EVENT_LBUTTONDOWN:
-            # logging.info(f"Point selected: ({x}, {y}), Label: {self.current_class_label}")
-            self.is_drawing = True
-            self.selected_points.append([x, y])
-            self.selected_labels.append(self.current_class_label)  # Assign the current class label to the point
-            cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label],
-                       -1)  # Draw color based on label
-        elif event == cv2.EVENT_MOUSEMOVE:
-            if self.is_drawing:
-                self.selected_points.append([x, y])
-                self.selected_labels.append(self.current_class_label)
-                cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
-            zoom_view = self.show_zoom_view(self.current_frame, x, y)
-            cv2.imshow("Zoom View", zoom_view)  # Update the zoom view
-            # Keep the Zoom View window on top
-            try:
-                zoom_window = gw.getWindowsWithTitle("Zoom View")[0]
-                zoom_window.activate()  # Bring it to the front
-            except IndexError:
-                pass  # Zoom window is not available
-        elif event == cv2.EVENT_LBUTTONUP:
-            self.is_drawing = False
-        elif event == cv2.EVENT_RBUTTONDOWN:
-            self.selected_points.append([x, y])
-            self.selected_labels.append(self.current_class_label)  # 0 is for background points
-            cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
-        cv2.imshow(f"Frame", self.current_frame)
 
     def run(self):
         if os.path.exists(f"points_labels_{self.prefixFileName}{self.video_number}.json"):
@@ -380,7 +380,7 @@ if __name__ == "__main__":
                         help="Directories for rendered frames (default: None).")
     parser.add_argument("--is_drawing", action="store_true", default=False,
                         help="Enable interactive drawing for annotation.")
-    parser.add_argument("--extractorImages", action="store_true", default=False,
+    parser.add_argument("--extractorImages", action="store_true", default=True,
                         help="The Extraction images for processing.")
     parser.add_argument("--window_size", type=int, nargs=2, default=[200, 200],
                         help="Window size for zoom view [width, height].")
@@ -401,5 +401,7 @@ if __name__ == "__main__":
         extractorImages=args.extractorImages
     )
     processor.run()
+
+    # from videos.ImageOverlayProcessor import ImageOverlayProcessor
 
 # python your_script.py --video_number 200 --prefixFileName "livingroom"

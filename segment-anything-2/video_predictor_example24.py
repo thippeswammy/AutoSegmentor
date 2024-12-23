@@ -339,6 +339,7 @@ class VideoFrameProcessor:
 
 
 if __name__ == "__main__":
+    start_time = time.process_time()
     rend = ['./videos/outputs/rendered_frames', './videos/outputs/rendered_frames1',
             './videos/outputs/rendered_frames2', './videos/outputs/rendered_frames3',
             './videos/outputs/rendered_frames4']
@@ -347,5 +348,13 @@ if __name__ == "__main__":
     #         os.makedirs(i)
     video_path_template = r'D:\downloadFiles\front_3\video{}.mp4'
     processor = VideoFrameProcessor(video_number=100, prefixFileName='bedroom', rendered_frames_dirs=None,
-                                    batch_size=150, video_path_template=video_path_template)
+                                    batch_size=50, video_path_template=video_path_template)
     processor.run()
+    end_time = time.process_time()
+    elapsed_time = end_time - start_time
+    print(f"Processing time: {elapsed_time:.2f} seconds")
+    hours, remainder = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    print(f"Processing time: {int(hours)} hr, {int(minutes)} min, {seconds:.2f} sec")
+    print(f"FPS: {total_frames / elapsed_time:.2f}")
+    print(f"FPS: {total_frames / elapsed_time:.2f}")
