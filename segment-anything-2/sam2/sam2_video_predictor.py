@@ -20,7 +20,7 @@ class SAM2VideoPredictor(SAM2Base):
             self,
             fill_hole_area=0,
             # whether to apply non-overlapping constraints on the output object masks
-            non_overlap_masks=False,
+            non_overlap_masks=True,
             # whether to clear non-conditioning memory of the surrounding frames (which may contain outdated information) after adding correction clicks;
             # note that this would only apply to *single-object tracking* unless `clear_non_cond_mem_for_multi_obj` is also set to True)
             clear_non_cond_mem_around_input=False,
