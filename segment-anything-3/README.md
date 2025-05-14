@@ -6,11 +6,11 @@
 
 [[`Paper`](https://ai.meta.com/research/publications/sam-2-segment-anything-in-images-and-videos/)] [[`Project`](https://ai.meta.com/sam2)] [[`Demo`](https://sam2.metademolab.com/)] [[`Dataset`](https://ai.meta.com/datasets/segment-anything-video)] [[`Blog`](https://ai.meta.com/blog/segment-anything-2)] [[`BibTeX`](#citing-sam-2)]
 
-![SAM 2 architecture](assets/model_diagram.png?raw=true)
+![SAM 2 architecture](../assets/model_diagram.png?raw=true)
 
 **Segment Anything Model 2 (SAM 2)** is a foundation model towards solving promptable visual segmentation in images and videos. We extend SAM to video by considering images as a video with a single frame. The model design is a simple transformer architecture with streaming memory for real-time video processing. We build a model-in-the-loop data engine, which improves model and data via user interaction, to collect [**our SA-V dataset**](https://ai.meta.com/datasets/segment-anything-video), the largest video segmentation dataset to date. SAM 2 trained on our data provides strong performance across a wide range of tasks and visual domains.
 
-![SA-V dataset](assets/sa_v_dataset.jpg?raw=true)
+![SA-V dataset](../assets/sa_v_dataset.jpg?raw=true)
 
 ## Installation
 
@@ -19,7 +19,7 @@ SAM 2 needs to be installed first before use. The code requires `python>=3.10`, 
 ```bash
 git clone https://github.com/facebookresearch/segment-anything-2.git
 
-cd segment-anything-2 & pip install -e .
+cd segment-anything-3 & pip install -e .
 ```
 If you are installing on Windows, it's strongly recommended to use [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu.
 
@@ -34,7 +34,7 @@ Note:
 2. The step above requires compiling a custom CUDA kernel with the `nvcc` compiler. If it isn't already available on your machine, please install the [CUDA toolkits](https://developer.nvidia.com/cuda-toolkit-archive) with a version that matches your PyTorch CUDA version.
 3. If you see a message like `Failed to build the SAM 2 CUDA extension` during installation, you can ignore it and still use SAM 2 (some post-processing functionality may be limited, but it doesn't affect the results in most cases).
 
-Please see [`INSTALL.md`](./INSTALL.md) for FAQs on potential issues and solutions.
+Please see [`INSTALL.md`](../INSTALL.md) for FAQs on potential issues and solutions.
 
 ## Getting Started
 
@@ -75,9 +75,9 @@ with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
     masks, _, _ = predictor.predict(<input_prompts>)
 ```
 
-Please refer to the examples in [image_predictor_example.ipynb](./notebooks/image_predictor_example.ipynb) (also in Colab [here](https://colab.research.google.com/github/facebookresearch/segment-anything-2/blob/main/notebooks/image_predictor_example.ipynb)) for static image use cases.
+Please refer to the examples in [image_predictor_example.ipynb](../notebooks/image_predictor_example.ipynb) (also in Colab [here](https://colab.research.google.com/github/facebookresearch/segment-anything-2/blob/main/notebooks/image_predictor_example.ipynb)) for static image use cases.
 
-SAM 2 also supports automatic mask generation on images just like SAM. Please see [automatic_mask_generator_example.ipynb](./notebooks/automatic_mask_generator_example.ipynb) (also in Colab [here](https://colab.research.google.com/github/facebookresearch/segment-anything-2/blob/main/notebooks/automatic_mask_generator_example.ipynb)) for automatic mask generation in images.
+SAM 2 also supports automatic mask generation on images just like SAM. Please see [automatic_mask_generator_example.ipynb](../notebooks/automatic_mask_generator_example.ipynb) (also in Colab [here](https://colab.research.google.com/github/facebookresearch/segment-anything-2/blob/main/notebooks/automatic_mask_generator_example.ipynb)) for automatic mask generation in images.
 
 ### Video prediction
 
@@ -102,7 +102,7 @@ with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
         ...
 ```
 
-Please refer to the examples in [video_predictor_example.ipynb](./notebooks/video_predictor_example.ipynb) (also in Colab [here](https://colab.research.google.com/github/facebookresearch/segment-anything-2/blob/main/notebooks/video_predictor_example.ipynb)) for details on how to add click or box prompts, make refinements, and track multiple objects in videos.
+Please refer to the examples in [video_predictor_example.ipynb](../notebooks/video_predictor_example.ipynb) (also in Colab [here](https://colab.research.google.com/github/facebookresearch/segment-anything-2/blob/main/notebooks/video_predictor_example.ipynb)) for details on how to add click or box prompts, make refinements, and track multiple objects in videos.
 
 ## Load from 🤗 Hugging Face
 
@@ -153,15 +153,15 @@ with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
 
 ## Segment Anything Video Dataset
 
-See [sav_dataset/README.md](sav_dataset/README.md) for details.
+See [sav_dataset/README.md](../sav_dataset/README.md) for details.
 
 ## License
 
-The models are licensed under the [Apache 2.0 license](./LICENSE). Please refer to our research paper for more details on the models.
+The models are licensed under the [Apache 2.0 license](../LICENSE). Please refer to our research paper for more details on the models.
 
 ## Contributing
 
-See [contributing](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md).
+See [contributing](../CONTRIBUTING.md) and the [code of conduct](../CODE_OF_CONDUCT.md).
 
 ## Contributors
 
@@ -169,7 +169,7 @@ The SAM 2 project was made possible with the help of many contributors (alphabet
 
 Karen Bergan, Daniel Bolya, Alex Bosenberg, Kai Brown, Vispi Cassod, Christopher Chedeau, Ida Cheng, Luc Dahlin, Shoubhik Debnath, Rene Martinez Doehner, Grant Gardner, Sahir Gomez, Rishi Godugu, Baishan Guo, Caleb Ho, Andrew Huang, Somya Jain, Bob Kamma, Amanda Kallet, Jake Kinney, Alexander Kirillov, Shiva Koduvayur, Devansh Kukreja, Robert Kuo, Aohan Lin, Parth Malani, Jitendra Malik, Mallika Malhotra, Miguel Martin, Alexander Miller, Sasha Mitts, William Ngan, George Orlin, Joelle Pineau, Kate Saenko, Rodrick Shepard, Azita Shokrpour, David Soofian, Jonathan Torres, Jenny Truong, Sagar Vaze, Meng Wang, Claudette Ward, Pengchuan Zhang.
 
-Third-party code: we use a GPU-based connected component algorithm adapted from [`cc_torch`](https://github.com/zsef123/Connected_components_PyTorch) (with its license in [`LICENSE_cctorch`](./LICENSE_cctorch)) as an optional post-processing step for the mask predictions.
+Third-party code: we use a GPU-based connected component algorithm adapted from [`cc_torch`](https://github.com/zsef123/Connected_components_PyTorch) (with its license in [`LICENSE_cctorch`](../LICENSE_cctorch)) as an optional post-processing step for the mask predictions.
 
 ## Citing SAM 2
 

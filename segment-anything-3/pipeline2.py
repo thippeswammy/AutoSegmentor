@@ -135,8 +135,8 @@ class VideoFrameProcessor:
         self.temp_directory = temp_processing_dir
         self.video_path_template = video_path_template
         self.rendered_frames_dirs = rendered_frames_dir
-        self.model_config = resource_path("./sam2_configs/sam2_hiera_l.yaml")
-        self.sam2_checkpoint = resource_path("./checkpoints/sam2_hiera_large.pt")
+        self.model_config = resource_path("../sam2_configs/sam2_hiera_l.yaml")
+        self.sam2_checkpoint = resource_path("../checkpoints/sam2_hiera_large.pt")
         self.sam2_predictor = self.build_predictor()
         self.frames_directory = images_extract_dir
         extractor = FrameExtractor(self.video_number, prefixFileName=self.prefixFileName,

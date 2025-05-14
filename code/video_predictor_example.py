@@ -25,7 +25,7 @@ We use the terms _segment_ or _mask_ to refer to the model prediction for an obj
 
 ## Environment Set-up
 
-If running locally using jupyter, first install `segment-anything-2` in your environment using the [installation instructions](https://github.com/facebookresearch/segment-anything-2#installation) in the repository.
+If running locally using jupyter, first install `segment-anything-3` in your environment using the [installation instructions](https://github.com/facebookresearch/segment-anything-2#installation) in the repository.
 
 If running from Google Colab, set `using_colab=True` below and run the cell. In Colab, be sure to select 'GPU' under 'Edit'->'Notebook Settings'->'Hardware accelerator'. Note that it's recommended to use **A100 or L4 GPUs when running in Colab** (T4 GPUs might also work, but could be slow and might run out of memory in some cases).
 """
@@ -147,7 +147,7 @@ where `-q:v` generates high-quality JPEG frames and `-start_number 0` asks ffmpe
 """
 
 # `video_dir` a directory of JPEG frames with filenames like `<frame_index>.jpg`
-video_dir = "../videos/Temp"
+video_dir = "../segment-anything-3/videos/Temp"
 
 # scan all the JPEG frame names in this directory
 frame_names = [

@@ -28,7 +28,7 @@ model_cfg = "sam2_hiera_l.yaml"
 predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint, device=device)
 
 # Initialization and state setup
-video_dir = "../videos/Temp"
+video_dir = "../segment-anything-3/videos/Temp"
 frame_names = sorted(
     [p for p in os.listdir(video_dir) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg"]],
     key=lambda p: int(os.path.splitext(p)[0])

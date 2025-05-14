@@ -262,7 +262,7 @@ def image_moves_copy(rep, frame_names_1, batch_size, video_dir="videos/Temp"):
 # Main process function with interactive point collection
 def repeated(rep):
     global batch_size, ImageCount, points, labels, current_image
-    video_dir = "../videos/Temp"
+    video_dir = "../segment-anything-3/videos/Temp"
 
     # Prepare video frame names
     frame_names = sorted(

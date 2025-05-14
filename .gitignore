@@ -6,5 +6,5 @@ __pycache__/
 *.egg*
 build/*
 _C.*
-outputs/*
+segment-anything-3/outputs/OrgVideo4.mp4
 checkpoints/*.pt

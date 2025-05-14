@@ -1,4 +1,5 @@
 import os
+import re
 from contextlib import nullcontext
 
 import cv2
@@ -26,11 +27,14 @@ model_cfg = "sam2_hiera_l.yaml"
 predictor = build_sam2_video_predictor(model_cfg, sam2_checkpoint, device=device)
 
 # Initialization and state setup
-video_dir = "../videos/Temp"
+video_dir = "../segment-anything-3/videos/Temp"
 frame_names = sorted(
-    [p for p in os.listdir(video_dir) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg"]],
-    key=lambda p: int(os.path.splitext(p)[0])
+    [p for p in os.listdir(video_dir) if
+     os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", '.png']],
+    key=lambda p: int(re.search(r'(\d+)', os.path.splitext(p)[0]).group())
+    if re.search(r'(\d+)', os.path.splitext(p)[0]) else float('inf')
 )
+print(video_dir)
 inference_state = predictor.init_state(video_path=video_dir)
 predictor.reset_state(inference_state)
 
@@ -57,12 +61,12 @@ def collect_points(event, x, y, flags, param):
 
 
 # Setup OpenCV window and mouse callback for point collection
-cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
-cv2.setWindowProperty("Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)  # Set to full-screen mode
+cv2.namedWindow("Frame")
 cv2.setMouseCallback("Frame", collect_points)
 
 # Load the first frame for point collection
 ann_frame_idx = 0
+
 frame_path = os.path.join(video_dir, frame_names[ann_frame_idx])
 frame_image = cv2.imread(frame_path)
 
@@ -91,13 +95,21 @@ if points and labels:
         inference_state=inference_state,
         frame_idx=ann_frame_idx,
         obj_id=ann_obj_id,
-        points=points,
-        labels=labels,
+        points=points[:3],
+        labels=labels[:3],
     )
-
+    _, out_obj_ids, out_mask_logits = predictor.add_new_points_or_box(
+        inference_state=inference_state,
+        frame_idx=ann_frame_idx,
+        obj_id=2,
+        clear_old_points=False,
+        points=points[3:],
+        labels=labels[3:],
+    )
+    print(out_obj_ids, out_mask_logits)
     # Run propagation and save frames
     video_segments = {}
-    rendered_dir = "../rendered_frames"
+    rendered_dir = "rendered_frames"
     os.makedirs(rendered_dir, exist_ok=True)
 
     for out_frame_idx, out_obj_ids, out_mask_logits in predictor.propagate_in_video(inference_state):
@@ -114,6 +126,7 @@ if points and labels:
 
             # Add segmentation mask to the frame
             if out_frame_idx in video_segments:
+
                 mask = video_segments[out_frame_idx][ann_obj_id]
 
                 # Remove redundant dimensions (squeeze the mask)
@@ -133,11 +146,11 @@ if points and labels:
 
                 # Save the blended image
                 blended_image.save(os.path.join(rendered_dir, f"rendered_frame_{ImageCount:05d}.png"))
-                ImageCount += 1
+                ImageCount = +1
             else:
                 # If no mask is available for this frame, save the original frame
                 image.save(os.path.join(rendered_dir, f"rendered_frame_{ImageCount:05d}.png"))
-                ImageCount += 1
+                ImageCount = +1
     print("Rendering completed!")
 else:
     print("No points were selected. Exiting.")
