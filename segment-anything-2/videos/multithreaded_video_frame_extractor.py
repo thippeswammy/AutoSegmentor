@@ -8,8 +8,8 @@ from tqdm import tqdm
 # Configuration
 VIDEO_NUMBER = 9
 NUM_THREADS = 16  # Number of threads for multithreading
-VIDEO_PATH_TEMPLATE = r'D:\downloadFiles\front_3\video{}.mp4'
-OUTPUT_DIR = r'F:\RunningProjects\SAM2\segment-anything-2\videos\road_imgs'
+VIDEO_PATH_TEMPLATE = r'../VideoInputs/video{}.mp4'
+OUTPUT_DIR = r'./videos/road_imgs'
 
 
 def clear_output_directory(directory):
