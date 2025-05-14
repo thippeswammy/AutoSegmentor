@@ -23,7 +23,7 @@ class images_resize:
         # shutil.copy2(src, dst)
         img = cv2.imread(src)
         # print("size = ", img.shape[1] // 2, img.shape[0] // 2)
-        img = cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2), interpolation=cv2.INTER_LINEAR)
+        img = cv2.resize(img, (1920, 1080), interpolation=cv2.INTER_NEAREST)
         cv2.imwrite(dst, img)
 
     def copy_images(self):
@@ -49,8 +49,8 @@ class images_resize:
 
 if __name__ == "__main__":
     # Configuration
-    original_images_folder = r'F:\RunningProjects\SAM2\segment-anything-2\videos\Images2'
-    output_original_folder = r'F:\RunningProjects\SAM2\segment-anything-2\videos\Images'
+    original_images_folder = r'img_folder1'
+    output_original_folder = r'img_folder2'
 
     # Create an instance of ImageCopier and run it
     copier = images_resize(original_images_folder, output_original_folder)
