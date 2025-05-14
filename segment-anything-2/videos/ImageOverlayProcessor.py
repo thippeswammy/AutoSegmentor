@@ -56,8 +56,8 @@ class ImageOverlayProcessor:
         """Overlay the mask on the original image."""
         if len(mask_image.shape) == 2:
             mask_image = cv2.cvtColor(mask_image, cv2.COLOR_GRAY2BGR)
-
         # Blend images
+
         overlay_image = cv2.addWeighted(original_image, 0.5, mask_image, 0.5, 0)
         return overlay_image
 
@@ -79,16 +79,15 @@ class ImageOverlayProcessor:
                 for future in futures:
                     future.result()  # Raise exceptions if any
                     pbar.update(1)
-        print("Processing completed.")
 
 
 if __name__ == "__main__":
     # Configuration
-    original_folder = r'F:\RunningProjects\SAM2\segment-anything-2\videos\Images'
-    mask_folder = r'F:\RunningProjects\SAM2\segment-anything-2\videos\outputs\rendered_frames_1'
-    output_folder = r'overlappedImages'
+    original_folder = r'./videos/Images'
+    mask_folder = r'./videos/outputs'
+    output_folder = r'./videos/overlappedImages'
     # Initialize and run the processor
     processor = ImageOverlayProcessor(original_folder, mask_folder, output_folder,
-                                      # all_consider='bedroom', image_count=0
+                                      all_consider='', image_count=0
                                       )
     processor.process_all_images()
