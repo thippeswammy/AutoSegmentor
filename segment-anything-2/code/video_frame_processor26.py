@@ -236,7 +236,7 @@ class VideoFrameProcessor:
 if __name__ == "__main__":
     for i in range(6, 7):
         video_path_template = r'D:\downloadFiles\front_3\Video{}.mp4'
-        images_extract_dir = r'F:\RunningProjects\SAM2\segment-anything-2\videos\Images'
+        images_extract_dir = r'/segment-anything-2/videos/Images'
         processor = VideoFrameProcessor(
             video_number=i,
             prefixFileName='roadW',
