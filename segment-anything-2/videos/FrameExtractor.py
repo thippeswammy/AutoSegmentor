@@ -7,13 +7,13 @@ from tqdm import tqdm
 
 
 class FrameExtractor:
-    def __init__(self, video_number, prefixFileName='files', num_threads=os.cpu_count() - 1, limitedImages=None,
+    def __init__(self, video_number, prefixFileName='files', num_threads=os.cpu_count() - 2, limitedImages=None,
                  video_path_template=r'D:\downloadFiles\front_3\video{}.mp4',
                  output_dir=r'F:\RunningProjects\SAM2\segment-anything-2\videos\Images'):
-        self.video_number = video_number
         self.output_dir = output_dir
-        self.limitedImages = limitedImages
         self.num_threads = num_threads
+        self.video_number = video_number
+        self.limitedImages = limitedImages
         self.prefixFileName = prefixFileName
         self.video_path_template = video_path_template
         self.video_path = self.video_path_template.format(video_number)
@@ -85,5 +85,6 @@ if __name__ == "__main__":
     OUTPUT_DIR = r'F:\RunningProjects\SAM2\segment-anything-2\videos\road_imgs'
 
     # Create an instance of FrameExtractor and run it
-    extractor = FrameExtractor(VIDEO_NUMBER, VIDEO_PATH_TEMPLATE, OUTPUT_DIR)
+    extractor = FrameExtractor(prefixFileName='frame', video_number=VIDEO_NUMBER,
+                               video_path_template=VIDEO_PATH_TEMPLATE, output_dir=OUTPUT_DIR, )
     extractor.run()
