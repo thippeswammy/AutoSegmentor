@@ -1,7 +1,9 @@
+import argparse
 import json
 import os
 import re
 import shutil
+import sys
 import time
 
 import GPUtil
@@ -14,18 +16,24 @@ from sam2.build_sam import build_sam2_video_predictor
 from videos.FrameExtractor import FrameExtractor
 
 
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
 class VideoFrameProcessor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
-                 prefixFileName="file", video_path_template=None, rendered_frames_dirs=None, is_drawing=False,
-                 window_size=None, label_colors=None):
+                 prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dirs=None,
+                 is_drawing=False, window_size=None, label_colors=None):
         if rendered_frames_dirs is None:
-            rendered_frames_dirs = ['']
-            for i in range(1, 10):
-                rendered_frames_dirs.append(f'./videos/outputs/rendered_frames_{i}')
+            rendered_frames_dirs = [os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos', 'outputs')]
         if window_size is None:
             window_size = [200, 200]
         if label_colors is None:
-            # label_colors = {1: (0, 0, 255), 2: (255, 0, 0), 3: (0, 255, 0)}
             label_colors = {
                 1: (0, 0, 255),
                 2: (255, 0, 0),
@@ -48,13 +56,14 @@ class VideoFrameProcessor:
         self.prefixFileName = prefixFileName
         self.video_path_template = video_path_template
         self.rendered_frames_dirs = rendered_frames_dirs
-        self.temp_directory = "videos/Temp"
-        self.model_config = "sam2_hiera_l.yaml"
-        self.frames_directory = "videos/Images"
-        self.sam2_checkpoint = "../checkpoints/sam2_hiera_large.pt"
+        self.temp_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'videos', 'Temp')
+        self.frames_directory = images_extract_dir  # Use images_extract_dir directly
+        self.model_config = resource_path("./sam2_configs/sam2_hiera_l.yaml")
+        self.sam2_checkpoint = resource_path("./checkpoints/sam2_hiera_large.pt")
         self.sam2_predictor = self.build_predictor()
         extractor = FrameExtractor(self.video_number, prefixFileName=self.prefixFileName,
-                                   limitedImages=images_ending_count, video_path_template=self.video_path_template)
+                                   limitedImages=images_ending_count, video_path_template=self.video_path_template,
+                                   output_dir=images_extract_dir)
         extractor.run()
         self.is_drawing = is_drawing
         self.window_size = window_size
@@ -68,7 +77,11 @@ class VideoFrameProcessor:
         self.labels_collection_list = []
         self.color_map = self.get_color_map(9)
         self.frame_paths = self.get_frame_paths()
+        # Create necessary directories
+        for dir_path in [self.temp_directory, self.frames_directory] + self.rendered_frames_dirs:
+            os.makedirs(dir_path, exist_ok=True)
 
+    # Rest of the class remains unchanged
     def get_device(self):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {device}")
@@ -102,12 +115,6 @@ class VideoFrameProcessor:
         return data["points"], data["labels"]
 
     def gpu_memory_usage(self, ind=0):
-        # for gpu in gpus[inf]:
-        #     print(f"GPU Name: {gpu.name}")
-        #     print(f"GPU Memory Total: {gpu.memoryTotal} MB")
-        #     print(f"GPU Memory Used: {gpu.memoryUsed} MB")
-        #     print(f"GPU Memory Free: {gpu.memoryFree} MB")
-        #     print(f"GPU Memory Utilization: {gpu.memoryUtil * 100}%")
         return self.gpus[ind]
 
     def load_user_points(self):
@@ -116,7 +123,6 @@ class VideoFrameProcessor:
     def mask2colorMaskImg(self, mask):
         colors = np.array([
             [0, 0, 0],  # Black (Background)
-            [255, 255, 255],  # White
             [0, 0, 255],  # Red
             [0, 255, 0],  # Green
             [255, 0, 0],  # Blue
@@ -124,7 +130,8 @@ class VideoFrameProcessor:
             [255, 0, 255],  # Magenta
             [255, 255, 0],  # Cyan
             [128, 0, 128],  # Purple
-            [0, 165, 255]  # Orange
+            [0, 165, 255],  # Orange
+            [255, 255, 255],  # White
         ], dtype=np.uint8)
         mask_image = colors[mask]
         return mask_image
@@ -155,6 +162,8 @@ class VideoFrameProcessor:
                         shutil.rmtree(file_path)
                 except Exception as e:
                     print(f"Failed to delete {file_path}. Reason: {e}")
+        else:
+            print(f"Directory {directory} does not exist.")
 
     def process_batch(self, batch_number):
         frame_filenames = sorted(
@@ -167,20 +176,16 @@ class VideoFrameProcessor:
         self.sam2_predictor.reset_state(inference_state)
         points_np = np.array(self.points_collection_list[batch_number], dtype=np.float32)
         labels_np = np.array(self.labels_collection_list[batch_number], np.int32)
-        # os.makedirs(rendered_frames_dir, exist_ok=True)
         ann_frame_idx = 0
-        # Simulate model segmentation for each object (replace with real model interaction)
         for ann_obj_id in (set(abs(labels_np))):
-            if not os.path.exists(self.rendered_frames_dirs[ann_obj_id]):
-                os.makedirs(self.rendered_frames_dirs[ann_obj_id])
+            if not os.path.exists(self.rendered_frames_dirs[0]):
+                os.makedirs(self.rendered_frames_dirs[0])
             present_count = self.image_counter + 0
-            # Initialize and reset inference state for segmentation
             labels_np1 = labels_np.copy()
             labels_np1[labels_np1 == ann_obj_id] = labels_np1[labels_np1 == ann_obj_id] // ann_obj_id
             labels_np1[labels_np1 < 0] = 0
             labels_np1 = labels_np1[abs(labels_np) == ann_obj_id]
             points_np1 = points_np[abs(labels_np) == ann_obj_id]
-            # inference_state = self.sam2_predictor.init_state(video_path=self.temp_directory)
             _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
                 frame_idx=ann_frame_idx,
@@ -189,45 +194,30 @@ class VideoFrameProcessor:
                 points=points_np1,
                 labels=labels_np1
             )
-
         video_segments = {}
         for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state):
             video_segments[out_frame_idx] = {
                 out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                 for i, out_obj_id in enumerate(out_obj_ids)
             }
-
-        # Frame processing
         for out_frame_idx in range(len(frame_filenames)):
             frame_path = os.path.join(self.temp_directory, frame_filenames[out_frame_idx])
             frame = cv2.imread(frame_path)
-            # Iterate over masks and overlay them on the full mask
+            full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
             for out_obj_id, out_mask in video_segments[out_frame_idx].items():
-                # Convert mask to uint8 if it's boolean
                 if out_mask.dtype == np.bool_:
                     out_mask = out_mask.astype(np.uint8)
-                # Squeeze the mask to remove singleton dimension if necessary
                 out_mask = out_mask.squeeze()
-                # Resize the mask to fit the frame
                 out_mask_resized = cv2.resize(out_mask, (frame.shape[1], frame.shape[0]))
-                # Combine the mask into the full mask using bitwise OR
                 out_mask_resized = out_mask_resized * out_obj_id
-                # Save the combined full mask image
-                # extracted_region = cv2.bitwise_and(frame, frame, mask=out_mask_resized.astype(np.uint8) * 255)
-                # cv2.imwrite(
-                #     os.path.join(
-                #         self.rendered_frames_dirs[
-                #             out_obj_id] + f"/{self.prefixFileName}{self.video_number}_{present_count:05d}_extracted.png"),
-                #     extracted_region)
-                color_mask_image = self.mask2colorMaskImg(out_mask_resized)
-                cv2.imwrite(
-                    os.path.join(
-                        self.rendered_frames_dirs[
-                            out_obj_id] + f"/{self.prefixFileName}{self.video_number}_{present_count:05d}.png"),
-                    color_mask_image)
-
+                full_mask = full_mask + out_mask_resized
+            color_mask_image = self.mask2colorMaskImg(full_mask)
+            cv2.imwrite(
+                os.path.join(
+                    self.rendered_frames_dirs[
+                        0] + f"/{self.prefixFileName}{self.video_number}_{present_count:05d}.png"),
+                color_mask_image)
             present_count = present_count + 1
-            # mainImages = mainImages + color_mask_image
         self.image_counter = present_count
 
     def collect_user_points(self):
@@ -274,7 +264,6 @@ class VideoFrameProcessor:
                     self.selected_points = []
                     self.selected_labels = []
                     self.current_frame = cv2.imread(frame_path)
-                    # current_frame = cv2.resize(current_frame, (window_width, window_height), interpolation=cv2.INTER_AREA)
         cv2.destroyAllWindows()
         self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
 
@@ -299,29 +288,26 @@ class VideoFrameProcessor:
 
     def click_event(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            # is_drawing = True
             self.selected_points.append([x, y])
-            self.selected_labels.append(self.current_class_label)  # Assign the current class label to the point
-            cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label],
-                       -1)  # Draw color based on label
+            self.selected_labels.append(self.current_class_label)
+            cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
         elif event == cv2.EVENT_MOUSEMOVE:
             if self.is_drawing:
                 self.selected_points.append([x, y])
                 self.selected_labels.append(self.current_class_label)
                 cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
             zoom_view = self.show_zoom_view(self.current_frame, x, y)
-            cv2.imshow("Zoom View", zoom_view)  # Update the zoom view
-            # Keep the Zoom View window on top
+            cv2.imshow("Zoom View", zoom_view)
             try:
                 zoom_window = gw.getWindowsWithTitle("Zoom View")[0]
-                zoom_window.activate()  # Bring it to the front
+                zoom_window.activate()
             except IndexError:
-                pass  # Zoom window is not available
+                pass
         elif event == cv2.EVENT_LBUTTONUP:
             self.is_drawing = False
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.selected_points.append([x, y])
-            self.selected_labels.append(self.current_class_label)  # 0 is for background points
+            self.selected_labels.append(self.current_class_label)
             cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
         cv2.imshow(f"Frame", self.current_frame)
 
@@ -346,22 +332,25 @@ class VideoFrameProcessor:
 
 
 if __name__ == "__main__":
-    start_time = time.process_time()
-    rend = ['./videos/outputs/rendered_frames', './videos/outputs/rendered_frames1',
-            './videos/outputs/rendered_frames2', './videos/outputs/rendered_frames3',
-            './videos/outputs/rendered_frames4']
-    # for i in rend:
-    #     if not os.path.exists(i):
-    #         os.makedirs(i)
-    video_path_template = r'D:\WhatsApp\video.mp4'
-    processor = VideoFrameProcessor(video_number=1, prefixFileName='roadTesting', rendered_frames_dirs=None,
-                                    batch_size=120, video_path_template=video_path_template)
-    processor.run()
-    end_time = time.process_time()
-    elapsed_time = end_time - start_time
-    print(f"Processing time: {elapsed_time:.2f} seconds")
-    hours, remainder = divmod(elapsed_time, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    print(f"Processing time: {int(hours)} hr, {int(minutes)} min, {seconds:.2f} sec")
-    print(f"FPS: {len(processor.frame_paths) / elapsed_time:.2f}")
-    print(f"FPS: {len(processor.frame_paths) / elapsed_time:.2f}")
+    parser = argparse.ArgumentParser(description="Run video frame processor with dynamic parameters.")
+    parser.add_argument('--video_start', type=int, required=True, help='Starting video number (inclusive)')
+    parser.add_argument('--video_end', type=int, required=True, help='Ending video number (exclusive)')
+    parser.add_argument('--video_path_template', type=str, required=True, default='D:\downloadFiles\\front_3\Video{}.mp4',
+                        help='Template path for video files, e.g., D:\downloadFiles\\front_3\Video{}.mp4')
+    parser.add_argument('--images_extract_dir', type=str, required=True, help='Directory to extract images')
+    parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
+    parser.add_argument('--batch_size', type=int, default=120, help='Batch size for processing frames')
+    parser.add_argument('--rendered_dirs', type=str, nargs='*', default=None,
+                        help='Rendered output directories (space separated)')
+    args = parser.parse_args()
+
+    for i in range(args.video_start, args.video_end):
+        processor = VideoFrameProcessor(
+            video_number=i,
+            prefixFileName=args.prefix,
+            rendered_frames_dirs=args.rendered_dirs,
+            batch_size=args.batch_size,
+            video_path_template=args.video_path_template,
+            images_extract_dir=args.images_extract_dir
+        )
+        processor.run()

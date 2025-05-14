@@ -371,9 +371,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=120, help="The batch size for processing frames.")
     parser.add_argument("--images_starting_count", type=int, default=0, help="Starting count for image numbering.")
     parser.add_argument("--images_ending_count", type=int, help="Ending count for limiting images.")
-    parser.add_argument("--prefixFileName", type=str, default="bedroom", help="Prefix for output file names.")
-    parser.add_argument("--video_path_template", type=str, default=r'D:\downloadFiles\front_3\video{}.mp4',
-                        help="Template path for input videos (default: 'D:\\downloadFiles\\front_3\\video{}.mp4').")
+    parser.add_argument("--prefixFileName", type=str, default="images", help="Prefix for output file names.")
+    parser.add_argument("--video_path_template", type=str, default=r'./VideoInputs/video{}.mp4',
+                        help="Template path for input videos (default: './VideoInputs/video{}.mp4').")
     # parser.add_argument("--rendered_frames_dirs", type=str, nargs='*', default=None,
     #                     help="Directories to store rendered frames.")
     parser.add_argument("--rendered_frames_dirs", type=str, nargs='+', default=None,

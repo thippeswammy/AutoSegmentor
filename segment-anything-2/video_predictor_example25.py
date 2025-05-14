@@ -16,8 +16,8 @@ from videos.FrameExtractor import FrameExtractor
 
 class VideoFrameProcessor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
-                 prefixFileName="file", video_path_template=None, rendered_frames_dirs=None, is_drawing=False,
-                 window_size=None, label_colors=None):
+                 prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dirs=None,
+                 is_drawing=False, window_size=None, label_colors=None):
         if rendered_frames_dirs is None:
             rendered_frames_dirs = [f'./videos/outputs']
             # for i in range(1, 10):
@@ -54,7 +54,8 @@ class VideoFrameProcessor:
         self.sam2_checkpoint = "../checkpoints/sam2_hiera_large.pt"
         self.sam2_predictor = self.build_predictor()
         extractor = FrameExtractor(self.video_number, prefixFileName=self.prefixFileName,
-                                   limitedImages=images_ending_count, video_path_template=self.video_path_template)
+                                   limitedImages=images_ending_count, video_path_template=self.video_path_template,
+                                   output_dir=images_extract_dir)
         extractor.run()
         self.is_drawing = is_drawing
         self.window_size = window_size
@@ -350,7 +351,10 @@ if __name__ == "__main__":
     # for i in rend:
     #     if not os.path.exists(i):
     #         os.makedirs(i)
-    video_path_template = r'D:\downloadFiles\front_3\video{}.mp4'
-    processor = VideoFrameProcessor(video_number=100, prefixFileName='bedroom', rendered_frames_dirs=None,
-                                    batch_size=150, video_path_template=video_path_template)
-    processor.run()
+    for i in range(78, 79):
+        video_path_template = r'D:\downloadFiles\front_3\Video{}.mp4'
+        images_extract_dir = r'F:\RunningProjects\SAM2\segment-anything-2\videos\Images'
+        processor = VideoFrameProcessor(video_number=i, prefixFileName='road', rendered_frames_dirs=None,
+                                        batch_size=120, video_path_template=video_path_template,
+                                        images_extract_dir=images_extract_dir)
+        processor.run()
