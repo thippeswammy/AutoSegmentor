@@ -69,11 +69,11 @@ class ImageCopier:
 
 if __name__ == "__main__":
     # Configuration
-    original_images_folder = r'F:\RunningProjects\SAM2\segment-anything-2\videos\road_imgs'
-    mask_images_folder = r'F:\RunningProjects\SAM2\segment-anything-2\rendered_frames_road'
-    overlap_images_folder = 'overlappedImages'
-    output_original_folder = r'I:\thippe\DatasetAnnotation\complected_2\TempImg'
-    output_mask_folder = r'I:\thippe\DatasetAnnotation\complected_2\TempMasks'
+    original_images_folder = r'./Images'
+    mask_images_folder = r'./outputs'
+    overlap_images_folder = './overlappedImages'
+    output_original_folder = r'./verified/TempImg'
+    output_mask_folder = r'./verified/TempMasks'
 
     # Create an instance of ImageCopier and run it
     copier = ImageCopier(original_images_folder, mask_images_folder, overlap_images_folder,
