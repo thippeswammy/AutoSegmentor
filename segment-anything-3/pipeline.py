@@ -114,9 +114,9 @@ class VideoFrameProcessor:
         self.video_path_template = video_path_template
         self.rendered_frames_dirs = rendered_frames_dir
         self.temp_directory = temp_processing_dir
-        self.model_config = "./sam2_configs/sam2_hiera_l.yaml"
+        self.model_config = "../sam2_configs/sam2_hiera_l.yaml"
         self.frames_directory = images_extract_dir
-        self.sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
+        self.sam2_checkpoint = "../checkpoints/sam2_hiera_large.pt"
         self.sam2_predictor = self.build_predictor()
         extractor = FrameExtractor(self.video_number, prefixFileName=self.prefixFileName,
                                    limitedImages=images_ending_count, video_path_template=self.video_path_template,
@@ -689,8 +689,7 @@ if __name__ == "__main__":
 '''
 python pipeline2.py --video_start 4 --video_end 5 --video_path_template "D:\downloadFiles\\front_3\Video{}.mp4" --images_extract_dir "F:\RunningProjects\SAM2\segment-anything-2\\videos\Images" --rendered_dir "F:\RunningProjects\SAM2\segment-anything-2\\videos\outputs" --overlap_dir "F:\RunningProjects\SAM2\segment-anything-2\\videos\overlappedImages" --verified_img_dir "F:\RunningProjects\SAM2\segment-anything-2\\videos\\verified\TempImg" --verified_mask_dir "F:\RunningProjects\SAM2\segment-anything-2\\videos\\verified\TempMasks" --prefix road --batch_size 120 --fps 30
 
-pyinstaller --name VideoProcessingPipeline --add-data "checkpoints\sam2_hiera_large.pt;checkpoints" --add-data "sam2_configs\sam2_hiera_l.yaml;sam2_configs" --add-data "sam2_configs;sam2_configs" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile pipeline.py
-c
+pyinstaller --name VideoProcessingPipeline --add-data "../checkpoints\sam2_hiera_large.pt;checkpoints" --add-data "../sam2_configs\sam2_hiera_l.yaml;sam2_configs" --add-data "../sam2_configs;sam2_configs" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor_long.py
 
 python pipeline.py --video_start 4 --prefix road
 
