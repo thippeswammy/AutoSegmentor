@@ -15,7 +15,8 @@ import numpy as np
 import pygetwindow as gw
 import torch
 from tqdm import tqdm
-
+# form some devices we need to set False
+# torch.backends.cuda.enable_flash_sdp(False)
 from sam2.build_sam import build_sam2_video_predictor
 
 # Configure logging
@@ -32,10 +33,15 @@ def ensure_directory(path):
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller."""
     try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except AttributeError:
+        # In development, use the current directory
         base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+
+    # Construct the full path and normalize it
+    full_path = os.path.normpath(os.path.join(base_path, relative_path))
+    return full_path
 
 
 class FrameExtractor:
@@ -217,19 +223,32 @@ class VideoFrameProcessor:
         frame_paths = []
         for p in os.listdir(self.frames_directory):
             if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]:
-                match = re.search(r'(\d+)', os.path.splitext(p)[0])
+                # Extract the numeric frame index after the underscore (e.g., '00000' from 'road4_00000.jpg')
+                match = re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE)
                 if match:
                     frame_paths.append(os.path.join(self.frames_directory, p))
                 else:
-                    logger.warning(f"Skipping file {p} due to missing numeric component in filename")
-        return sorted(frame_paths, key=lambda p: int(re.search(r'(\d+)', os.path.splitext(p)[0]).group()))
+                    logger.warning(f"Skipping file {p} due to invalid filename format")
+        # Sort by the numeric frame index
+        return sorted(frame_paths,
+                      key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1)))
 
     def move_and_copy_frames(self, batch_index):
         frames_to_copy = self.frame_paths[batch_index:batch_index + self.batch_size]
         self.clear_directory(self.temp_directory)
-        for frame_path in frames_to_copy:
-            ensure_directory(self.temp_directory)
-            shutil.copy(frame_path, self.temp_directory)
+        ensure_directory(self.temp_directory)
+        for i, frame_path in enumerate(frames_to_copy):
+            # Extract the frame index from the filename (e.g., '00000' from 'road4_00000.jpg')
+            match = re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', frame_path, re.IGNORECASE)
+            if not match:
+                logger.warning(f"Skipping file {frame_path} due to invalid filename format")
+                continue
+            frame_index = match.group(1)
+            # Create a new filename with only the frame index (e.g., '00000.jpg')
+            new_filename = f"{frame_index}.jpg"
+            dst_path = os.path.join(self.temp_directory, new_filename)
+            shutil.copy(frame_path, dst_path)
+            logger.debug(f"Copied {frame_path} to {dst_path}")
 
     def clear_directory(self, directory):
         if os.path.exists(directory):
@@ -277,9 +296,9 @@ class VideoFrameProcessor:
     def process_batch(self, batch_number):
         frame_filenames = sorted(
             [p for p in os.listdir(self.temp_directory) if
-             os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", '.png']],
-            key=lambda p: int(re.search(r'(\d+)', os.path.splitext(p)[0]).group())
-            if re.search(r'(\d+)', os.path.splitext(p)[0]) else float('inf')
+             os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
+            key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1))
+            if re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE) else float('inf')
         )
         inference_state = self.sam2_predictor.init_state(video_path=self.temp_directory)
         self.sam2_predictor.reset_state(inference_state)
@@ -690,28 +709,30 @@ def main():
                         help='Directory to save output videos')
 
     args = parser.parse_args()
-    if os.path.exists(args.working_dir_name):
-        if args.delete.lower() == 'yes':
-            shutil.rmtree(args.working_dir_name)
-            logger.info(f"Cleared prev working directory: {args.working_dir_name}")
-        else:
-            confirm = input(
-                f"Do you want to clear prev working directory '{args.working_dir_name}'? (yes/no): "
-            ).lower()
-            if confirm == 'yes':
-                shutil.rmtree(args.working_dir_name)
-                logger.info(f"Clearing prev working directory: {args.working_dir_name}")
-            else:
-                logger.info(f"Working directory '{args.working_dir_name}' not deleted")
-                logger.info('Stopping the process')
-                sys.exit(1000)
+
     for i in range(args.video_start, args.video_start + args.video_end):
+        if os.path.exists(args.working_dir_name):
+            if args.delete.lower() == 'yes':
+                shutil.rmtree(args.working_dir_name)
+                logger.info(f"Cleared prev working directory: {args.working_dir_name}")
+            else:
+                confirm = input(
+                    f"Do you want to clear prev working directory '{args.working_dir_name}'? (yes/no): "
+                ).lower()
+                if confirm == 'yes':
+                    shutil.rmtree(args.working_dir_name)
+                    logger.info(f"Clearing prev working directory: {args.working_dir_name}")
+                else:
+                    logger.info(f"Working directory '{args.working_dir_name}' not deleted")
+                    logger.info('Stopping the process')
+                    sys.exit(1000)
+
         run_pipeline(
             fps=args.fps,
             video_number=i,
-            delete=args.delete.lower(),
             prefix=args.prefix,
             batch_size=args.batch_size,
+            delete=args.delete.lower(),
             video_path_template=args.video_path_template.replace('working_dir', args.working_dir_name),
             images_extract_dir=args.images_extract_dir.replace('working_dir', args.working_dir_name),
             temp_processing_dir=args.temp_processing_dir.replace('working_dir', args.working_dir_name),
@@ -740,3 +761,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+'''
+pyinstaller --name sam2_video_predictor_long --add-data "../checkpoints\sam2_hiera_large.pt;checkpoints" --add-data "../sam2_co
+nfigs\sam2_hiera_l.yaml;sam2_configs" --add-data "../sam2_configs;sam2_configs" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor_long.py
+
+'''
