@@ -144,10 +144,6 @@ Adjust paths as needed for your project structure.
 - The pipeline is interactive; user input is required at several stages.
 - For best results, use videos with consistent resolution and naming.
 
-## License
-
-This project is released under the MIT License.
-
 ## Acknowledgements
 
 - [SAM2](https://github.com/facebookresearch/segment-anything) by Meta AI
