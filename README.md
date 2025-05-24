@@ -82,27 +82,6 @@ python sam2_video_predictor_long.py \
   - Mask prediction video
   - Overlay video
 
-## PyInstaller Packaging
-
-To create a standalone executable with PyInstaller:
-
-```bash
-pyinstaller --name sam2_video_predictor_long \
-  --add-data "../checkpoints/sam2_hiera_large.pt;checkpoints" \
-  --add-data "../sam2_configs/sam2_hiera_l.yaml;sam2_configs" \
-  --add-data "../sam2_configs;sam2_configs" \
-  --hidden-import torch \
-  --hidden-import cv2 \
-  --hidden-import numpy \
-  --hidden-import GPUtil \
-  --hidden-import sam2 \
-  --hidden-import sam2.sam2_configs \
-  --collect-all sam2 \
-  --onefile sam2_video_predictor_long.py
-```
-
-Adjust paths as needed for your project structure.
-
 ## Keyboard Controls for Annotation
 
 - **1-9**: Change current class label.
@@ -116,26 +95,36 @@ Adjust paths as needed for your project structure.
 ## Directory Structure
 
 ```
-.
-├── VideoInputs/
-│   └── Video1.mp4, Video2.mp4, ...
+SAM2/
+├── DatasetManager/
+│   └── YolovDatasetManager/
+│       └── DatasetCreatere.py
 ├── checkpoints/
 │   └── sam2_hiera_large.pt
+├── sam2/
+│   └── __init__.py
 ├── sam2_configs/
 │   └── sam2_hiera_l.yaml
-├── working_dir/
-│   ├── images/
-│   ├── temp/
-│   ├── render/
-│   ├── overlap/
-│   └── verified/
-│       ├── images/
-│       └── mask/
-├── outputs/
-│   ├── OrgVideo1.mp4
-│   ├── MaskVideo1.mp4
-│   └── OverlappedVideo1.mp4
-└── sam2_video_predictor_long.py
+├── segment-anything-3/
+│   ├── VideoInputs/
+│   │   └── Video1.mp4, Video2.mp4, ...
+│   ├── checkpoints/
+│   │   └── sam2_hiera_large.pt
+│   ├── sam2_configs/
+│   │   └── sam2_hiera_l.yaml
+│   ├── working_dir/
+│   │   ├── images/
+│   │   ├── temp/
+│   │   ├── render/
+│   │   ├── overlap/
+│   │   └── verified/
+│   │       ├── images/
+│   │       └── mask/
+│   ├── outputs/
+│   │   ├── OrgVideo1.mp4
+│   │   ├── MaskVideo1.mp4
+│   │   └── OverlappedVideo1.mp4
+│   └── sam2_video_predictor_long.py
 ```
 
 ## Notes
