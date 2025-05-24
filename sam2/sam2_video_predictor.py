@@ -8,9 +8,10 @@ import warnings
 from collections import OrderedDict
 
 import torch
+from tqdm import tqdm
+
 from sam2.modeling.sam2_base import NO_OBJ_SCORE, SAM2Base
 from sam2.utils.misc import concat_points, fill_holes_in_mask_scores, load_video_frames
-from tqdm import tqdm
 
 
 class SAM2VideoPredictor(SAM2Base):
@@ -38,6 +39,7 @@ class SAM2VideoPredictor(SAM2Base):
     def init_state(
             self,
             video_path,
+            frame_paths,
             offload_video_to_cpu=False,
             offload_state_to_cpu=False,
             async_loading_frames=False,
@@ -49,6 +51,7 @@ class SAM2VideoPredictor(SAM2Base):
             image_size=self.image_size,
             offload_video_to_cpu=offload_video_to_cpu,
             async_loading_frames=async_loading_frames,
+            frame_paths=frame_paths,
             compute_device=compute_device,
         )
         inference_state = {}

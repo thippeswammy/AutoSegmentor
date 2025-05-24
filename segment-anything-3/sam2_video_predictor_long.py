@@ -7,6 +7,7 @@ import shutil
 import sys
 import threading
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
 import GPUtil
@@ -15,6 +16,7 @@ import numpy as np
 import pygetwindow as gw
 import torch
 from tqdm import tqdm
+
 # form some devices we need to set False
 # torch.backends.cuda.enable_flash_sdp(False)
 from sam2.build_sam import build_sam2_video_predictor
@@ -47,6 +49,7 @@ def resource_path(relative_path):
 class FrameExtractor:
     def __init__(self, video_number, prefixFileName="file", limitedImages=None, video_path_template=None,
                  output_dir=None):
+        self.video_path = None
         self.video_number = video_number
         self.prefixFileName = prefixFileName
         self.limitedImages = limitedImages
@@ -98,25 +101,45 @@ class FrameExtractor:
                 if not ret:
                     break
                 output_path = os.path.join(self.output_dir,
-                                           f"{self.prefixFileName}{self.video_number}_{frame_count:05d}.jpg")
+                                           f"{self.prefixFileName}{self.video_number}_{frame_count:05d}.jpeg")
                 cv2.imwrite(output_path, frame)
                 frame_count += 1
                 pbar.update(1)
 
         cap.release()
-        print(f"Extracted {frame_count} frames to '{self.output_dir}'")
+
+
+def clear_directory(directory):
+    if os.path.exists(directory):
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                logger.error(f"Failed to delete {file_path}. Reason: {e}")
+    else:
+        logger.debug(f"Directory {directory} does not exist.")
 
 
 class VideoFrameProcessor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
+        self.current_frame_only_text = None
         if rendered_frames_dir is None:
             rendered_frames_dir = './videos/outputs'
         if window_size is None:
             window_size = [200, 200]
         if images_extract_dir is None:
             images_extract_dir = './videos/images'
+        self.current_frame_only_with_points = None
+        self.window_name = "SAM2 Annotation Tool"
+        self.current_class_label = 1
+        self.current_instance_id = 1
+        self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
         if label_colors is None:
             label_colors = {
                 1: (0, 0, 255),
@@ -130,6 +153,8 @@ class VideoFrameProcessor:
                 9: (255, 255, 255),
                 10: (0, 0, 0),
             }
+        self.class_instance_counter = defaultdict(int)
+        self.current_instance_id = 1
         if video_path_template is None:
             logger.error("Missing the video file paths or video")
             sys.exit(100)
@@ -164,11 +189,14 @@ class VideoFrameProcessor:
 
     def get_device(self):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info(f"Using device: {device}")
+        print(f"Using device: {device}")
         if device.type == "cuda":
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
         return device
+
+    def encode_label(self, class_id, instance_id):
+        return class_id * 1000 + instance_id
 
     def build_predictor(self):
         return build_sam2_video_predictor(
@@ -235,7 +263,7 @@ class VideoFrameProcessor:
 
     def move_and_copy_frames(self, batch_index):
         frames_to_copy = self.frame_paths[batch_index:batch_index + self.batch_size]
-        self.clear_directory(self.temp_directory)
+        clear_directory(self.temp_directory)
         ensure_directory(self.temp_directory)
         for i, frame_path in enumerate(frames_to_copy):
             # Extract the frame index from the filename (e.g., '00000' from 'road4_00000.jpg')
@@ -250,22 +278,11 @@ class VideoFrameProcessor:
             shutil.copy(frame_path, dst_path)
             logger.debug(f"Copied {frame_path} to {dst_path}")
 
-    def clear_directory(self, directory):
-        if os.path.exists(directory):
-            for filename in os.listdir(directory):
-                file_path = os.path.join(directory, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as e:
-                    logger.error(f"Failed to delete {file_path}. Reason: {e}")
+    def process_frame(self, out_frame_idx, frame_filenames, video_segments, present_count, save=True):
+        if save:
+            frame_path = os.path.join(self.temp_directory, frame_filenames[out_frame_idx])
         else:
-            logger.debug(f"Directory {directory} does not exist.")
-
-    def process_frame(self, out_frame_idx, frame_filenames, video_segments, present_count):
-        frame_path = os.path.join(self.temp_directory, frame_filenames[out_frame_idx])
+            frame_path = frame_filenames
         frame = cv2.imread(frame_path)
         full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
 
@@ -281,17 +298,59 @@ class VideoFrameProcessor:
             else:
                 out_mask_resized = out_mask
             mask_condition = (out_mask_resized > 0) & (full_mask == 0)
-            full_mask[mask_condition] = out_obj_id
-            logger.debug(f"np.unique(out_mask_resized): {np.unique(out_mask_resized)}, obj_id: {out_obj_id}, "
-                         f"np.unique(full_mask): {np.unique(full_mask)}")
+            full_mask[mask_condition] = out_obj_id // 1000
 
         color_mask_image = self.mask2colorMaskImg(full_mask)
-        cv2.imwrite(
-            os.path.join(self.rendered_frames_dirs,
-                         f"{self.prefixFileName}{self.video_number}_{present_count:05d}.png"),
-            color_mask_image
-        )
+        if save:
+            cv2.imwrite(
+                os.path.join(self.rendered_frames_dirs,
+                             f"{self.prefixFileName}{self.video_number}_{present_count:05d}.png"),
+                color_mask_image
+            )
+        else:
+            return color_mask_image
         return present_count + 1
+
+    def PromptEncodingImageEncoding(self, inference_state, batch_number=-1):
+        if batch_number == -1:
+            points_list = self.selected_points
+            label_list = self.selected_labels
+        else:
+            points_list = self.points_collection_list[batch_number]
+            label_list = self.labels_collection_list[batch_number]
+
+        points_np = np.array(points_list, dtype=np.float32)
+        labels_np = np.array(label_list, dtype=np.int32)
+
+        # Validate labels
+        unique_labels = np.unique(np.abs(labels_np))
+        max_expected_label = 10
+        if unique_labels is None:
+            raise ValueError(
+                f"Invalid labels in batch {batch_number}: {unique_labels}. Max expected: {max_expected_label}")
+
+        ensure_directory(self.rendered_frames_dirs)
+        ann_frame_idx = 0
+        for label in unique_labels:
+            class_id = label // 1000
+            instance_id = label % 1000
+            logger.debug(f"Processing class {class_id}, instance {instance_id}")
+
+            obj_mask = np.abs(labels_np) == label
+            points_np1 = points_np[obj_mask]
+            raw_labels_np1 = labels_np[obj_mask]
+
+            # Binary mask: foreground = 1, background = 0
+            labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
+
+            _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
+                inference_state=inference_state,
+                frame_idx=ann_frame_idx,
+                clear_old_points=False,
+                obj_id=int(label),  # unique for each class+instance
+                points=points_np1,
+                labels=labels_np1
+            )
 
     def process_batch(self, batch_number):
         frame_filenames = sorted(
@@ -300,35 +359,9 @@ class VideoFrameProcessor:
             key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1))
             if re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE) else float('inf')
         )
-        inference_state = self.sam2_predictor.init_state(video_path=self.temp_directory)
+        inference_state = self.sam2_predictor.init_state(video_path=self.temp_directory, frame_paths=None)
         self.sam2_predictor.reset_state(inference_state)
-        points_np = np.array(self.points_collection_list[batch_number], dtype=np.float32)
-        labels_np = np.array(self.labels_collection_list[batch_number], np.int32)
-
-        # Validate labels
-        unique_labels = np.unique(np.abs(labels_np))
-        max_expected_label = 10
-        if any(label > max_expected_label for label in unique_labels):
-            raise ValueError(
-                f"Invalid labels in batch {batch_number}: {unique_labels}. Max expected: {max_expected_label}")
-
-        ensure_directory(self.rendered_frames_dirs)
-        ann_frame_idx = 0
-        for ann_obj_id in set(abs(labels_np)):
-            logger.debug(f"Processing object ID: {ann_obj_id}")
-            labels_np1 = labels_np.copy()
-            labels_np1[labels_np1 == ann_obj_id] = labels_np1[labels_np1 == ann_obj_id] // ann_obj_id
-            labels_np1[labels_np1 < 0] = 0
-            labels_np1 = labels_np1[abs(labels_np) == ann_obj_id]
-            points_np1 = points_np[abs(labels_np) == ann_obj_id]
-            _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
-                inference_state=inference_state,
-                frame_idx=ann_frame_idx,
-                clear_old_points=False,
-                obj_id=int(ann_obj_id),
-                points=points_np1,
-                labels=labels_np1
-            )
+        self.PromptEncodingImageEncoding(inference_state, batch_number)
         video_segments = {}
         for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state):
             video_segments[out_frame_idx] = {
@@ -345,65 +378,114 @@ class VideoFrameProcessor:
                 present_count = max(present_count, future.result())
         self.image_counter = present_count
 
+    def draw_text_with_background(self, image, position=(10, 30), font=cv2.FONT_HERSHEY_SIMPLEX,
+                                  font_scale=1, text_color=(255, 255, 255), bg_color=(0, 0, 0),
+                                  thickness=2, padding=5):
+        """
+        Draw text with a background rectangle on an OpenCV image.
+
+        :param image: The image to draw on (modified in-place).
+        :param text: Text string to draw.
+        :param position: Bottom-left corner of the text (x, y).
+        :param font: Font type.
+        :param font_scale: Font scale (size).
+        :param text_color: Color of the text (BGR tuple).
+        :param bg_color: Background rectangle color (BGR tuple).
+        :param thickness: Thickness of the text.
+        :param padding: Padding around the text inside the background box.
+        """
+        text = self.display_text
+        (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
+        x, y = position
+        top_left = (x - padding, y - text_height - padding)
+        bottom_right = (x + text_width + padding, y + padding)
+        cv2.rectangle(image, top_left, bottom_right, bg_color, thickness=-1)
+        cv2.putText(image, text, position, font, font_scale, text_color, thickness)
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+
     def collect_user_points(self):
         self.points_collection_list = []
         self.labels_collection_list = []
         cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Zoom View", self.window_size[0], self.window_size[1])
+
         frames_batch_paths = [self.frame_paths[i] for i in range(0, len(self.frame_paths), self.batch_size)]
+
         for frame_path in frames_batch_paths:
-            self.current_class_label = 1
-            self.current_frame = cv2.imread(frame_path)
-            cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
-            cv2.setMouseCallback("Frame", self.click_event)
+            inference_state_temp = self.sam2_predictor.init_state(
+                video_path=frame_path,
+                frame_paths=[os.path.abspath(frame_path)]
+            )
+            self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
+                frame_path)
+            self.current_class_label = self.current_instance_id = 1
+            cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+
+            parm = [inference_state_temp, frame_path]
+            cv2.setMouseCallback(self.window_name, self.click_event, parm)
+
             while True:
-                display_frame = self.current_frame.copy()
-                cv2.putText(display_frame, f"Class: {self.current_class_label}", (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.imshow("Frame", display_frame)
+                self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
+                self.draw_text_with_background(self.current_frame)
+                cv2.imshow(self.window_name, self.current_frame)
                 key = cv2.waitKey(0)
+
                 if key == 13:  # Enter key
                     self.points_collection_list.append(self.selected_points[:])
                     self.labels_collection_list.append(self.selected_labels[:])
                     self.selected_points.clear()
                     self.selected_labels.clear()
+                    cv2.destroyAllWindows()
                     break
-                if key == ord('q'):
+                elif key == ord('q'):
+                    cv2.destroyAllWindows()
                     return
-                elif key == ord('u'):  # Undo last point
+                elif key == 9:  # Tab
+                    self.current_instance_id += 1
+                    self.draw_text_with_background(self.current_frame)
+                    cv2.imshow(self.window_name, self.current_frame)
+                elif key == 353:  # Shift + Tab (key code for Windows OpenCV)
+                    if self.current_instance_id > 0:
+                        self.current_instance_id -= 1
+                        self.draw_text_with_background(self.current_frame)
+                        cv2.imshow(self.window_name, self.current_frame)
+                elif key == ord('u'):
                     if self.selected_points:
                         self.selected_points.pop()
                         self.selected_labels.pop()
                         self.current_frame = cv2.imread(frame_path)
+                        self.draw_text_with_background(self.current_frame)
+                        cv2.imshow(self.window_name, self.current_frame)
+
                         for pt, lbl in zip(self.selected_points, self.selected_labels):
-                            cv2.circle(self.current_frame, (int(pt[0]), int(pt[1])), 2, self.label_colors[lbl], -1)
-                elif key == ord('1'):
-                    self.change_class_label(1)
-                elif key == ord('2'):
-                    self.change_class_label(2)
-                elif key == ord('3'):
-                    self.change_class_label(3)
-                elif key == ord('4'):
-                    self.change_class_label(4)
-                elif key == ord('5'):
-                    self.change_class_label(5)
-                elif key == ord('6'):
-                    self.change_class_label(6)
-                elif key == ord('7'):
-                    self.change_class_label(7)
-                elif key == ord('8'):
-                    self.change_class_label(8)
-                elif key == ord('9'):
-                    self.change_class_label(9)
+                            cv2.circle(self.current_frame, (int(pt[0]), int(pt[1])), 2,
+                                       self.label_colors[lbl // 1000], -1)
+                            cv2.circle(self.current_frame_only_with_points, (int(pt[0]), int(pt[1])), 2,
+                                       self.label_colors[lbl // 1000], -1)
+                        if len(self.selected_points) > 0:
+                            self.userPromptAdder(inference_state_temp, frame_path)
+                elif key in [ord(str(i)) for i in range(1, 10)]:
+                    self.change_class_label(int(chr(key)))
                 elif key == ord('r'):
                     self.selected_points = []
                     self.selected_labels = []
-                    self.current_frame = cv2.imread(frame_path)
+                    self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
+                        frame_path)
+
         cv2.destroyAllWindows()
         self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
 
     def change_class_label(self, label):
         self.current_class_label = label
+        self.current_instance_id = 1
+        for i in self.selected_labels:
+            if i // 1000 == label:
+                self.current_instance_id = max(i % 1000, self.current_instance_id)
+        self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
+        cv2.putText(self.current_frame, self.display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                    (255, 255, 255), 2)
+        self.draw_text_with_background(self.current_frame)
+        cv2.imshow(self.window_name, self.current_frame)
 
     def show_zoom_view(self, frame, x, y, zoom_factor=4, zoom_size=200):
         height, width = frame.shape[:2]
@@ -421,16 +503,53 @@ class VideoFrameProcessor:
         cv2.circle(zoom_view, (scaled_x, scaled_y), 5, (0, 255, 0), -1)
         return zoom_view
 
-    def click_event(self, event, x, y, flags, param):
+    def userPromptAdder(self, inference_state_temp, frame_path):
+        self.sam2_predictor.reset_state(inference_state_temp)
+        self.PromptEncodingImageEncoding(inference_state_temp)
+        video_segments = {}
+        for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp):
+            video_segments[out_frame_idx] = {
+                out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
+                for i, out_obj_id in enumerate(out_obj_ids)
+            }
+        mask = self.process_frame(out_frame_idx, frame_path, video_segments, 0, save=False)
+        current_frame_org = self.current_frame_only_with_points.copy()
+        # self.current_frame = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+
+        # Make 2D mask and broadcast to 3D
+        non_zero_mask = np.any(mask > 0, axis=-1)  # (H, W)
+        non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)  # (H, W, 3)
+
+        # Perform blending
+        blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+
+        # Only update non-zero regions
+        current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
+
+        self.current_frame = current_frame_org
+
+    def click_event(self, event, x, y, flags, parm):
+        inference_state_temp = parm[0]
+        frame_path = parm[1]
         if event == cv2.EVENT_LBUTTONDOWN:
             self.selected_points.append([x, y])
-            self.selected_labels.append(self.current_class_label)
+
+            full_label = self.encode_label(self.current_class_label, self.current_instance_id)
+            self.selected_labels.append(full_label)
+
             cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
+            cv2.circle(self.current_frame_only_with_points, (x, y), 2, self.label_colors[self.current_class_label], -1)
+            self.userPromptAdder(inference_state_temp, frame_path)
         elif event == cv2.EVENT_MOUSEMOVE:
             if self.is_drawing:
                 self.selected_points.append([x, y])
-                self.selected_labels.append(self.current_class_label)
+
+                full_label = self.encode_label(self.current_class_label, self.current_instance_id)
+                self.selected_labels.append(full_label)
+
                 cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
+                cv2.circle(self.current_frame_only_with_points, (x, y), 2, self.label_colors[self.current_class_label],
+                           -1)
             zoom_view = self.show_zoom_view(self.current_frame, x, y)
             cv2.imshow("Zoom View", zoom_view)
             try:
@@ -442,9 +561,15 @@ class VideoFrameProcessor:
             self.is_drawing = False
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.selected_points.append([x, y])
-            self.selected_labels.append(self.current_class_label)
+
+            full_label = self.encode_label(self.current_class_label, self.current_instance_id)
+            self.selected_labels.append(full_label)
+
             cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
-        cv2.imshow("Frame", self.current_frame)
+            cv2.circle(self.current_frame_only_with_points, (x, y), 4, (0, 0, 255), -1)
+            self.userPromptAdder(inference_state_temp, frame_path)
+        self.draw_text_with_background(self.current_frame)
+        cv2.imshow(self.window_name, self.current_frame)
 
     def run(self):
         if os.path.exists(f"points_labels_{self.prefixFileName}{self.video_number}.json"):
@@ -462,7 +587,7 @@ class VideoFrameProcessor:
             self.process_batch(batch_index // self.batch_size)
             batch_index += self.batch_size
             logger.info('-' * 28 + " completed " + '-' * 28)
-        self.clear_directory(self.temp_directory)
+        clear_directory(self.temp_directory)
 
 
 class ImageOverlayProcessor:
@@ -628,7 +753,7 @@ class VideoCreator:
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir, verified_img_dir,
                  verified_mask_dir, prefix, batch_size, fps, final_video_path, temp_processing_dir, delete):
     """Run the entire pipeline for a single video number."""
-    logger.info(f"Processing video {video_number}")
+    print(f"Processing video {video_number}")
 
     processor = VideoFrameProcessor(
         video_number=video_number,
@@ -682,10 +807,10 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
 
 def main():
     parser = argparse.ArgumentParser(description="Automated video processing pipeline.")
-    parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
+    parser.add_argument('--video_start', type=int, default=100, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=120, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=10, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
     parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='no',
                         help='Delete working directory without verification prompt (yes/no)')
@@ -714,14 +839,15 @@ def main():
         if os.path.exists(args.working_dir_name):
             if args.delete.lower() == 'yes':
                 shutil.rmtree(args.working_dir_name)
-                logger.info(f"Cleared prev working directory: {args.working_dir_name}")
+                pass
             else:
                 confirm = input(
                     f"Do you want to clear prev working directory '{args.working_dir_name}'? (yes/no): "
                 ).lower()
                 if confirm == 'yes':
                     shutil.rmtree(args.working_dir_name)
-                    logger.info(f"Clearing prev working directory: {args.working_dir_name}")
+                    # logger.info(f"Clearing prev working directory: {args.working_dir_name}")
+                    pass
                 else:
                     logger.info(f"Working directory '{args.working_dir_name}' not deleted")
                     logger.info('Stopping the process')
