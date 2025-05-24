@@ -129,30 +129,23 @@ class VideoFrameProcessor:
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
         self.current_frame_only_text = None
-        if rendered_frames_dir is None:
-            rendered_frames_dir = './videos/outputs'
-        if window_size is None:
-            window_size = [200, 200]
-        if images_extract_dir is None:
-            images_extract_dir = './videos/images'
+        self.rendered_frames_dir = rendered_frames_dir or './videos/outputs'
+        self.frames_directory = images_extract_dir or './videos/images'
+        self.temp_directory = temp_processing_dir or './videos/temp'
+        ensure_directory(self.rendered_frames_dir)
+        ensure_directory(self.frames_directory)
+        ensure_directory(self.temp_directory)
+        self.window_size = window_size or [200, 200]
         self.current_frame_only_with_points = None
         self.window_name = "SAM2 Annotation Tool"
         self.current_class_label = 1
         self.current_instance_id = 1
         self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
-        if label_colors is None:
-            label_colors = {
-                1: (0, 0, 255),
-                2: (255, 0, 0),
-                3: (0, 255, 0),
-                4: (0, 255, 255),
-                5: (255, 0, 255),
-                6: (255, 255, 0),
-                7: (128, 0, 128),
-                8: (0, 165, 255),
-                9: (255, 255, 255),
-                10: (0, 0, 0),
-            }
+        self.label_colors = label_colors or {
+            1: (0, 0, 255), 2: (255, 0, 0), 3: (0, 255, 0), 4: (0, 255, 255),
+            5: (255, 0, 255), 6: (255, 255, 0), 7: (128, 0, 128), 8: (0, 165, 255),
+            9: (255, 255, 255), 10: (0, 0, 0)
+        }
         self.class_instance_counter = defaultdict(int)
         self.current_instance_id = 1
         if video_path_template is None:
@@ -211,16 +204,26 @@ class VideoFrameProcessor:
         return colors
 
     def save_points_and_labels(self, points_collection, labels_collection, filename=None):
-        if filename is None:
-            filename = f"points_labels_{self.prefixFileName}{self.video_number}.json"
-        with open(filename, 'w') as f:
-            json.dump({"points": points_collection, "labels": labels_collection}, f)
+        filename = filename or f"points_labels_{self.prefixFileName}{self.video_number}.json"
+        try:
+            with open(filename, 'w') as f:
+                json.dump({"points": points_collection, "labels": labels_collection}, f)
+            logger.info(f"Saved points and labels to {filename}")
+        except Exception as e:
+            logger.error(f"Error saving points and labels to {filename}: {e}")
 
     def load_points_and_labels(self):
         filename = f"points_labels_{self.prefixFileName}{self.video_number}.json"
-        with open(filename, 'r') as f:
-            data = json.load(f)
-        return data["points"], data["labels"]
+        if not os.path.exists(filename):
+            logger.warning(f"Points and labels file {filename} not found")
+            return [], []
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+            return data["points"], data["labels"]
+        except Exception as e:
+            logger.error(f"Error loading points and labels from {filename}: {e}")
+            return [], []
 
     def gpu_memory_usage(self, ind=0):
         return self.gpus[ind]
@@ -230,22 +233,13 @@ class VideoFrameProcessor:
 
     def mask2colorMaskImg(self, mask):
         colors = np.array([
-            [0, 0, 0],  # Black (Background)
-            [0, 0, 255],  # Red
-            [0, 255, 0],  # Green
-            [255, 0, 0],  # Blue
-            [0, 255, 255],  # Yellow
-            [255, 0, 255],  # Magenta
-            [255, 255, 0],  # Cyan
-            [128, 0, 128],  # Purple
-            [0, 165, 255],  # Orange
-            [255, 255, 255],  # White
+            [0, 0, 0], [0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255],
+            [255, 0, 255], [255, 255, 0], [128, 0, 128], [0, 165, 255], [255, 255, 255]
         ], dtype=np.uint8)
         max_valid_id = len(colors) - 1
         mask = np.clip(mask, 0, max_valid_id)
-        logger.debug(f"np.unique(mask): {np.unique(mask)}")
-        mask_image = colors[mask]
-        return mask_image
+        logger.debug(f"Unique mask values: {np.unique(mask)}")
+        return colors[mask]
 
     def get_frame_paths(self):
         frame_paths = []
@@ -793,12 +787,12 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
 
 def main():
     parser = argparse.ArgumentParser(description="Automated video processing pipeline.")
-    parser.add_argument('--video_start', type=int, default=100, help='Starting video number (inclusive)')
+    parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=10, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=60, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
-    parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='no',
+    parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
                         help='Delete working directory without verification prompt (yes/no)')
     parser.add_argument('--working_dir_name', type=str, default='working_dir',
                         help='Base directory name for working directories')
