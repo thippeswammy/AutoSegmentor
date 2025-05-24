@@ -350,7 +350,7 @@ class VideoFrameProcessor:
                 labels=labels_np1
             )
 
-    def process_batch(self, batch_number):
+    def process_batch(self, batch_number, isSingle=False):
         frame_filenames = sorted(
             [p for p in os.listdir(self.temp_directory) if
              os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
@@ -492,7 +492,8 @@ class VideoFrameProcessor:
         self.sam2_predictor.reset_state(inference_state_temp)
         self.PromptEncodingImageEncoding(inference_state_temp)
         video_segments = {}
-        for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp):
+        for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp,
+                                                                                                  isSingle=True):
             video_segments[out_frame_idx] = {
                 out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                 for i, out_obj_id in enumerate(out_obj_ids)
