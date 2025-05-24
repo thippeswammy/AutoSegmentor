@@ -318,7 +318,6 @@ class VideoFrameProcessor:
         else:
             points_list = self.points_collection_list[batch_number]
             label_list = self.labels_collection_list[batch_number]
-
         points_np = np.array(points_list, dtype=np.float32)
         labels_np = np.array(label_list, dtype=np.int32)
 
@@ -342,7 +341,6 @@ class VideoFrameProcessor:
 
             # Binary mask: foreground = 1, background = 0
             labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
-
             _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
                 frame_idx=ann_frame_idx,
@@ -381,19 +379,6 @@ class VideoFrameProcessor:
     def draw_text_with_background(self, image, position=(10, 30), font=cv2.FONT_HERSHEY_SIMPLEX,
                                   font_scale=1, text_color=(255, 255, 255), bg_color=(0, 0, 0),
                                   thickness=2, padding=5):
-        """
-        Draw text with a background rectangle on an OpenCV image.
-
-        :param image: The image to draw on (modified in-place).
-        :param text: Text string to draw.
-        :param position: Bottom-left corner of the text (x, y).
-        :param font: Font type.
-        :param font_scale: Font scale (size).
-        :param text_color: Color of the text (BGR tuple).
-        :param bg_color: Background rectangle color (BGR tuple).
-        :param thickness: Thickness of the text.
-        :param padding: Padding around the text inside the background box.
-        """
         text = self.display_text
         (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
         x, y = position
@@ -562,7 +547,7 @@ class VideoFrameProcessor:
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.selected_points.append([x, y])
 
-            full_label = self.encode_label(self.current_class_label, self.current_instance_id)
+            full_label = self.encode_label(self.current_class_label, self.current_instance_id) * -1
             self.selected_labels.append(full_label)
 
             cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
@@ -889,7 +874,9 @@ if __name__ == "__main__":
     main()
 
 '''
-pyinstaller --name sam2_video_predictor_long --add-data "../checkpoints\sam2_hiera_large.pt;checkpoints" --add-data "../sam2_co
-nfigs\sam2_hiera_l.yaml;sam2_configs" --add-data "../sam2_configs;sam2_configs" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor_long.py
-
+pyinstaller --name sam2_video_predictor_long --add-data "../checkpoints/sam2_hiera_large.pt;checkpoints"
+--add-data "../sam2_configs/sam2_hiera_l.yaml;sam2_configs" 
+--add-data "../sam2_configs;sam2_configs"
+--hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil
+--hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor_long.py
 '''
