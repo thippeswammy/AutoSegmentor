@@ -298,7 +298,7 @@ class VideoFrameProcessor:
             else:
                 out_mask_resized = out_mask
             mask_condition = (out_mask_resized > 0) & (full_mask == 0)
-            full_mask[mask_condition] = out_obj_id // 1000
+            full_mask[mask_condition] = abs(out_obj_id // 1000)
 
         color_mask_image = self.mask2colorMaskImg(full_mask)
         if save:
@@ -444,9 +444,9 @@ class VideoFrameProcessor:
 
                         for pt, lbl in zip(self.selected_points, self.selected_labels):
                             cv2.circle(self.current_frame, (int(pt[0]), int(pt[1])), 2,
-                                       self.label_colors[lbl // 1000], -1)
+                                       self.label_colors[abs(lbl // 1000)], -1)
                             cv2.circle(self.current_frame_only_with_points, (int(pt[0]), int(pt[1])), 2,
-                                       self.label_colors[lbl // 1000], -1)
+                                       self.label_colors[abs(lbl // 1000)], -1)
                         if len(self.selected_points) > 0:
                             self.userPromptAdder(inference_state_temp, frame_path)
                 elif key in [ord(str(i)) for i in range(1, 10)]:
@@ -464,8 +464,8 @@ class VideoFrameProcessor:
         self.current_class_label = label
         self.current_instance_id = 1
         for i in self.selected_labels:
-            if i // 1000 == label:
-                self.current_instance_id = max(i % 1000, self.current_instance_id)
+            if abs(i // 1000) == label:
+                self.current_instance_id = max(abs(i % 1000), self.current_instance_id)
         self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
         cv2.putText(self.current_frame, self.display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
                     (255, 255, 255), 2)
