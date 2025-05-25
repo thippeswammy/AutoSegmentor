@@ -64,6 +64,8 @@ class sam2_video_predictor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
+        self.prefixFileName = prefixFileName
+        self.video_number = video_number
         self.frame_list = None
         self.current_frame_only_text = None
         self.rendered_frames_dir = rendered_frames_dir or './videos/outputs'
@@ -72,6 +74,7 @@ class sam2_video_predictor:
         ensure_directory(self.rendered_frames_dir)
         ensure_directory(self.frames_directory)
         ensure_directory(self.temp_directory)
+        self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
         self.window_size = window_size or [200, 200]
         self.current_frame_only_with_points = None
         self.window_name = "SAM2 Annotation Tool"
@@ -91,8 +94,6 @@ class sam2_video_predictor:
         self.device = self.get_device()
         self.gpus = GPUtil.getGPUs()
         self.batch_size = batch_size
-        self.video_number = video_number
-        self.prefixFileName = prefixFileName
         self.video_path_template = video_path_template
         self.rendered_frames_dirs = rendered_frames_dir
         self.temp_directory = temp_processing_dir
@@ -114,7 +115,8 @@ class sam2_video_predictor:
         self.labels_collection_list = []
         self.frame_paths = self.get_frame_paths()
 
-    def get_device(self):
+    @staticmethod
+    def get_device():
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {device}")
         if device.type == "cuda":
@@ -141,7 +143,8 @@ class sam2_video_predictor:
         return sorted(frame_paths,
                       key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1)))
 
-    def mask2colorMaskImg(self, mask):
+    @staticmethod
+    def mask2colorMaskImg(mask):
         colors = np.array([
             [0, 0, 0], [0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255],
             [255, 0, 255], [255, 255, 0], [128, 0, 128], [0, 165, 255], [255, 255, 255]
@@ -154,7 +157,8 @@ class sam2_video_predictor:
     def gpu_memory_usage(self, ind=0):
         return self.gpus[ind]
 
-    def encode_label(self, class_id, instance_id):
+    @staticmethod
+    def encode_label(class_id, instance_id):
         return class_id * 1000 + instance_id
 
     def change_class_label(self, label):
@@ -169,7 +173,8 @@ class sam2_video_predictor:
         self.draw_text_with_background(self.current_frame)
         cv2.imshow(self.window_name, self.current_frame)
 
-    def show_zoom_view(self, frame, x, y, zoom_factor=4, zoom_size=200):
+    @staticmethod
+    def show_zoom_view(frame, x, y, zoom_factor=4, zoom_size=200):
         height, width = frame.shape[:2]
         half_zoom = zoom_size // 2
         x_start = max(x - half_zoom // zoom_factor, 0)
@@ -214,7 +219,6 @@ class sam2_video_predictor:
             return [], [], []
 
     def check_data_sufficiency(self):
-        self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
         total_batches = (len(self.frame_paths) + self.batch_size - 1) // self.batch_size
         if len(self.points_collection_list) >= total_batches:
             logger.info("Sufficient points and labels data for all batches")
@@ -254,7 +258,7 @@ class sam2_video_predictor:
             shutil.copy(frame_path, dst_path)
             # logger.debug(f"Copied {frame_path} to {dst_path}")
 
-    def process_batch(self, batch_number, isSingle=False):
+    def process_batch(self, batch_number):
         frame_filenames = sorted(
             [p for p in os.listdir(self.temp_directory) if
              os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
@@ -352,7 +356,8 @@ class sam2_video_predictor:
                 elif key == ord('r'):
                     self.selected_points = []
                     self.selected_labels = []
-                    self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
+                    self.current_frame = self.current_frame_only_text = (
+                        self).current_frame_only_with_points = cv2.imread(
                         frame_path)
                 elif key == ord('f'):
                     frame_idx_input = input("Enter frame index to annotate: ")
@@ -364,7 +369,8 @@ class sam2_video_predictor:
                                 video_path=frame_path,
                                 frame_paths=[os.path.abspath(frame_path)]
                             )
-                            self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
+                            self.current_frame = self.current_frame_only_text = (
+                                self).current_frame_only_with_points = cv2.imread(
                                 frame_path)
                             self.current_class_label = self.current_instance_id = 1
                             parm = [inference_state_temp, frame_path]
@@ -484,7 +490,7 @@ class sam2_video_predictor:
             labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
             _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
-                frame_idx=frame_idx // self.batch_size,
+                frame_idx=(frame_idx % self.batch_size),
                 clear_old_points=False,
                 obj_id=int(label),  # unique for each class+instance
                 points=points_np1,
@@ -536,7 +542,8 @@ class sam2_video_predictor:
             while len(self.points_collection_list) <= batch_index // self.batch_size:
                 time.sleep(1)
             logger.info(
-                f"Processing batch {(batch_index + 1) // self.batch_size + 1}/{(len(self.frame_paths) // self.batch_size) + 1}")
+                f"Processing batch {(batch_index + 1) // self.batch_size + 1}/"
+                f"{(len(self.frame_paths) // self.batch_size) + 1}")
             self.move_and_copy_frames(batch_index)
             self.process_batch(batch_index // self.batch_size)
             batch_index += self.batch_size
@@ -570,7 +577,8 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     overlay_processor.process_all_images()
     while delete != 'yes':
         user_input = input(
-            "Have you verified all the overlay masks on original images? Enter 'yes' to proceed or 'no' to exit: ").lower()
+            "Have you verified all the overlay masks on original images?"
+            " Enter 'yes' to proceed or 'no' to exit: ").lower()
         if user_input == 'yes':
             break
         elif user_input == 'no':
