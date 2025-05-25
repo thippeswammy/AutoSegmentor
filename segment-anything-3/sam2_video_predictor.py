@@ -1,6 +1,5 @@
 import argparse
 import json
-import logging
 import os
 import re
 import shutil
@@ -16,17 +15,14 @@ import numpy as np
 import pygetwindow as gw
 import torch
 
-import ImageCopier
-import ImageOverlayProcessor
-import VideoCreator
 from FrameExtractor import FrameExtractor
+from ImageCopier import ImageCopier
+from ImageOverlayProcessor import ImageOverlayProcessor
+from VideoCreator import VideoCreator
+from logger_config import logger
 # form some devices we need to set False
 # torch.backends.cuda.enable_flash_sdp(False)
 from sam2.build_sam import build_sam2_video_predictor
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 
 def ensure_directory(path):
@@ -64,7 +60,7 @@ def clear_directory(directory):
         logger.debug(f"Directory {directory} does not exist.")
 
 
-class sam2_video_predictor_long:
+class sam2_video_predictor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
@@ -151,7 +147,7 @@ class sam2_video_predictor_long:
         ], dtype=np.uint8)
         max_valid_id = len(colors) - 1
         mask = np.clip(mask, 0, max_valid_id)
-        logger.debug(f"Unique mask values: {np.unique(mask)}")
+        # logger.debug(f"Unique mask values: {np.unique(mask)}")
         return colors[mask]
 
     def gpu_memory_usage(self, ind=0):
@@ -221,7 +217,7 @@ class sam2_video_predictor_long:
         try:
             with open(filename, 'w') as f:
                 json.dump({"points": points_collection, "labels": labels_collection}, f)
-            logger.info(f"Saved points and labels to {filename}")
+            # logger.info(f"Saved points and labels to {filename}")
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
@@ -240,7 +236,7 @@ class sam2_video_predictor_long:
             new_filename = f"{frame_index}.jpg"
             dst_path = os.path.join(self.temp_directory, new_filename)
             shutil.copy(frame_path, dst_path)
-            logger.debug(f"Copied {frame_path} to {dst_path}")
+            # logger.debug(f"Copied {frame_path} to {dst_path}")
 
     def process_batch(self, batch_number, isSingle=False):
         frame_filenames = sorted(
@@ -432,7 +428,7 @@ class sam2_video_predictor_long:
         for label in unique_labels:
             class_id = label // 1000
             instance_id = label % 1000
-            logger.debug(f"Processing class {class_id}, instance {instance_id}")
+            # logger.debug(f"Processing class {class_id}, instance {instance_id}")
 
             obj_mask = np.abs(labels_np) == label
             points_np1 = points_np[obj_mask]
@@ -459,7 +455,7 @@ class sam2_video_predictor_long:
 
         for out_obj_id in sorted(video_segments[out_frame_idx].keys(), reverse=True):
             out_mask = video_segments[out_frame_idx][out_obj_id]
-            logger.debug(f"Processing object ID: {out_obj_id}")
+            # logger.debug(f"Processing object ID: {out_obj_id}")
             if out_mask.dtype == np.bool_:
                 out_mask = out_mask.astype(np.uint8)
             out_mask = out_mask.squeeze()
@@ -506,7 +502,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     """Run the entire pipeline for a single video number."""
     print(f"Processing video {video_number}")
 
-    processor = sam2_video_predictor_long(
+    processor = sam2_video_predictor(
         video_number=video_number,
         prefixFileName=prefix,
         batch_size=batch_size,

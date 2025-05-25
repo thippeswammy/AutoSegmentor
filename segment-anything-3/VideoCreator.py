@@ -1,8 +1,10 @@
 import os
 import threading
-from sam2_video_predictor_long import logger
+
 import cv2
 from tqdm import tqdm
+
+from logger_config import logger
 
 
 class VideoCreator:
