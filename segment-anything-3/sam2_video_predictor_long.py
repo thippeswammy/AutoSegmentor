@@ -15,8 +15,11 @@ import cv2
 import numpy as np
 import pygetwindow as gw
 import torch
-from tqdm import tqdm
 
+from FrameExtractor import FrameExtractor
+import ImageCopier
+import ImageOverlayProcessor
+import VideoCreator
 # form some devices we need to set False
 # torch.backends.cuda.enable_flash_sdp(False)
 from sam2.build_sam import build_sam2_video_predictor
@@ -46,69 +49,6 @@ def resource_path(relative_path):
     return full_path
 
 
-class FrameExtractor:
-    def __init__(self, video_number, prefixFileName="file", limitedImages=None, video_path_template=None,
-                 output_dir=None):
-        self.video_path = None
-        self.video_number = video_number
-        self.prefixFileName = prefixFileName
-        self.limitedImages = limitedImages
-        self.video_path_template = video_path_template
-        self.output_dir = output_dir
-        self.valid_extensions = (".jpg", ".jpeg", ".png")
-
-    def save_frame(self, frame, frame_count):
-        """Save the individual frame as a .png file."""
-        frame_filename = os.path.join(self.output_dir,
-                                      f'{self.prefixFileName}{self.video_number}_{frame_count:05d}.png')
-        cv2.imwrite(frame_filename, frame)
-
-    def extract_frames_in_range(self, start_frame, end_frame, progress_bar):
-        """Extract and save frames for a given range of frame numbers."""
-        cap = cv2.VideoCapture(self.video_path)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-
-        for frame_count in range(start_frame, end_frame):
-            ret, frame = cap.read()
-            if not ret:
-                break
-            self.save_frame(frame, frame_count)
-            progress_bar.update(1)
-
-        cap.release()
-
-    def run(self):
-        """Extract frames from the video to the output directory."""
-        if not self.video_path_template or not self.output_dir:
-            raise ValueError("Video path template and output directory must be specified.")
-
-        video_path = self.video_path_template.format(self.video_number)
-        if not os.path.exists(video_path):
-            raise FileNotFoundError(f"Video file not found: {video_path}")
-
-        os.makedirs(self.output_dir, exist_ok=True)
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            raise RuntimeError(f"Failed to open video: {video_path}")
-
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_limit = self.limitedImages if self.limitedImages is not None else total_frames
-
-        with tqdm(total=min(frame_limit, total_frames), desc="Extracting Frames") as pbar:
-            frame_count = 0
-            while cap.isOpened() and frame_count < frame_limit:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                output_path = os.path.join(self.output_dir,
-                                           f"{self.prefixFileName}{self.video_number}_{frame_count:05d}.jpeg")
-                cv2.imwrite(output_path, frame)
-                frame_count += 1
-                pbar.update(1)
-
-        cap.release()
-
-
 def clear_directory(directory):
     if os.path.exists(directory):
         for filename in os.listdir(directory):
@@ -124,7 +64,7 @@ def clear_directory(directory):
         logger.debug(f"Directory {directory} does not exist.")
 
 
-class VideoFrameProcessor:
+class sam2_video_predictor_long:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
@@ -570,172 +510,12 @@ class VideoFrameProcessor:
         clear_directory(self.temp_directory)
 
 
-class ImageOverlayProcessor:
-    def __init__(self, original_folder, mask_folder, output_folder, all_consider='', image_count=0):
-        self.original_folder = original_folder
-        self.mask_folder = mask_folder
-        self.output_folder = output_folder
-        self.all_consider = all_consider
-        self.image_count = image_count
-        self.valid_extensions = ('.png', '.jpg', '.jpeg')
-        ensure_directory(self.output_folder)
-        self.original_images = self._filter_original_images()
-
-    def _filter_original_images(self):
-        all_images = sorted(
-            [img for img in os.listdir(self.original_folder) if img.lower().endswith(self.valid_extensions)]
-        )
-        if self.all_consider:
-            return all_images
-        filtered_images = []
-        count = 0
-        for img in all_images:
-            if img.split('_')[0] == self.all_consider:
-                if count >= self.image_count:
-                    filtered_images.append(img)
-                count += 1
-        return filtered_images
-
-    def load_image_and_mask(self, image_name):
-        original_image_path = os.path.join(self.original_folder, image_name)
-        mask_image_name = os.path.splitext(image_name)[0] + '.png'
-        mask_image_path = os.path.join(self.mask_folder, mask_image_name)
-        if not os.path.exists(mask_image_path):
-            return None, None
-        original_image = cv2.imread(original_image_path)
-        mask_image = cv2.imread(mask_image_path, cv2.IMREAD_GRAYSCALE)
-        return original_image, mask_image
-
-    def overlay_mask_on_image(self, original_image, mask_image):
-        if len(mask_image.shape) == 2:
-            mask_image = cv2.cvtColor(mask_image, cv2.COLOR_GRAY2BGR)
-        return cv2.addWeighted(original_image, 0.5, mask_image, 0.5, 0)
-
-    def process_image(self, img_name):
-        original_image, mask_image = self.load_image_and_mask(img_name)
-        if original_image is not None and mask_image is not None:
-            combined_image = self.overlay_mask_on_image(original_image, mask_image)
-            output_image_path = os.path.join(self.output_folder, img_name)
-            cv2.imwrite(output_image_path, combined_image)
-
-    def process_all_images(self):
-        with tqdm(total=len(self.original_images), desc="Processing Images") as pbar:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = {executor.submit(self.process_image, img_name): img_name for img_name in self.original_images}
-                for future in futures:
-                    future.result()
-                    pbar.update(1)
-
-
-class ImageCopier:
-    def __init__(self, original_folder, mask_folder, overlap_images_folder, output_original_folder, output_mask_folder):
-        self.original_folder = original_folder
-        self.mask_folder = mask_folder
-        self.overlap_images_folder = overlap_images_folder
-        self.output_original_folder = output_original_folder
-        self.output_mask_folder = output_mask_folder
-        self.valid_extensions = ('.png', '.jpg', '.jpeg')
-
-    def copy_image(self, src, dst):
-        if os.path.exists(dst):
-            base, ext = os.path.splitext(os.path.basename(src))
-            counter = 1
-            while os.path.exists(dst):
-                new_filename = f"{base}_{counter}{ext}"
-                dst = os.path.join(os.path.dirname(dst), new_filename)
-                counter += 1
-        shutil.copy2(src, dst)
-
-    def _get_overlap_filenames(self):
-        return {os.path.splitext(filename)[0].lower() for filename in os.listdir(self.overlap_images_folder)
-                if filename.lower().endswith(self.valid_extensions)}
-
-    def _filter_images_to_copy(self, images):
-        overlap_filenames = self._get_overlap_filenames()
-        return [img for img in images if os.path.splitext(os.path.basename(img))[0].lower() in overlap_filenames]
-
-    def copy_images(self):
-        ensure_directory(self.output_original_folder)
-        ensure_directory(self.output_mask_folder)
-        original_images = [os.path.join(self.original_folder, filename) for filename in os.listdir(self.original_folder)
-                           if filename.endswith(self.valid_extensions)]
-        mask_images = [os.path.join(self.mask_folder, filename) for filename in os.listdir(self.mask_folder)
-                       if filename.endswith(self.valid_extensions)]
-        original_images_to_copy = self._filter_images_to_copy(original_images)
-        mask_images_to_copy = self._filter_images_to_copy(mask_images)
-        with tqdm(total=len(original_images_to_copy), desc='Copying Original Images') as pbar:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = {executor.submit(self.copy_image, img,
-                                           os.path.join(self.output_original_folder, os.path.basename(img))): img
-                           for img in original_images_to_copy}
-                for future in futures:
-                    future.result()
-                    pbar.update(1)
-        with tqdm(total=len(mask_images_to_copy), desc='Copying Mask Images') as pbar:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = {executor.submit(self.copy_image, img,
-                                           os.path.join(self.output_mask_folder, os.path.basename(img))): img
-                           for img in mask_images_to_copy}
-                for future in futures:
-                    future.result()
-                    pbar.update(1)
-
-
-class VideoCreator:
-    def __init__(self, image_folders, video_names, fps=30):
-        self.image_folders = image_folders
-        self.video_names = video_names
-        self.fps = fps
-        self.valid_extensions = ('.png', '.jpg', '.jpeg')
-        self.lock = threading.Lock()
-        self.total_images = sum(len([img for img in os.listdir(folder) if img.endswith(self.valid_extensions)])
-                                for folder in image_folders)
-        self.processed_images = 0
-
-    def create_video(self, image_folder, video_name, progress_bar):
-        images = sorted([img for img in os.listdir(image_folder) if img.endswith(self.valid_extensions)])
-        if not images:
-            logger.warning(f"No images found in {image_folder}.")
-            return
-        first_image = os.path.join(image_folder, images[0])
-        frame = cv2.imread(first_image)
-        height, width, layers = frame.shape
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(video_name, fourcc, self.fps, (width, height))
-        try:
-            for image in images:
-                img_path = os.path.join(image_folder, image)
-                img = cv2.imread(img_path)
-                video.write(img)
-                with self.lock:
-                    self.processed_images += 1
-                    progress_bar.update(1)
-        finally:
-            video.release()
-        cap = cv2.VideoCapture(video_name)
-        if not cap.isOpened():
-            logger.error(f"Failed to create valid video: {video_name}")
-        else:
-            logger.info(f"Video saved as {video_name}")
-        cap.release()
-
-    def run(self):
-        with tqdm(total=self.total_images, desc="Creating Videos", unit="frame") as pbar:
-            threads = []
-            for folder, name in zip(self.image_folders, self.video_names):
-                thread = threading.Thread(target=self.create_video, args=(folder, name, pbar))
-                threads.append(thread)
-                thread.start()
-            for thread in threads:
-                thread.join()
-
-
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir, verified_img_dir,
                  verified_mask_dir, prefix, batch_size, fps, final_video_path, temp_processing_dir, delete):
     """Run the entire pipeline for a single video number."""
     print(f"Processing video {video_number}")
 
-    processor = VideoFrameProcessor(
+    processor = sam2_video_predictor_long(
         video_number=video_number,
         prefixFileName=prefix,
         batch_size=batch_size,
@@ -787,10 +567,10 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
 
 def main():
     parser = argparse.ArgumentParser(description="Automated video processing pipeline.")
-    parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
+    parser.add_argument('--video_start', type=int, default=99, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=60, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=10, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
     parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
                         help='Delete working directory without verification prompt (yes/no)')
