@@ -64,6 +64,7 @@ class sam2_video_predictor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
+        self.frame_list = None
         self.current_frame_only_text = None
         self.rendered_frames_dir = rendered_frames_dir or './videos/outputs'
         self.frames_directory = images_extract_dir or './videos/images'
@@ -196,28 +197,43 @@ class sam2_video_predictor:
         cv2.putText(image, text, position, font, font_scale, text_color, thickness)
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
-    def load_user_points(self):
-        self.points_collection_list, self.labels_collection_list = self.load_points_and_labels()
-
     def load_points_and_labels(self):
         filename = f"points_labels_{self.prefixFileName}{self.video_number}.json"
         if not os.path.exists(filename):
             logger.warning(f"Points and labels file {filename} not found")
-            return [], []
+            return [], [], []
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)
-            return data["points"], data["labels"]
+            points_collection = [entry["points"] for entry in data]
+            labels_collection = [entry["labels"] for entry in data]
+            frame_indices = [entry["frame_idx"] for entry in data]
+            return points_collection, labels_collection, frame_indices
         except Exception as e:
             logger.error(f"Error loading points and labels from {filename}: {e}")
-            return [], []
+            return [], [], []
 
-    def save_points_and_labels(self, points_collection, labels_collection, filename=None):
+    def check_data_sufficiency(self):
+        self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
+        total_batches = (len(self.frame_paths) + self.batch_size - 1) // self.batch_size
+        if len(self.points_collection_list) >= total_batches:
+            logger.info("Sufficient points and labels data for all batches")
+            return 0  # Start from the first batch (all data is available)
+        else:
+            missing_batches = total_batches - len(self.points_collection_list)
+            logger.info(f"Missing points and labels for {missing_batches} batches")
+            return len(self.points_collection_list) * self.batch_size  # Start from the first missing batch
+
+    def save_points_and_labels(self, points_collection, labels_collection, frame_indices, filename=None):
         filename = filename or f"points_labels_{self.prefixFileName}{self.video_number}.json"
+        data = [
+            {"frame_idx": frame_idx, "points": points, "labels": labels}
+            for frame_idx, points, labels in zip(frame_indices, points_collection, labels_collection)
+        ]
         try:
             with open(filename, 'w') as f:
-                json.dump({"points": points_collection, "labels": labels_collection}, f)
-            # logger.info(f"Saved points and labels to {filename}")
+                json.dump(data, f, indent=2)
+            # logger.info(f"Saved points, labels, and frame indices to {filename}")
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
@@ -254,26 +270,28 @@ class sam2_video_predictor:
                 out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                 for i, out_obj_id in enumerate(out_obj_ids)
             }
-
         present_count = self.image_counter
         with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
             futures = [
-                executor.submit(self.binary_mask_2_color_mask, out_frame_idx, frame_filenames, video_segments,
-                                present_count + i)
-                for i, out_frame_idx in enumerate(range(len(frame_filenames)))]
+                executor.submit(self.binary_mask_2_color_mask, out_frame_idx,
+                                frame_filenames, video_segments, present_count + i)
+                for i, out_frame_idx in enumerate(sorted(video_segments.keys()))]
             for future in futures:
                 present_count = max(present_count, future.result())
         self.image_counter = present_count
 
     def collect_user_points(self):
-        self.points_collection_list = []
-        self.labels_collection_list = []
+        self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
         cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Zoom View", self.window_size[0], self.window_size[1])
 
-        frames_batch_paths = [self.frame_paths[i] for i in range(0, len(self.frame_paths), self.batch_size)]
+        start_batch_idx = self.check_data_sufficiency()
+        frames_batch_paths = [self.frame_paths[i] for i in
+                              range(start_batch_idx, len(self.frame_paths), self.batch_size)]
 
-        for frame_path in frames_batch_paths:
+        for i, frame_path in enumerate(frames_batch_paths):
+            batch_idx = (start_batch_idx // self.batch_size) + i
+            frame_idx = batch_idx * self.batch_size
             inference_state_temp = self.sam2_predictor.init_state(
                 video_path=frame_path,
                 frame_paths=[os.path.abspath(frame_path)]
@@ -296,11 +314,13 @@ class sam2_video_predictor:
                     if len(self.selected_points) > 0:
                         self.points_collection_list.append(self.selected_points[:])
                         self.labels_collection_list.append(self.selected_labels[:])
-                        self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
-                        self.selected_points.clear()
-                        self.selected_labels.clear()
-                        cv2.destroyAllWindows()
-                        break
+                        self.frame_indices.append(frame_idx)
+                        self.save_points_and_labels(self.points_collection_list, self.labels_collection_list,
+                                                    self.frame_indices)
+                    self.selected_points.clear()
+                    self.selected_labels.clear()
+                    cv2.destroyAllWindows()
+                    break
                 elif key == ord('q'):
                     cv2.destroyAllWindows()
                     return
@@ -308,7 +328,7 @@ class sam2_video_predictor:
                     self.current_instance_id += 1
                     self.draw_text_with_background(self.current_frame)
                     cv2.imshow(self.window_name, self.current_frame)
-                elif key == 353:  # Shift + Tab (key code for Windows OpenCV)
+                elif key == 353:  # Shift + Tab
                     if self.current_instance_id > 0:
                         self.current_instance_id -= 1
                         self.draw_text_with_background(self.current_frame)
@@ -320,7 +340,6 @@ class sam2_video_predictor:
                         self.current_frame = cv2.imread(frame_path)
                         self.draw_text_with_background(self.current_frame)
                         cv2.imshow(self.window_name, self.current_frame)
-
                         for pt, lbl in zip(self.selected_points, self.selected_labels):
                             cv2.circle(self.current_frame, (int(pt[0]), int(pt[1])), 2,
                                        self.label_colors[abs(lbl // 1000)], -1)
@@ -335,7 +354,34 @@ class sam2_video_predictor:
                     self.selected_labels = []
                     self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
                         frame_path)
-            self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
+                elif key == ord('f'):
+                    frame_idx_input = input("Enter frame index to annotate: ")
+                    try:
+                        new_frame_idx = int(frame_idx_input)
+                        if 0 <= new_frame_idx < len(self.frame_paths):
+                            frame_path = self.frame_paths[new_frame_idx]
+                            inference_state_temp = self.sam2_predictor.init_state(
+                                video_path=frame_path,
+                                frame_paths=[os.path.abspath(frame_path)]
+                            )
+                            self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
+                                frame_path)
+                            self.current_class_label = self.current_instance_id = 1
+                            parm = [inference_state_temp, frame_path]
+                            cv2.setMouseCallback(self.window_name, self.click_event, parm)
+                            if len(self.selected_points) > 0:
+                                self.points_collection_list.append(self.selected_points[:])
+                                self.labels_collection_list.append(self.selected_labels[:])
+                                self.frame_indices.append(new_frame_idx)
+                                self.save_points_and_labels(self.points_collection_list, self.labels_collection_list,
+                                                            self.frame_indices)
+                            self.selected_points.clear()
+                            self.selected_labels.clear()
+                        else:
+                            logger.warning(f"Invalid frame index: {new_frame_idx}")
+                    except ValueError:
+                        logger.warning("Invalid input for frame index")
+            self.save_points_and_labels(self.points_collection_list, self.labels_collection_list, self.frame_indices)
         cv2.destroyAllWindows()
 
     def click_event(self, event, x, y, flags, parm):
@@ -411,9 +457,11 @@ class sam2_video_predictor:
         if batch_number == -1:
             points_list = self.selected_points
             label_list = self.selected_labels
+            frame_idx = 0
         else:
             points_list = self.points_collection_list[batch_number]
             label_list = self.labels_collection_list[batch_number]
+            frame_idx = self.frame_indices[batch_number]
         points_np = np.array(points_list, dtype=np.float32)
         labels_np = np.array(label_list, dtype=np.int32)
 
@@ -425,12 +473,9 @@ class sam2_video_predictor:
                 f"Invalid labels in batch {batch_number}: {unique_labels}. Max expected: {max_expected_label}")
 
         ensure_directory(self.rendered_frames_dirs)
-        ann_frame_idx = 0
         for label in unique_labels:
-            class_id = label // 1000
-            instance_id = label % 1000
-            # logger.debug(f"Processing class {class_id}, instance {instance_id}")
-
+            # class_id = label // 1000
+            # instance_id = label % 1000
             obj_mask = np.abs(labels_np) == label
             points_np1 = points_np[obj_mask]
             raw_labels_np1 = labels_np[obj_mask]
@@ -439,7 +484,7 @@ class sam2_video_predictor:
             labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
             _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
-                frame_idx=ann_frame_idx,
+                frame_idx=frame_idx // self.batch_size,
                 clear_old_points=False,
                 obj_id=int(label),  # unique for each class+instance
                 points=points_np1,
@@ -480,11 +525,12 @@ class sam2_video_predictor:
         return present_count + 1
 
     def run(self):
-        if os.path.exists(f"points_labels_{self.prefixFileName}{self.video_number}.json"):
-            self.load_user_points()
-        else:
-            thread = threading.Thread(target=self.collect_user_points)
-            thread.start()
+        start_batch_idx = self.check_data_sufficiency()
+        # if start_batch_idx > 0:
+        logger.info(f"Starting point collection from batch {start_batch_idx // self.batch_size + 1}")
+        thread = threading.Thread(target=self.collect_user_points)
+        thread.start()
+
         batch_index = 0
         while batch_index < len(self.frame_paths):
             while len(self.points_collection_list) <= batch_index // self.batch_size:
