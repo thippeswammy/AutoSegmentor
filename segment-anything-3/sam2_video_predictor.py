@@ -15,6 +15,7 @@ import numpy as np
 import pygetwindow as gw
 import torch
 
+print(torch.cuda.get_device_name(0))
 from FrameExtractor import FrameExtractor
 from ImageCopier import ImageCopier
 from ImageOverlayProcessor import ImageOverlayProcessor
@@ -22,6 +23,8 @@ from VideoCreator import VideoCreator
 from logger_config import logger
 # form some devices we need to set False
 # torch.backends.cuda.enable_flash_sdp(False)
+
+
 from sam2.build_sam import build_sam2_video_predictor
 
 
@@ -203,7 +206,7 @@ class sam2_video_predictor:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def load_points_and_labels(self):
-        filename = f"points_labels_{self.prefixFileName}{self.video_number}.json"
+        filename = f"./UserPrompts/points_labels_{self.prefixFileName}{self.video_number}.json"
         if not os.path.exists(filename):
             logger.warning(f"Points and labels file {filename} not found")
             return [], [], []
@@ -229,7 +232,7 @@ class sam2_video_predictor:
             return len(self.points_collection_list) * self.batch_size  # Start from the first missing batch
 
     def save_points_and_labels(self, points_collection, labels_collection, frame_indices, filename=None):
-        filename = filename or f"points_labels_{self.prefixFileName}{self.video_number}.json"
+        filename = filename or f"./UserPrompts/points_labels_{self.prefixFileName}{self.video_number}.json"
         data = [
             {"frame_idx": frame_idx, "points": points, "labels": labels}
             for frame_idx, points, labels in zip(frame_indices, points_collection, labels_collection)
