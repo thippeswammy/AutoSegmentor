@@ -16,10 +16,10 @@ import numpy as np
 import pygetwindow as gw
 import torch
 
-from FrameExtractor import FrameExtractor
 import ImageCopier
 import ImageOverlayProcessor
 import VideoCreator
+from FrameExtractor import FrameExtractor
 # form some devices we need to set False
 # torch.backends.cuda.enable_flash_sdp(False)
 from sam2.build_sam import build_sam2_video_predictor
@@ -108,8 +108,6 @@ class sam2_video_predictor_long:
                                    output_dir=images_extract_dir)
         extractor.run()
         self.is_drawing = is_drawing
-        self.window_size = window_size
-        self.label_colors = label_colors
         self.image_counter = images_starting_count
         self.current_class_label = 1
         self.current_frame = None
@@ -117,7 +115,6 @@ class sam2_video_predictor_long:
         self.selected_labels = []
         self.points_collection_list = []
         self.labels_collection_list = []
-        self.color_map = self.get_color_map(9)
         self.frame_paths = self.get_frame_paths()
 
     def get_device(self):
@@ -128,58 +125,10 @@ class sam2_video_predictor_long:
             torch.backends.cudnn.allow_tf32 = True
         return device
 
-    def encode_label(self, class_id, instance_id):
-        return class_id * 1000 + instance_id
-
     def build_predictor(self):
         return build_sam2_video_predictor(
             self.model_config, self.sam2_checkpoint, device=self.device
         )
-
-    def get_color_map(self, num_colors):
-        colors = []
-        for _ in range(num_colors):
-            color = np.random.randint(0, 256, size=3).tolist()
-            colors.append(color)
-        return colors
-
-    def save_points_and_labels(self, points_collection, labels_collection, filename=None):
-        filename = filename or f"points_labels_{self.prefixFileName}{self.video_number}.json"
-        try:
-            with open(filename, 'w') as f:
-                json.dump({"points": points_collection, "labels": labels_collection}, f)
-            logger.info(f"Saved points and labels to {filename}")
-        except Exception as e:
-            logger.error(f"Error saving points and labels to {filename}: {e}")
-
-    def load_points_and_labels(self):
-        filename = f"points_labels_{self.prefixFileName}{self.video_number}.json"
-        if not os.path.exists(filename):
-            logger.warning(f"Points and labels file {filename} not found")
-            return [], []
-        try:
-            with open(filename, 'r') as f:
-                data = json.load(f)
-            return data["points"], data["labels"]
-        except Exception as e:
-            logger.error(f"Error loading points and labels from {filename}: {e}")
-            return [], []
-
-    def gpu_memory_usage(self, ind=0):
-        return self.gpus[ind]
-
-    def load_user_points(self):
-        self.points_collection_list, self.labels_collection_list = self.load_points_and_labels()
-
-    def mask2colorMaskImg(self, mask):
-        colors = np.array([
-            [0, 0, 0], [0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255],
-            [255, 0, 255], [255, 255, 0], [128, 0, 128], [0, 165, 255], [255, 255, 255]
-        ], dtype=np.uint8)
-        max_valid_id = len(colors) - 1
-        mask = np.clip(mask, 0, max_valid_id)
-        logger.debug(f"Unique mask values: {np.unique(mask)}")
-        return colors[mask]
 
     def get_frame_paths(self):
         frame_paths = []
@@ -194,6 +143,87 @@ class sam2_video_predictor_long:
         # Sort by the numeric frame index
         return sorted(frame_paths,
                       key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1)))
+
+    def mask2colorMaskImg(self, mask):
+        colors = np.array([
+            [0, 0, 0], [0, 0, 255], [0, 255, 0], [255, 0, 0], [0, 255, 255],
+            [255, 0, 255], [255, 255, 0], [128, 0, 128], [0, 165, 255], [255, 255, 255]
+        ], dtype=np.uint8)
+        max_valid_id = len(colors) - 1
+        mask = np.clip(mask, 0, max_valid_id)
+        logger.debug(f"Unique mask values: {np.unique(mask)}")
+        return colors[mask]
+
+    def gpu_memory_usage(self, ind=0):
+        return self.gpus[ind]
+
+    def encode_label(self, class_id, instance_id):
+        return class_id * 1000 + instance_id
+
+    def change_class_label(self, label):
+        self.current_class_label = label
+        self.current_instance_id = 1
+        for i in self.selected_labels:
+            if abs(i // 1000) == label:
+                self.current_instance_id = max(abs(i % 1000), self.current_instance_id)
+        self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
+        cv2.putText(self.current_frame, self.display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                    (255, 255, 255), 2)
+        self.draw_text_with_background(self.current_frame)
+        cv2.imshow(self.window_name, self.current_frame)
+
+    def show_zoom_view(self, frame, x, y, zoom_factor=4, zoom_size=200):
+        height, width = frame.shape[:2]
+        half_zoom = zoom_size // 2
+        x_start = max(x - half_zoom // zoom_factor, 0)
+        x_end = min(x + half_zoom // zoom_factor, width)
+        y_start = max(y - half_zoom // zoom_factor, 0)
+        y_end = min(y + half_zoom // zoom_factor, height)
+        zoomed_area = frame[y_start:y_end, x_start:x_end]
+        zoomed_area_resized = cv2.resize(zoomed_area, (zoom_size, zoom_size), interpolation=cv2.INTER_LINEAR)
+        zoom_view = np.zeros((zoom_size, zoom_size, 3), dtype=np.uint8)
+        zoom_view[:zoom_size, :zoom_size] = zoomed_area_resized
+        scaled_x = zoom_size // 2
+        scaled_y = zoom_size // 2
+        cv2.circle(zoom_view, (scaled_x, scaled_y), 5, (0, 255, 0), -1)
+        return zoom_view
+
+    def draw_text_with_background(self, image, position=(10, 30), font=cv2.FONT_HERSHEY_SIMPLEX,
+                                  font_scale=1, text_color=(255, 255, 255), bg_color=(0, 0, 0),
+                                  thickness=2, padding=5):
+        text = self.display_text
+        (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
+        x, y = position
+        top_left = (x - padding, y - text_height - padding)
+        bottom_right = (x + text_width + padding, y + padding)
+        cv2.rectangle(image, top_left, bottom_right, bg_color, thickness=-1)
+        cv2.putText(image, text, position, font, font_scale, text_color, thickness)
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+
+    def load_user_points(self):
+        self.points_collection_list, self.labels_collection_list = self.load_points_and_labels()
+
+    def load_points_and_labels(self):
+        filename = f"points_labels_{self.prefixFileName}{self.video_number}.json"
+        if not os.path.exists(filename):
+            logger.warning(f"Points and labels file {filename} not found")
+            return [], []
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+            return data["points"], data["labels"]
+        except Exception as e:
+            logger.error(f"Error loading points and labels from {filename}: {e}")
+            return [], []
+
+    def save_points_and_labels(self, points_collection, labels_collection, filename=None):
+        filename = filename or f"points_labels_{self.prefixFileName}{self.video_number}.json"
+        try:
+            with open(filename, 'w') as f:
+                json.dump({"points": points_collection, "labels": labels_collection}, f)
+            logger.info(f"Saved points and labels to {filename}")
+        except Exception as e:
+            logger.error(f"Error saving points and labels to {filename}: {e}")
 
     def move_and_copy_frames(self, batch_index):
         frames_to_copy = self.frame_paths[batch_index:batch_index + self.batch_size]
@@ -212,78 +242,6 @@ class sam2_video_predictor_long:
             shutil.copy(frame_path, dst_path)
             logger.debug(f"Copied {frame_path} to {dst_path}")
 
-    def process_frame(self, out_frame_idx, frame_filenames, video_segments, present_count, save=True):
-        if save:
-            frame_path = os.path.join(self.temp_directory, frame_filenames[out_frame_idx])
-        else:
-            frame_path = frame_filenames
-        frame = cv2.imread(frame_path)
-        full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-
-        for out_obj_id in sorted(video_segments[out_frame_idx].keys(), reverse=True):
-            out_mask = video_segments[out_frame_idx][out_obj_id]
-            logger.debug(f"Processing object ID: {out_obj_id}")
-            if out_mask.dtype == np.bool_:
-                out_mask = out_mask.astype(np.uint8)
-            out_mask = out_mask.squeeze()
-            if out_mask.shape[:2] != (frame.shape[0], frame.shape[1]):
-                out_mask_resized = cv2.resize(out_mask, (frame.shape[1], frame.shape[0]),
-                                              interpolation=cv2.INTER_NEAREST_EXACT)
-            else:
-                out_mask_resized = out_mask
-            mask_condition = (out_mask_resized > 0) & (full_mask == 0)
-            full_mask[mask_condition] = abs(out_obj_id // 1000)
-
-        color_mask_image = self.mask2colorMaskImg(full_mask)
-        if save:
-            cv2.imwrite(
-                os.path.join(self.rendered_frames_dirs,
-                             f"{self.prefixFileName}{self.video_number}_{present_count:05d}.png"),
-                color_mask_image
-            )
-        else:
-            return color_mask_image
-        return present_count + 1
-
-    def PromptEncodingImageEncoding(self, inference_state, batch_number=-1):
-        if batch_number == -1:
-            points_list = self.selected_points
-            label_list = self.selected_labels
-        else:
-            points_list = self.points_collection_list[batch_number]
-            label_list = self.labels_collection_list[batch_number]
-        points_np = np.array(points_list, dtype=np.float32)
-        labels_np = np.array(label_list, dtype=np.int32)
-
-        # Validate labels
-        unique_labels = np.unique(np.abs(labels_np))
-        max_expected_label = 10
-        if unique_labels is None:
-            raise ValueError(
-                f"Invalid labels in batch {batch_number}: {unique_labels}. Max expected: {max_expected_label}")
-
-        ensure_directory(self.rendered_frames_dirs)
-        ann_frame_idx = 0
-        for label in unique_labels:
-            class_id = label // 1000
-            instance_id = label % 1000
-            logger.debug(f"Processing class {class_id}, instance {instance_id}")
-
-            obj_mask = np.abs(labels_np) == label
-            points_np1 = points_np[obj_mask]
-            raw_labels_np1 = labels_np[obj_mask]
-
-            # Binary mask: foreground = 1, background = 0
-            labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
-            _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
-                inference_state=inference_state,
-                frame_idx=ann_frame_idx,
-                clear_old_points=False,
-                obj_id=int(label),  # unique for each class+instance
-                points=points_np1,
-                labels=labels_np1
-            )
-
     def process_batch(self, batch_number, isSingle=False):
         frame_filenames = sorted(
             [p for p in os.listdir(self.temp_directory) if
@@ -293,7 +251,7 @@ class sam2_video_predictor_long:
         )
         inference_state = self.sam2_predictor.init_state(video_path=self.temp_directory, frame_paths=None)
         self.sam2_predictor.reset_state(inference_state)
-        self.PromptEncodingImageEncoding(inference_state, batch_number)
+        self.PromptEncodingWithImageEncoding(inference_state, batch_number)
         video_segments = {}
         for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state):
             video_segments[out_frame_idx] = {
@@ -304,23 +262,12 @@ class sam2_video_predictor_long:
         present_count = self.image_counter
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [
-                executor.submit(self.process_frame, out_frame_idx, frame_filenames, video_segments, present_count + i)
+                executor.submit(self.binary_mask_2_color_mask, out_frame_idx, frame_filenames, video_segments,
+                                present_count + i)
                 for i, out_frame_idx in enumerate(range(len(frame_filenames)))]
             for future in futures:
                 present_count = max(present_count, future.result())
         self.image_counter = present_count
-
-    def draw_text_with_background(self, image, position=(10, 30), font=cv2.FONT_HERSHEY_SIMPLEX,
-                                  font_scale=1, text_color=(255, 255, 255), bg_color=(0, 0, 0),
-                                  thickness=2, padding=5):
-        text = self.display_text
-        (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
-        x, y = position
-        top_left = (x - padding, y - text_height - padding)
-        bottom_right = (x + text_width + padding, y + padding)
-        cv2.rectangle(image, top_left, bottom_right, bg_color, thickness=-1)
-        cv2.putText(image, text, position, font, font_scale, text_color, thickness)
-        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def collect_user_points(self):
         self.points_collection_list = []
@@ -394,60 +341,6 @@ class sam2_video_predictor_long:
         cv2.destroyAllWindows()
         self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
 
-    def change_class_label(self, label):
-        self.current_class_label = label
-        self.current_instance_id = 1
-        for i in self.selected_labels:
-            if abs(i // 1000) == label:
-                self.current_instance_id = max(abs(i % 1000), self.current_instance_id)
-        self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
-        cv2.putText(self.current_frame, self.display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
-                    (255, 255, 255), 2)
-        self.draw_text_with_background(self.current_frame)
-        cv2.imshow(self.window_name, self.current_frame)
-
-    def show_zoom_view(self, frame, x, y, zoom_factor=4, zoom_size=200):
-        height, width = frame.shape[:2]
-        half_zoom = zoom_size // 2
-        x_start = max(x - half_zoom // zoom_factor, 0)
-        x_end = min(x + half_zoom // zoom_factor, width)
-        y_start = max(y - half_zoom // zoom_factor, 0)
-        y_end = min(y + half_zoom // zoom_factor, height)
-        zoomed_area = frame[y_start:y_end, x_start:x_end]
-        zoomed_area_resized = cv2.resize(zoomed_area, (zoom_size, zoom_size), interpolation=cv2.INTER_LINEAR)
-        zoom_view = np.zeros((zoom_size, zoom_size, 3), dtype=np.uint8)
-        zoom_view[:zoom_size, :zoom_size] = zoomed_area_resized
-        scaled_x = zoom_size // 2
-        scaled_y = zoom_size // 2
-        cv2.circle(zoom_view, (scaled_x, scaled_y), 5, (0, 255, 0), -1)
-        return zoom_view
-
-    def userPromptAdder(self, inference_state_temp, frame_path):
-        self.sam2_predictor.reset_state(inference_state_temp)
-        self.PromptEncodingImageEncoding(inference_state_temp)
-        video_segments = {}
-        for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp,
-                                                                                                  isSingle=True):
-            video_segments[out_frame_idx] = {
-                out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
-                for i, out_obj_id in enumerate(out_obj_ids)
-            }
-        mask = self.process_frame(out_frame_idx, frame_path, video_segments, 0, save=False)
-        current_frame_org = self.current_frame_only_with_points.copy()
-        # self.current_frame = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
-
-        # Make 2D mask and broadcast to 3D
-        non_zero_mask = np.any(mask > 0, axis=-1)  # (H, W)
-        non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)  # (H, W, 3)
-
-        # Perform blending
-        blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
-
-        # Only update non-zero regions
-        current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
-
-        self.current_frame = current_frame_org
-
     def click_event(self, event, x, y, flags, parm):
         inference_state_temp = parm[0]
         frame_path = parm[1]
@@ -490,6 +383,104 @@ class sam2_video_predictor_long:
             self.userPromptAdder(inference_state_temp, frame_path)
         self.draw_text_with_background(self.current_frame)
         cv2.imshow(self.window_name, self.current_frame)
+
+    def userPromptAdder(self, inference_state_temp, frame_path):
+        self.sam2_predictor.reset_state(inference_state_temp)
+        self.PromptEncodingWithImageEncoding(inference_state_temp)
+        video_segments = {}
+        for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp,
+                                                                                                  isSingle=True):
+            video_segments[out_frame_idx] = {
+                out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
+                for i, out_obj_id in enumerate(out_obj_ids)
+            }
+        mask = self.binary_mask_2_color_mask(out_frame_idx, frame_path, video_segments, 0, save=False)
+        current_frame_org = self.current_frame_only_with_points.copy()
+        # self.current_frame = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+
+        # Make 2D mask and broadcast to 3D
+        non_zero_mask = np.any(mask > 0, axis=-1)  # (H, W)
+        non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)  # (H, W, 3)
+
+        # Perform blending
+        blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+
+        # Only update non-zero regions
+        current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
+
+        self.current_frame = current_frame_org
+
+    def PromptEncodingWithImageEncoding(self, inference_state, batch_number=-1):
+        if batch_number == -1:
+            points_list = self.selected_points
+            label_list = self.selected_labels
+        else:
+            points_list = self.points_collection_list[batch_number]
+            label_list = self.labels_collection_list[batch_number]
+        points_np = np.array(points_list, dtype=np.float32)
+        labels_np = np.array(label_list, dtype=np.int32)
+
+        # Validate labels
+        unique_labels = np.unique(np.abs(labels_np))
+        max_expected_label = 10
+        if unique_labels is None:
+            raise ValueError(
+                f"Invalid labels in batch {batch_number}: {unique_labels}. Max expected: {max_expected_label}")
+
+        ensure_directory(self.rendered_frames_dirs)
+        ann_frame_idx = 0
+        for label in unique_labels:
+            class_id = label // 1000
+            instance_id = label % 1000
+            logger.debug(f"Processing class {class_id}, instance {instance_id}")
+
+            obj_mask = np.abs(labels_np) == label
+            points_np1 = points_np[obj_mask]
+            raw_labels_np1 = labels_np[obj_mask]
+
+            # Binary mask: foreground = 1, background = 0
+            labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
+            _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
+                inference_state=inference_state,
+                frame_idx=ann_frame_idx,
+                clear_old_points=False,
+                obj_id=int(label),  # unique for each class+instance
+                points=points_np1,
+                labels=labels_np1
+            )
+
+    def binary_mask_2_color_mask(self, out_frame_idx, frame_filenames, video_segments, present_count, save=True):
+        if save:
+            frame_path = os.path.join(self.temp_directory, frame_filenames[out_frame_idx])
+        else:
+            frame_path = frame_filenames
+        frame = cv2.imread(frame_path)
+        full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+
+        for out_obj_id in sorted(video_segments[out_frame_idx].keys(), reverse=True):
+            out_mask = video_segments[out_frame_idx][out_obj_id]
+            logger.debug(f"Processing object ID: {out_obj_id}")
+            if out_mask.dtype == np.bool_:
+                out_mask = out_mask.astype(np.uint8)
+            out_mask = out_mask.squeeze()
+            if out_mask.shape[:2] != (frame.shape[0], frame.shape[1]):
+                out_mask_resized = cv2.resize(out_mask, (frame.shape[1], frame.shape[0]),
+                                              interpolation=cv2.INTER_NEAREST_EXACT)
+            else:
+                out_mask_resized = out_mask
+            mask_condition = (out_mask_resized > 0) & (full_mask == 0)
+            full_mask[mask_condition] = abs(out_obj_id // 1000)
+
+        color_mask_image = self.mask2colorMaskImg(full_mask)
+        if save:
+            cv2.imwrite(
+                os.path.join(self.rendered_frames_dirs,
+                             f"{self.prefixFileName}{self.video_number}_{present_count:05d}.png"),
+                color_mask_image
+            )
+        else:
+            return color_mask_image
+        return present_count + 1
 
     def run(self):
         if os.path.exists(f"points_labels_{self.prefixFileName}{self.video_number}.json"):
