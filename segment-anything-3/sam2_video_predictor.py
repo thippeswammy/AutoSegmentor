@@ -256,7 +256,7 @@ class sam2_video_predictor:
             }
 
         present_count = self.image_counter
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
             futures = [
                 executor.submit(self.binary_mask_2_color_mask, out_frame_idx, frame_filenames, video_segments,
                                 present_count + i)
@@ -293,12 +293,14 @@ class sam2_video_predictor:
                 key = cv2.waitKey(0)
 
                 if key == 13:  # Enter key
-                    self.points_collection_list.append(self.selected_points[:])
-                    self.labels_collection_list.append(self.selected_labels[:])
-                    self.selected_points.clear()
-                    self.selected_labels.clear()
-                    cv2.destroyAllWindows()
-                    break
+                    if len(self.selected_points) > 0:
+                        self.points_collection_list.append(self.selected_points[:])
+                        self.labels_collection_list.append(self.selected_labels[:])
+                        self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
+                        self.selected_points.clear()
+                        self.selected_labels.clear()
+                        cv2.destroyAllWindows()
+                        break
                 elif key == ord('q'):
                     cv2.destroyAllWindows()
                     return
@@ -333,9 +335,8 @@ class sam2_video_predictor:
                     self.selected_labels = []
                     self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
                         frame_path)
-
+            self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
         cv2.destroyAllWindows()
-        self.save_points_and_labels(self.points_collection_list, self.labels_collection_list)
 
     def click_event(self, event, x, y, flags, parm):
         inference_state_temp = parm[0]
