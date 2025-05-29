@@ -37,12 +37,15 @@ pip install torch torchvision opencv-python numpy GPUtil tqdm pygetwindow
 - Place your videos in the input directory (e.g., `./VideoInputs/Video1.mp4`, `./VideoInputs/Video2.mp4`, ...).
 - Ensure the `sam2_hiera_large.pt` checkpoint and `sam2_hiera_l.yaml` config are available in the paths specified by the script (see arguments below).
 
-### 2. Run the Pipeline
-
-You can run the pipeline via command line:
+### 2. How to run this repository
 
 ```bash
-python sam2_video_predictor_long.py \
+cd ./segment-anything-3
+```
+
+You can run the code by command line:
+```bash
+python sam2_video_predictor.py \
   --video_start 1 \
   --video_end 2 \
   --prefix Img \
@@ -124,7 +127,7 @@ SAM2/
 │   │   ├── OrgVideo1.mp4
 │   │   ├── MaskVideo1.mp4
 │   │   └── OverlappedVideo1.mp4
-│   └── sam2_video_predictor_long.py
+│   └── sam2_video_predictor.py
 ```
 
 ## Notes
