@@ -21,11 +21,22 @@ from ImageCopier import ImageCopier
 from ImageOverlayProcessor import ImageOverlayProcessor
 from VideoCreator import VideoCreator
 from logger_config import logger
+from sam2.build_sam import build_sam2_video_predictor
+
+
 # form some devices we need to set False
 # torch.backends.cuda.enable_flash_sdp(False)
 
 
-from sam2.build_sam import build_sam2_video_predictor
+def get_resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
+# Load .pt checkpoint
+model_path = get_resource_path("checkpoints/sam2_hiera_large.pt")
 
 
 def ensure_directory(path):
@@ -169,7 +180,7 @@ class sam2_video_predictor:
         self.current_instance_id = 1
         for i in self.selected_labels:
             if abs(i // 1000) == label:
-                self.current_instance_id = max(abs(i % 1000), self.current_instance_id)
+                self.current_instance_id = max(abs(i) % 1000, self.current_instance_id)
         self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
         cv2.putText(self.current_frame, self.display_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
                     (255, 255, 255), 2)
@@ -262,13 +273,15 @@ class sam2_video_predictor:
             # logger.debug(f"Copied {frame_path} to {dst_path}")
 
     def process_batch(self, batch_number):
-        frame_filenames = sorted(
+        frame_file_names = sorted(
             [p for p in os.listdir(self.temp_directory) if
              os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
             key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1))
             if re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE) else float('inf')
         )
-        inference_state = self.sam2_predictor.init_state(video_path=self.temp_directory, frame_paths=None)
+        inference_state = self.sam2_predictor.init_state(
+            video_path=self.temp_directory,
+            frame_paths=None)
         self.sam2_predictor.reset_state(inference_state)
         self.PromptEncodingWithImageEncoding(inference_state, batch_number)
         video_segments = {}
@@ -281,14 +294,13 @@ class sam2_video_predictor:
         with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
             futures = [
                 executor.submit(self.binary_mask_2_color_mask, out_frame_idx,
-                                frame_filenames, video_segments, present_count + i)
+                                frame_file_names, video_segments, present_count + i)
                 for i, out_frame_idx in enumerate(sorted(video_segments.keys()))]
             for future in futures:
                 present_count = max(present_count, future.result())
         self.image_counter = present_count
 
     def collect_user_points(self):
-        self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
         cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Zoom View", self.window_size[0], self.window_size[1])
 
@@ -300,8 +312,8 @@ class sam2_video_predictor:
             batch_idx = (start_batch_idx // self.batch_size) + i
             frame_idx = batch_idx * self.batch_size
             inference_state_temp = self.sam2_predictor.init_state(
-                video_path=frame_path,
-                frame_paths=[os.path.abspath(frame_path)]
+                video_path=None,
+                frame_paths=[os.path.abspath(frames_batch_paths[i])]
             )
             self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
                 frame_path)
@@ -344,6 +356,7 @@ class sam2_video_predictor:
                     if self.selected_points:
                         self.selected_points.pop()
                         self.selected_labels.pop()
+                        print("pressed 'U'", self.selected_labels)
                         self.current_frame = cv2.imread(frame_path)
                         self.draw_text_with_background(self.current_frame)
                         cv2.imshow(self.window_name, self.current_frame)
@@ -353,6 +366,7 @@ class sam2_video_predictor:
                             cv2.circle(self.current_frame_only_with_points, (int(pt[0]), int(pt[1])), 2,
                                        self.label_colors[abs(lbl // 1000)], -1)
                         if len(self.selected_points) > 0:
+                            print("pressed 'UU'", self.selected_labels)
                             self.userPromptAdder(inference_state_temp, frame_path)
                 elif key in [ord(str(i)) for i in range(1, 10)]:
                     self.change_class_label(int(chr(key)))
@@ -362,6 +376,7 @@ class sam2_video_predictor:
                     self.current_frame = self.current_frame_only_text = (
                         self).current_frame_only_with_points = cv2.imread(
                         frame_path)
+                    print("pressed 'r'", self.selected_labels)
                 elif key == ord('f'):
                     frame_idx_input = input("Enter frame index to annotate: ")
                     try:
@@ -419,9 +434,12 @@ class sam2_video_predictor:
             cv2.imshow("Zoom View", zoom_view)
             try:
                 zoom_window = gw.getWindowsWithTitle("Zoom View")[0]
-                zoom_window.activate()
+                try:
+                    zoom_window.activate()
+                except gw.PyGetWindowException:
+                    pass
             except IndexError:
-                pass
+                pass  # No Zoom View window found, skip
         elif event == cv2.EVENT_LBUTTONUP:
             self.is_drawing = False
         elif event == cv2.EVENT_RBUTTONDOWN:
@@ -534,9 +552,10 @@ class sam2_video_predictor:
         return present_count + 1
 
     def run(self):
+        self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
         start_batch_idx = self.check_data_sufficiency()
         # if start_batch_idx > 0:
-        logger.info(f"Starting point collection from batch {start_batch_idx // self.batch_size + 1}")
+        logger.info(f"Starting point collection from batch {start_batch_idx // self.batch_size }")
         thread = threading.Thread(target=self.collect_user_points)
         thread.start()
 
@@ -545,7 +564,7 @@ class sam2_video_predictor:
             while len(self.points_collection_list) <= batch_index // self.batch_size:
                 time.sleep(1)
             logger.info(
-                f"Processing batch {(batch_index + 1) // self.batch_size + 1}/"
+                f"Processing batch {((batch_index + 1) // self.batch_size) + 1}/"
                 f"{(len(self.frame_paths) // self.batch_size) + 1}")
             self.move_and_copy_frames(batch_index)
             self.process_batch(batch_index // self.batch_size)
@@ -694,9 +713,7 @@ if __name__ == "__main__":
     main()
 
 '''
-pyinstaller --name sam2_video_predictor_long --add-data "../checkpoints/sam2_hiera_large.pt;checkpoints"
---add-data "../sam2_configs/sam2_hiera_l.yaml;sam2_configs" 
---add-data "../sam2_configs;sam2_configs"
---hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil
---hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor_long.py
+
+pyinstaller --name sam2_video_predictor --add-data "F:\RunningProjects\SAM2\checkpoints\sam2_hiera_large.pt;checkpoints" --add-data "F:\RunningProjects\SAM2\sam2_configs\sam2_hiera_l.yaml;sam2_configs" --add-data "F:\RunningProjects\SAM2\sam2_configs\__init__.py;sam2_configs" --add-data "F:\RunningProjects\SAM2\sam2;sam2" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.build_sam --hidden-import sam2.sam2_configs --hidden-import hydra --hidden-import hydra.core --hidden-import hydra.experimental --collect-all sam2 --collect-all hydra --collect-all torch --collect-all numpy --collect-all cv2 --collect-all GPUtil --clean --onefile F:\RunningProjects\SAM2\segment-anything-3\sam2_video_predictor.py
+
 '''

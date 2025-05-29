@@ -39,7 +39,7 @@ class SAM2VideoPredictor(SAM2Base):
     def init_state(
             self,
             video_path,
-            frame_paths=None,
+            frame_paths,
             offload_video_to_cpu=False,
             offload_state_to_cpu=False,
             async_loading_frames=False,
@@ -48,10 +48,10 @@ class SAM2VideoPredictor(SAM2Base):
         compute_device = self.device  # device of the model
         images, video_height, video_width = load_video_frames(
             video_path=video_path,
+            frame_paths=frame_paths,
             image_size=self.image_size,
             offload_video_to_cpu=offload_video_to_cpu,
             async_loading_frames=async_loading_frames,
-            frame_paths=frame_paths,
             compute_device=compute_device,
         )
         inference_state = {}
