@@ -35,10 +35,6 @@ def get_resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 
-# Load .pt checkpoint
-model_path = get_resource_path("checkpoints/sam2_hiera_large.pt")
-
-
 def ensure_directory(path):
     """Create directory if it doesn't exist."""
     os.makedirs(path, exist_ok=True)
@@ -356,7 +352,6 @@ class sam2_video_predictor:
                     if self.selected_points:
                         self.selected_points.pop()
                         self.selected_labels.pop()
-                        print("pressed 'U'", self.selected_labels)
                         self.current_frame = cv2.imread(frame_path)
                         self.draw_text_with_background(self.current_frame)
                         cv2.imshow(self.window_name, self.current_frame)
@@ -366,7 +361,6 @@ class sam2_video_predictor:
                             cv2.circle(self.current_frame_only_with_points, (int(pt[0]), int(pt[1])), 2,
                                        self.label_colors[abs(lbl // 1000)], -1)
                         if len(self.selected_points) > 0:
-                            print("pressed 'UU'", self.selected_labels)
                             self.userPromptAdder(inference_state_temp, frame_path)
                 elif key in [ord(str(i)) for i in range(1, 10)]:
                     self.change_class_label(int(chr(key)))
@@ -376,7 +370,6 @@ class sam2_video_predictor:
                     self.current_frame = self.current_frame_only_text = (
                         self).current_frame_only_with_points = cv2.imread(
                         frame_path)
-                    print("pressed 'r'", self.selected_labels)
                 elif key == ord('f'):
                     frame_idx_input = input("Enter frame index to annotate: ")
                     try:
@@ -555,7 +548,7 @@ class sam2_video_predictor:
         self.points_collection_list, self.labels_collection_list, self.frame_indices = self.load_points_and_labels()
         start_batch_idx = self.check_data_sufficiency()
         # if start_batch_idx > 0:
-        logger.info(f"Starting point collection from batch {start_batch_idx // self.batch_size }")
+        logger.info(f"Starting point collection from batch {start_batch_idx // self.batch_size}")
         thread = threading.Thread(target=self.collect_user_points)
         thread.start()
 
@@ -574,7 +567,8 @@ class sam2_video_predictor:
 
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir, verified_img_dir,
-                 verified_mask_dir, prefix, batch_size, fps, final_video_path, temp_processing_dir, delete):
+                 verified_mask_dir, prefix, batch_size, fps, final_video_path, temp_processing_dir, delete,
+                 images_ending_count):
     """Run the entire pipeline for a single video number."""
     print(f"Processing video {video_number}")
 
@@ -585,7 +579,8 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         video_path_template=video_path_template,
         images_extract_dir=images_extract_dir,
         rendered_frames_dir=rendered_dirs,
-        temp_processing_dir=temp_processing_dir
+        temp_processing_dir=temp_processing_dir,
+        images_ending_count=images_ending_count
     )
     processor.run()
 
@@ -631,10 +626,10 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
 
 def main():
     parser = argparse.ArgumentParser(description="Automated video processing pipeline.")
-    parser.add_argument('--video_start', type=int, default=99, help='Starting video number (inclusive)')
+    parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=10, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=30, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
     parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
                         help='Delete working directory without verification prompt (yes/no)')
@@ -655,6 +650,8 @@ def main():
     parser.add_argument('--verified_mask_dir', type=str, default='./working_dir/verified/mask',
                         help='Directory for verified mask images')
     parser.add_argument('--final_video_path', type=str, default='./outputs',
+                        help='Directory to save output videos')
+    parser.add_argument('--images_ending_count', type=int, default=100,
                         help='Directory to save output videos')
 
     args = parser.parse_args()
@@ -690,7 +687,8 @@ def main():
             overlap_dir=args.overlap_dir.replace('working_dir', args.working_dir_name),
             verified_img_dir=args.verified_img_dir.replace('working_dir', args.working_dir_name),
             verified_mask_dir=args.verified_mask_dir.replace('working_dir', args.working_dir_name),
-            final_video_path=args.final_video_path
+            final_video_path=args.final_video_path,
+            images_ending_count=args.images_ending_count
         )
 
         logger.info("Pipeline completed for all videos.")

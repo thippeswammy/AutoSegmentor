@@ -699,9 +699,5 @@ if __name__ == "__main__":
     main()
 
 '''
-pyinstaller --name sam2_video_predictor_long --add-data "../checkpoints/sam2_hiera_large.pt;checkpoints"
---add-data "../sam2_configs/sam2_hiera_l.yaml;sam2_configs" 
---add-data "../sam2_configs;sam2_configs"
---hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil
---hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor_long.py
+pyinstaller --name sam2_video_predictor --add-data "../checkpoints/sam2_hiera_large.pt;checkpoints" --add-data "../sam2_configs/sam2_hiera_l.yaml;sam2_configs"  --add-data "../sam2_configs;sam2_configs" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.sam2_configs --collect-all sam2 --onefile sam2_video_predictor.py
 '''
