@@ -2,6 +2,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 
 import cv2
+import numpy as np
 from tqdm import tqdm
 
 
@@ -44,18 +45,31 @@ class ImageOverlayProcessor:
         if not os.path.exists(mask_image_path):
             return None, None
         original_image = cv2.imread(original_image_path)
-        mask_image = cv2.imread(mask_image_path, cv2.IMREAD_GRAYSCALE)
+        mask_image = cv2.imread(mask_image_path, cv2.IMREAD_COLOR)  # Mask with class colors
         return original_image, mask_image
 
-    def overlay_mask_on_image(self, original_image, mask_image):
-        if len(mask_image.shape) == 2:
-            mask_image = cv2.cvtColor(mask_image, cv2.COLOR_GRAY2BGR)
-        return cv2.addWeighted(original_image, 0.5, mask_image, 0.5, 0)
+    @staticmethod
+    def overlay_mask_on_image(original_image, mask_image, alpha=0.5):
+        # Create a mask of where the mask image is not black (non-zero)
+        mask_gray = cv2.cvtColor(mask_image, cv2.COLOR_BGR2GRAY)
+        mask_binary = mask_gray > 0
+
+        # Create the blended version of original and mask image
+        blended = cv2.addWeighted(original_image, 1 - alpha, mask_image, alpha, 0)
+
+        # Create a 3-channel boolean mask
+        mask_3ch = np.stack([mask_binary] * 3, axis=-1)
+
+        # Copy original image and overlay blended regions where mask is present
+        output = original_image.copy()
+        output[mask_3ch] = blended[mask_3ch]
+
+        return output
 
     def process_image(self, img_name):
         original_image, mask_image = self.load_image_and_mask(img_name)
         if original_image is not None and mask_image is not None:
-            combined_image = self.overlay_mask_on_image(original_image, mask_image)
+            combined_image = self.overlay_mask_on_image(original_image=original_image, mask_image=mask_image)
             output_image_path = os.path.join(self.output_folder, img_name)
             cv2.imwrite(output_image_path, combined_image)
 
