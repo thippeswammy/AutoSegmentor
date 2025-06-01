@@ -749,17 +749,22 @@ class SAM2VideoPredictor(SAM2Base):
             obj_output_dict[storage_key][frame_idx] = obj_out
 
     @torch.inference_mode()
-    def reset_state(self, inference_state):
+    def reset_state(self, inference_state, all_clear=True):
         """Remove all input points or mask in all frames throughout the video."""
         self._reset_tracking_results(inference_state)
         # Remove all object ids
-        inference_state["obj_id_to_idx"].clear()
-        inference_state["obj_idx_to_id"].clear()
-        inference_state["obj_ids"].clear()
-        inference_state["point_inputs_per_obj"].clear()
-        inference_state["mask_inputs_per_obj"].clear()
-        inference_state["output_dict_per_obj"].clear()
-        inference_state["temp_output_dict_per_obj"].clear()
+        if all_clear:
+            inference_state["obj_id_to_idx"].clear()
+            inference_state["obj_idx_to_id"].clear()
+            inference_state["obj_ids"].clear()
+            inference_state["point_inputs_per_obj"].clear()
+            inference_state["mask_inputs_per_obj"].clear()
+            inference_state["output_dict_per_obj"].clear()
+            inference_state["temp_output_dict_per_obj"].clear()
+        else:
+            # only now removing last one
+
+            pass
 
     def _reset_tracking_results(self, inference_state):
         """Reset all tracking inputs and results across the videos."""

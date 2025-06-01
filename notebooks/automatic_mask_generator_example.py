@@ -33,7 +33,7 @@ using_colab = True
 
 # !{sys.executable} -m pip install opencv-python matplotlib
 # !{sys.executable} -m pip install 'git+https://github.com/facebookresearch/segment-anything-2.git'
-import os
+
 # get_ipython().system('mkdir -p images')
 # os.makedirs('images', exist_ok=True)
 # os.system('wget -P images https://raw.githubusercontent.com/facebookresearch/segment-anything-2/main/notebooks/images/cars.jpg')

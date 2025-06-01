@@ -4,8 +4,6 @@ import os
 import re
 import shutil
 import sys
-import threading
-import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -73,7 +71,9 @@ def clear_directory(directory):
 class sam2_video_predictor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
-                 temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None):
+                 temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None, memory_bank_size=5,
+                 prompt_memory_size=5):
+        self.box_points = None
         self.prefixFileName = prefixFileName
         self.video_number = video_number
         self.frame_list = None
@@ -110,6 +110,9 @@ class sam2_video_predictor:
         self.model_config = resource_path("../sam2_configs/sam2_hiera_l.yaml")
         self.frames_directory = images_extract_dir
         self.sam2_checkpoint = resource_path("../checkpoints/sam2_hiera_large.pt")
+        self.memory_bank_size = memory_bank_size  # n: Store last n masks/encodings
+        self.prompt_memory_size = prompt_memory_size
+        self.last_mask = None,
         self.sam2_predictor = self.build_predictor()
         extractor = FrameExtractor(self.video_number, prefixFileName=self.prefixFileName,
                                    limitedImages=images_ending_count, video_path_template=self.video_path_template,
@@ -136,7 +139,9 @@ class sam2_video_predictor:
 
     def build_predictor(self):
         return build_sam2_video_predictor(
-            self.model_config, self.sam2_checkpoint, device=self.device
+            self.model_config, self.sam2_checkpoint, device=self.device,
+            memory_bank_size=self.memory_bank_size, prompt_memory_size=self.prompt_memory_size
+
         )
 
     def get_frame_paths(self):
@@ -245,9 +250,10 @@ class sam2_video_predictor:
             for frame_idx, points, labels in zip(frame_indices, points_collection, labels_collection)
         ]
         try:
-            with open(filename, 'w') as f:
-                json.dump(data, f, indent=2)
+            # with open(filename, 'w') as f:
+            #     json.dump(data, f, indent=2)
             # logger.info(f"Saved points, labels, and frame indices to {filename}")
+            pass
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
@@ -268,7 +274,7 @@ class sam2_video_predictor:
             shutil.copy(frame_path, dst_path)
             # logger.debug(f"Copied {frame_path} to {dst_path}")
 
-    def process_batch(self, batch_number):
+    def mask_generator(self, batch_number):
         frame_file_names = sorted(
             [p for p in os.listdir(self.temp_directory) if
              os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
@@ -278,8 +284,11 @@ class sam2_video_predictor:
         inference_state = self.sam2_predictor.init_state(
             video_path=self.temp_directory,
             frame_paths=None)
-        self.sam2_predictor.reset_state(inference_state)
-        self.PromptEncodingWithImageEncoding(inference_state, batch_number)
+        # self.sam2_predictor.reset_state(inference_state)
+        if batch_number > 0:
+            self.AutoPromptEncodingWithImageEncoding(inference_state, batch_number)
+        else:
+            self.PromptEncodingWithImageEncoding(inference_state, batch_number)
         video_segments = {}
         for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state):
             video_segments[out_frame_idx] = {
@@ -296,21 +305,22 @@ class sam2_video_predictor:
                 present_count = max(present_count, future.result())
         self.image_counter = present_count
 
-    def collect_user_points(self):
+    def collect_user_points(self, batch):
         cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Zoom View", self.window_size[0], self.window_size[1])
 
         start_batch_idx = self.check_data_sufficiency()
         frames_batch_paths = [self.frame_paths[i] for i in
                               range(start_batch_idx, len(self.frame_paths), self.batch_size)]
-
+        frames_batch_paths = [self.frame_paths[batch]]
         for i, frame_path in enumerate(frames_batch_paths):
             batch_idx = (start_batch_idx // self.batch_size) + i
             frame_idx = batch_idx * self.batch_size
             inference_state_temp = self.sam2_predictor.init_state(
                 video_path=None,
-                frame_paths=[os.path.abspath(frames_batch_paths[i])]
+                frame_paths=[os.path.abspath(self.frame_paths[batch])]
             )
+
             self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
                 frame_path)
             self.current_class_label = self.current_instance_id = 1
@@ -318,7 +328,11 @@ class sam2_video_predictor:
 
             parm = [inference_state_temp, frame_path]
             cv2.setMouseCallback(self.window_name, self.click_event, parm)
-
+            if self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,),
+                                                                                                          [None]]:
+                pass
+            else:
+                self.userPromptAdder(inference_state_temp, frame_path, batch)
             while True:
                 self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
                 self.draw_text_with_background(self.current_frame)
@@ -413,6 +427,8 @@ class sam2_video_predictor:
             cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
             cv2.circle(self.current_frame_only_with_points, (x, y), 2, self.label_colors[self.current_class_label], -1)
             self.userPromptAdder(inference_state_temp, frame_path)
+            print("Click =>", f'({x}, {y}) ,self.selected_labels => {self.selected_labels}')
+            print("Click =>", f'({x}, {y}) ,self.labels_collection_list => {self.labels_collection_list}')
         elif event == cv2.EVENT_MOUSEMOVE:
             if self.is_drawing:
                 self.selected_points.append([x, y])
@@ -447,8 +463,10 @@ class sam2_video_predictor:
         self.draw_text_with_background(self.current_frame)
         cv2.imshow(self.window_name, self.current_frame)
 
-    def userPromptAdder(self, inference_state_temp, frame_path):
+    def userPromptAdder(self, inference_state_temp, frame_path, batch=-1):
         self.sam2_predictor.reset_state(inference_state_temp)
+        if batch > -1:
+            self.box_points = self.AutoPromptEncodingWithImageEncoding(inference_state_temp, batch)
         self.PromptEncodingWithImageEncoding(inference_state_temp)
         video_segments = {}
         for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp,
@@ -467,7 +485,7 @@ class sam2_video_predictor:
 
         # Perform blending
         blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
-
+        cv2.imshow('blended', cv2.resize(blended, (640, 480)))
         # Only update non-zero regions
         current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
 
@@ -491,8 +509,9 @@ class sam2_video_predictor:
         if unique_labels is None:
             raise ValueError(
                 f"Invalid labels in batch {batch_number}: {unique_labels}. Max expected: {max_expected_label}")
-
         ensure_directory(self.rendered_frames_dirs)
+        labels_np_c = labels_np.copy()
+        print('points_np, labels_np=>', points_np, labels_np)
         for label in unique_labels:
             # class_id = label // 1000
             # instance_id = label % 1000
@@ -502,14 +521,86 @@ class sam2_video_predictor:
 
             # Binary mask: foreground = 1, background = 0
             labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
+            # print('self.box_points=>', self.box_points, label)
+
             _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
                 frame_idx=(frame_idx % self.batch_size),
                 clear_old_points=False,
-                obj_id=int(label),  # unique for each class+instance
+                obj_id=int(label),
                 points=points_np1,
                 labels=labels_np1
             )
+            # else:
+            #     _, object_ids, mask_logits = self.sam2_predictor.add_new_points_or_box(
+            #         inference_state=inference_state,
+            #         frame_idx=(frame_idx % self.batch_size),
+            #         clear_old_points=True,
+            #         obj_id=int(label),  # unique for each class+instance
+            #         points=points_np1,
+            #         labels=labels_np1,
+            #         box=self.box_points[0]
+            #     )
+        labels_np = labels_np_c.copy()
+
+    def AutoPromptEncodingWithImageEncoding(self, inference_state, batch_number):
+        # self.selected_labels = self.labels_collection_list[batch_number]
+        # self.selected_points = self.points_collection_list[batch_number]
+        points_list = []
+        label_list = []
+        mask = self.last_mask
+        boxPrompt = self.mask_to_boxes(mask)
+        print('boxPrompt =>', boxPrompt)
+        print('points_list =>', points_list)
+        print('label_list =>', label_list)
+        frame_idx = 0
+        for k, v in boxPrompt.items():
+            points_list.append(v)
+            label_list.append(k)
+        print('points_list =>', points_list)
+        print('label_list =>', label_list)
+        # self.points_collection_list.append(points_list)
+        # self.labels_collection_list.append(label_list)
+        points_np = []
+        labels_np = []
+        for i in points_list:
+            points_np.append(np.array(i, dtype=np.float32))
+
+        labels_np = label_list
+        # points_np = np.array(points_list, dtype=np.float32)
+        # labels_np = np.array(label_list, dtype=np.int32)
+        # Validate labels
+        ensure_directory(self.rendered_frames_dirs)
+        for i in range(len(points_np)):
+            print('label, point =>', labels_np[i], points_np[i])
+            self.sam2_predictor.add_new_points_or_box(
+                inference_state=inference_state,
+                frame_idx=0,
+                obj_id=int(labels_np[i]),
+                box=points_np[i]
+            )
+        return points_np
+
+    @staticmethod
+    def mask_to_boxes(mask: np.ndarray):
+        boxes = {}
+        object_ids = np.unique(mask)
+        print("unique object_ids =>", object_ids)
+        object_ids = object_ids[object_ids != 0]  # Ignore background (0)
+        for obj_id in object_ids:
+            # Create a binary mask for this object
+            binary_mask = (mask == obj_id).astype(np.uint8)
+
+            # Find contours
+            contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if not contours:
+                continue
+
+            # Bounding box from largest contour
+            largest_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_contour)
+            boxes[int(obj_id)] = [x, y, x + w, y + h]
+        return boxes
 
     def binary_mask_2_color_mask(self, out_frame_idx, frame_filenames, video_segments, present_count, save=True):
         if save:
@@ -517,8 +608,8 @@ class sam2_video_predictor:
         else:
             frame_path = frame_filenames
         frame = cv2.imread(frame_path)
-        full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-
+        full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
+        temp = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
         for out_obj_id in sorted(video_segments[out_frame_idx].keys(), reverse=True):
             out_mask = video_segments[out_frame_idx][out_obj_id]
             # logger.debug(f"Processing object ID: {out_obj_id}")
@@ -532,7 +623,9 @@ class sam2_video_predictor:
                 out_mask_resized = out_mask
             mask_condition = (out_mask_resized > 0) & (full_mask == 0)
             full_mask[mask_condition] = abs(out_obj_id // 1000)
-
+            temp[mask_condition] = abs(out_obj_id)
+        if save and out_frame_idx == len(video_segments) - 1:
+            self.last_mask = temp.copy()
         color_mask_image = self.mask2colorMaskImg(full_mask)
         if save:
             cv2.imwrite(
@@ -549,18 +642,18 @@ class sam2_video_predictor:
         start_batch_idx = self.check_data_sufficiency()
         # if start_batch_idx > 0:
         logger.info(f"Starting point collection from batch {start_batch_idx // self.batch_size}")
-        thread = threading.Thread(target=self.collect_user_points)
-        thread.start()
+        # thread = threading.Thread(target=self.collect_user_points)
+        # thread.start()
 
         batch_index = 0
         while batch_index < len(self.frame_paths):
-            while len(self.points_collection_list) <= batch_index // self.batch_size:
-                time.sleep(1)
             logger.info(
                 f"Processing batch {((batch_index + 1) // self.batch_size) + 1}/"
                 f"{(len(self.frame_paths) // self.batch_size) + 1}")
             self.move_and_copy_frames(batch_index)
-            self.process_batch(batch_index // self.batch_size)
+            if batch_index // self.batch_size == 0:
+                self.collect_user_points(batch_index // self.batch_size)
+            self.mask_generator(batch_index // self.batch_size)
             batch_index += self.batch_size
             logger.info('-' * 28 + " completed " + '-' * 28)
         clear_directory(self.temp_directory)
@@ -629,7 +722,7 @@ def main():
     parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=30, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=5, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
     parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
                         help='Delete working directory without verification prompt (yes/no)')
@@ -651,7 +744,7 @@ def main():
                         help='Directory for verified mask images')
     parser.add_argument('--final_video_path', type=str, default='./outputs',
                         help='Directory to save output videos')
-    parser.add_argument('--images_ending_count', type=int, default=100,
+    parser.add_argument('--images_ending_count', type=int, default=10,
                         help='Directory to save output videos')
 
     args = parser.parse_args()
@@ -714,4 +807,10 @@ if __name__ == "__main__":
 
 pyinstaller --name sam2_video_predictor --add-data "F:\RunningProjects\SAM2\checkpoints\sam2_hiera_large.pt;checkpoints" --add-data "F:\RunningProjects\SAM2\sam2_configs\sam2_hiera_l.yaml;sam2_configs" --add-data "F:\RunningProjects\SAM2\sam2_configs\__init__.py;sam2_configs" --add-data "F:\RunningProjects\SAM2\sam2;sam2" --hidden-import torch --hidden-import cv2 --hidden-import numpy --hidden-import GPUtil --hidden-import sam2 --hidden-import sam2.build_sam --hidden-import sam2.sam2_configs --hidden-import hydra --hidden-import hydra.core --hidden-import hydra.experimental --collect-all sam2 --collect-all hydra --collect-all torch --collect-all numpy --collect-all cv2 --collect-all GPUtil --clean --onefile F:\RunningProjects\SAM2\segment-anything-3\sam2_video_predictor.py
 
+'''
+'''
+points_list => [[686, 746, 1920, 1080]]
+label_list => [1001]
+
+Click => (1221, 959) label = 1001
 '''
