@@ -478,7 +478,21 @@ class sam2_video_predictor:
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.selected_points.append([x, y])
 
+            boxPrompt = self.mask_box_points
             full_label = self.encode_label(self.current_class_label, self.current_instance_id) * -1
+            if not (boxPrompt is None):
+                points_list = []
+                label_list = []
+                for k, v in boxPrompt.items():
+                    points_list.append(v)
+                    label_list.append(k)
+                print('BBB_points_list =>', points_list)
+                print('BBB_label_list =>', label_list)
+                for i in range(len(points_list)):
+                    if points_list[i][0] <= x <= points_list[i][2] and points_list[i][1] <= y <= points_list[i][3]:
+                        full_label = label_list[i] * -1
+                        print('full_label_changed=>', full_label)
+                        break
             self.selected_labels.append(full_label)
 
             cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
@@ -699,7 +713,7 @@ class sam2_video_predictor:
         while batch_index < len(self.frame_paths):
             logger.info(
                 f"Processing batch {((batch_index + 1) // self.batch_size) + 1}/"
-                f"{(len(self.frame_paths) // self.batch_size) + 1}")
+                f"{(len(self.frame_paths) // self.batch_size)}")
             self.move_and_copy_frames(batch_index)
             # if batch_index // self.batch_size == 0:
             self.isPrompted = False
