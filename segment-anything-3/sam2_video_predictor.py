@@ -440,13 +440,20 @@ class sam2_video_predictor:
                 for k, v in boxPrompt.items():
                     points_list.append(v)
                     label_list.append(k)
-                print('BBB_points_list =>', points_list)
-                print('BBB_label_list =>', label_list)
+                matching_boxes = []
                 for i in range(len(points_list)):
-                    if points_list[i][0] <= x <= points_list[i][2] and points_list[i][1] <= y <= points_list[i][3]:
-                        full_label = label_list[i]
-                        print('full_label_changed=>', full_label)
-                        break
+                    x0, y0, x1, y1 = points_list[i]
+                    if x0 <= x <= x1 and y0 <= y <= y1:
+                        area = (x1 - x0) * (y1 - y0)
+                        matching_boxes.append((area, label_list[i]))
+                if matching_boxes:
+                    # Choose the box with the smallest area
+                    matching_boxes.sort(key=lambda x: x[0])
+                    full_label = matching_boxes[0][1]
+            if not (self.last_mask is None or isinstance(self.last_mask, (tuple, list))
+                    and self.last_mask in [(None,), [None]]):
+                if self.last_mask[y][x] > 0:
+                    full_label = self.last_mask[y][x]
             self.selected_labels.append(full_label)
             cv2.circle(self.current_frame, (x, y), 2, self.label_colors[self.current_class_label], -1)
             cv2.circle(self.current_frame_only_with_points, (x, y), 2, self.label_colors[self.current_class_label], -1)
@@ -486,15 +493,21 @@ class sam2_video_predictor:
                 for k, v in boxPrompt.items():
                     points_list.append(v)
                     label_list.append(k)
-                print('BBB_points_list =>', points_list)
-                print('BBB_label_list =>', label_list)
+                matching_boxes = []
                 for i in range(len(points_list)):
-                    if points_list[i][0] <= x <= points_list[i][2] and points_list[i][1] <= y <= points_list[i][3]:
-                        full_label = label_list[i] * -1
-                        print('full_label_changed=>', full_label)
-                        break
+                    x0, y0, x1, y1 = points_list[i]
+                    if x0 <= x <= x1 and y0 <= y <= y1:
+                        area = (x1 - x0) * (y1 - y0)
+                        matching_boxes.append((area, label_list[i]))
+                if matching_boxes:
+                    # Choose the box with the smallest area
+                    matching_boxes.sort(key=lambda x: x[0])
+                    full_label = matching_boxes[0][1] * -1
+            if not (self.last_mask is None or isinstance(self.last_mask, (tuple, list))
+                    and self.last_mask in [(None,), [None]]):
+                if self.last_mask[y][x] > 0:
+                    full_label = self.last_mask[y][x] * -1
             self.selected_labels.append(full_label)
-
             cv2.circle(self.current_frame, (x, y), 4, (0, 0, 255), -1)
             cv2.circle(self.current_frame_only_with_points, (x, y), 4, (0, 0, 255), -1)
             self.userPromptAdder(inference_state_temp, frame_path)
@@ -608,8 +621,7 @@ class sam2_video_predictor:
         # self.selected_points = self.points_collection_list[batch_number]
         points_list = []
         label_list = []
-        mask = self.last_mask
-        boxPrompt = self.mask_to_boxes(mask)
+        boxPrompt = self.mask_to_boxes(self.last_mask)
         print('boxPrompt =>', boxPrompt)
         print('points_list =>', points_list)
         print('label_list =>', label_list)
@@ -788,7 +800,7 @@ def main():
     parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=10, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=5, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
     parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
                         help='Delete working directory without verification prompt (yes/no)')
@@ -810,7 +822,7 @@ def main():
                         help='Directory for verified mask images')
     parser.add_argument('--final_video_path', type=str, default='./outputs',
                         help='Directory to save output videos')
-    parser.add_argument('--images_ending_count', type=int, default=300,
+    parser.add_argument('--images_ending_count', type=int, default=15,
                         help='Directory to save output videos')
 
     args = parser.parse_args()
