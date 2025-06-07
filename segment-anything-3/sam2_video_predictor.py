@@ -73,6 +73,7 @@ class sam2_video_predictor:
                  prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None, memory_bank_size=5,
                  prompt_memory_size=5):
+        self.isPrompted = False
         self.mask_box_points = {}
         self.box_points = None
         self.prefixFileName = prefixFileName
@@ -495,28 +496,30 @@ class sam2_video_predictor:
         else:
             self.box_points = None
         self.PromptEncodingWithImageEncoding(inference_state_temp, -1)
-        video_segments = {}
-        for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(inference_state_temp,
-                                                                                                  isSingle=True):
-            video_segments[out_frame_idx] = {
-                out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
-                for i, out_obj_id in enumerate(out_obj_ids)
-            }
-        mask = self.binary_mask_2_color_mask(out_frame_idx, frame_path, video_segments, 0, save=False)
-        current_frame_org = self.current_frame_only_with_points.copy()
-        # self.current_frame = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+        if self.isPrompted:
+            video_segments = {}
+            for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(
+                    inference_state_temp,
+                    isSingle=True):
+                video_segments[out_frame_idx] = {
+                    out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
+                    for i, out_obj_id in enumerate(out_obj_ids)
+                }
+            mask = self.binary_mask_2_color_mask(out_frame_idx, frame_path, video_segments, 0, save=False)
+            current_frame_org = self.current_frame_only_with_points.copy()
+            # self.current_frame = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
 
-        # Make 2D mask and broadcast to 3D
-        non_zero_mask = np.any(mask > 0, axis=-1)  # (H, W)
-        non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)  # (H, W, 3)
+            # Make 2D mask and broadcast to 3D
+            non_zero_mask = np.any(mask > 0, axis=-1)  # (H, W)
+            non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)  # (H, W, 3)
 
-        # Perform blending
-        blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
-        # cv2.imshow('blended', cv2.resize(blended, (640, 480)))
-        # Only update non-zero regions
-        current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
-        # current_frame_org =
-        self.current_frame = self.show_box(self.box_points, current_frame_org)
+            # Perform blending
+            blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+            # cv2.imshow('blended', cv2.resize(blended, (640, 480)))
+            # Only update non-zero regions
+            current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
+            # current_frame_org =
+            self.current_frame = self.show_box(self.box_points, current_frame_org)
 
     @staticmethod
     def show_box(boxs, img):
@@ -555,6 +558,7 @@ class sam2_video_predictor:
         labels_np_c = labels_np.copy()
         print('points_np, labels_np=>', points_np, labels_np)
         for label in unique_labels:
+            self.isPrompted = True
             # class_id = label // 1000
             # instance_id = label % 1000
             obj_mask = np.abs(labels_np) == label
@@ -614,6 +618,7 @@ class sam2_video_predictor:
         # Validate labels
         ensure_directory(self.rendered_frames_dirs)
         for i in range(len(points_np)):
+            self.isPrompted = True
             print('label, point =>', labels_np[i], points_np[i])
             self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
@@ -639,7 +644,7 @@ class sam2_video_predictor:
 
             # Bounding box from largest contour
             largest_contour = max(contours, key=cv2.contourArea)
-            if cv2.contourArea(largest_contour) < int(mask.shape[0] * mask.shape[1] * 0.001):
+            if cv2.contourArea(largest_contour) < int(mask.shape[0] * mask.shape[1] * 0.0005):
                 continue
             x, y, w, h = cv2.boundingRect(largest_contour)
             boxes[int(obj_id)] = [max(x, 0), max(y, 0), min(x + w, mask.shape[1]),
@@ -697,7 +702,9 @@ class sam2_video_predictor:
                 f"{(len(self.frame_paths) // self.batch_size) + 1}")
             self.move_and_copy_frames(batch_index)
             # if batch_index // self.batch_size == 0:
+            self.isPrompted = False
             self.collect_user_points(batch_index // self.batch_size)
+            self.isPrompted = False
             self.mask_generator(batch_index // self.batch_size)
             batch_index += self.batch_size
             logger.info('-' * 28 + " completed " + '-' * 28)
@@ -767,7 +774,7 @@ def main():
     parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
     parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
     parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=80, help='Batch size for processing frames')
+    parser.add_argument('--batch_size', type=int, default=10, help='Batch size for processing frames')
     parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
     parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
                         help='Delete working directory without verification prompt (yes/no)')
