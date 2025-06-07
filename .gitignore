@@ -13,3 +13,11 @@ segment-anything-3/dist
 segment-anything-3/temp
 /sav_dataset/example/sav_000001.mp4
 /notebooks/videos/bedroom.zip
+/segment-anything-3/working_dir
+/DataVisualizationEditingTool/output.pickle
+/segment-anything-3/UserPrompts/points_labels_Img99.json
+/segment-anything-3/sam2_video_predictor.spec
+/DataVisualizationEditingTool/test1.py
+/DataVisualizationEditingTool/test2.py
+/DataVisualizationEditingTool/test3.py
+/DataVisualizationEditingTool/WorkingLane.npy

@@ -30,7 +30,7 @@ def get_resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+    return os.path.join(os.path.abspath(".."), relative_path)
 
 
 def ensure_directory(path):
@@ -46,7 +46,7 @@ def resource_path(relative_path):
         base_path = sys._MEIPASS
     except AttributeError:
         # In development, use the current directory
-        base_path = os.path.abspath(".")
+        base_path = os.path.abspath("..")
 
     # Construct the full path and normalize it
     full_path = os.path.normpath(os.path.join(base_path, relative_path))
@@ -70,13 +70,13 @@ def clear_directory(directory):
 
 class sam2_video_predictor:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
-                 prefixFileName="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
+                 prefix="file", video_path_template=None, images_extract_dir=None, rendered_frames_dir=None,
                  temp_processing_dir=None, is_drawing=False, window_size=None, label_colors=None, memory_bank_size=5,
                  prompt_memory_size=5):
         self.isPrompted = False
         self.mask_box_points = {}
         self.box_points = None
-        self.prefixFileName = prefixFileName
+        self.prefixFileName = prefix
         self.video_number = video_number
         self.frame_list = None
         self.current_frame_only_text = None
@@ -109,9 +109,9 @@ class sam2_video_predictor:
         self.video_path_template = video_path_template
         self.rendered_frames_dirs = rendered_frames_dir
         self.temp_directory = temp_processing_dir
-        self.model_config = resource_path("../sam2_configs/sam2_hiera_l.yaml")
+        self.model_config = resource_path("sam2_configs/sam2_hiera_l.yaml")
         self.frames_directory = images_extract_dir
-        self.sam2_checkpoint = resource_path("../checkpoints/sam2_hiera_large.pt")
+        self.sam2_checkpoint = resource_path("checkpoints/sam2_hiera_large.pt")
         self.memory_bank_size = memory_bank_size  # n: Store last n masks/encodings
         self.prompt_memory_size = prompt_memory_size
         self.last_mask = None,
@@ -745,7 +745,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
 
     processor = sam2_video_predictor(
         video_number=video_number,
-        prefixFileName=prefix,
+        prefix=prefix,
         batch_size=batch_size,
         video_path_template=video_path_template,
         images_extract_dir=images_extract_dir,
