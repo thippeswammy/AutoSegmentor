@@ -14,11 +14,11 @@ import pygetwindow as gw
 import torch
 
 print(torch.cuda.get_device_name(0))
-from FrameExtractor import FrameExtractor
-from ImageCopier import ImageCopier
-from ImageOverlayProcessor import ImageOverlayProcessor
-from VideoCreator import VideoCreator
-from logger_config import logger
+from Utils.FrameExtractor import FrameExtractor
+from Utils.ImageCopier import ImageCopier
+from Utils.ImageOverlayProcessor import ImageOverlayProcessor
+from Utils.VideoCreator import VideoCreator
+from Utils.logger_config import logger
 from sam2.build_sam import build_sam2_video_predictor
 
 
@@ -670,7 +670,7 @@ class sam2_video_predictor:
 
             # Bounding box from largest contour
             largest_contour = max(contours, key=cv2.contourArea)
-            if cv2.contourArea(largest_contour) < int(mask.shape[0] * mask.shape[1] * 0.0005):
+            if cv2.contourArea(largest_contour) < int(mask.shape[0] * mask.shape[1] * 0.00015):
                 continue
             x, y, w, h = cv2.boundingRect(largest_contour)
             boxes[int(obj_id)] = [max(x, 0), max(y, 0), min(x + w, mask.shape[1]),

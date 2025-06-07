@@ -2,9 +2,8 @@ import os
 import threading
 
 import cv2
+from Utils.logger_config import logger
 from tqdm import tqdm
-
-from logger_config import logger
 
 
 class VideoCreator:
