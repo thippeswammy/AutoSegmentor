@@ -8,7 +8,7 @@ from tqdm import tqdm
 # Configuration
 VIDEO_NUMBER = 9
 NUM_THREADS = 16  # Number of threads for multithreading
-VIDEO_PATH_TEMPLATE = r'../VideoInputs/video{}.mp4'
+VIDEO_PATH_TEMPLATE = r'../inputs/VideoInputs/video{}.mp4'
 OUTPUT_DIR = r'./videos/road_imgs'
 
 

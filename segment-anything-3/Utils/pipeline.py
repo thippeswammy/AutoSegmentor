@@ -5,7 +5,7 @@ from Utils.ImageCopier import ImageCopier
 from Utils.ImageOverlayProcessor import ImageOverlayProcessor
 from Utils.VideoCreator import VideoCreator
 from Utils.logger_config import logger
-from Utils.sam2_video_predictor import sam2_video_predictor
+from Utils.sam2_video_predictor import SAM2VideoProcessor
 
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
@@ -14,7 +14,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     """Run the entire pipeline for a single video number."""
     logger.info(f"Processing video {video_number}")
 
-    processor = sam2_video_predictor(
+    processor = SAM2VideoProcessor(
         video_number=video_number,
         prefix=prefix,
         batch_size=batch_size,

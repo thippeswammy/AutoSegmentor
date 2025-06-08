@@ -1,90 +1,139 @@
-import argparse
 import os
 import shutil
 import sys
+
+import yaml
 
 from Utils.logger_config import logger
 from Utils.pipeline import run_pipeline
 
 
+def load_config(config_path="inputs/config/default_config.yaml"):
+    """
+    Load configuration from a YAML file and validate required keys.
+
+    Args:
+        config_path (str): Path to the YAML configuration file (default: config.yml).
+
+    Returns:
+        dict: Configuration parameters.
+
+    Raises:
+        FileNotFoundError: If the config file does not exist.
+        yaml.YAMLError: If the YAML file is invalid.
+        KeyError: If required configuration keys are missing.
+        ValueError: If the 'delete' option is invalid.
+    """
+    try:
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+
+        # Required configuration keys
+        required_keys = [
+            'video_start', 'video_end', 'prefix', 'batch_size', 'fps', 'delete',
+            'working_dir_name', 'video_path_template', 'images_extract_dir',
+            'temp_processing_dir', 'rendered_dir', 'overlap_dir',
+            'verified_img_dir', 'verified_mask_dir', 'final_video_path',
+            'images_ending_count'
+        ]
+
+        # Check for missing keys
+        missing_keys = [key for key in required_keys if key not in config]
+        if missing_keys:
+            logger.error(f"Missing required configuration keys in {config_path}: {', '.join(missing_keys)}")
+            sys.exit(1)
+
+        # Handle delete option (string or boolean)
+        if isinstance(config['delete'], bool):
+            config['delete'] = 'yes' if config['delete'] else 'no'
+        elif isinstance(config['delete'], str):
+            config['delete'] = config['delete'].lower()
+        else:
+            logger.error("Invalid 'delete' option in config. Must be 'yes', 'no', true, or false.")
+            sys.exit(1)
+
+        # Validate delete option
+        if config['delete'] not in ['yes', 'no']:
+            logger.error("Invalid 'delete' option in config. Must be 'yes', 'no', true, or false.")
+            sys.exit(1)
+
+        return config
+    except FileNotFoundError:
+        logger.error(f"Configuration file '{config_path}' not found.")
+        sys.exit(1)
+    except yaml.YAMLError as e:
+        logger.error(f"Error parsing YAML file: {e}")
+        sys.exit(1)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Automated video processing pipeline.")
-    parser.add_argument('--video_start', type=int, default=1, help='Starting video number (inclusive)')
-    parser.add_argument('--video_end', type=int, default=1, help='Ending video number (exclusive)')
-    parser.add_argument('--prefix', type=str, default='Img', help='Prefix for output filenames')
-    parser.add_argument('--batch_size', type=int, default=5, help='Batch size for processing frames')
-    parser.add_argument('--fps', type=int, default=30, help='Frames per second for output videos')
-    parser.add_argument('--delete', type=str, choices=['yes', 'no'], default='yes',
-                        help='Delete working directory without verification prompt (yes/no)')
-    parser.add_argument('--working_dir_name', type=str, default='working_dir',
-                        help='Base directory name for working directories')
-    parser.add_argument('--video_path_template', type=str, default='./VideoInputs/Video{}.mp4',
-                        help='Template path for video files, e.g., ./VideoInputs/Video{}.mp4')
-    parser.add_argument('--images_extract_dir', type=str, default='./working_dir/images',
-                        help='Directory to extract images')
-    parser.add_argument('--temp_processing_dir', type=str, default='./working_dir/temp',
-                        help='Directory for temporary processing images')
-    parser.add_argument('--rendered_dir', type=str, default='./working_dir/render',
-                        help='Directory for rendered mask outputs')
-    parser.add_argument('--overlap_dir', type=str, default='./working_dir/overlap',
-                        help='Directory for overlapped images')
-    parser.add_argument('--verified_img_dir', type=str, default='./working_dir/verified/images',
-                        help='Directory for verified original images')
-    parser.add_argument('--verified_mask_dir', type=str, default='./working_dir/verified/mask',
-                        help='Directory for verified mask images')
-    parser.add_argument('--final_video_path', type=str, default='./outputs',
-                        help='Directory to save output videos')
-    parser.add_argument('--images_ending_count', type=int, default=15,
-                        help='Number of images to process')
+    # Load configuration from YAML file
+    config = load_config()
 
-    args = parser.parse_args()
+    # Extract configuration parameters
+    video_start = config['video_start']
+    video_end = config['video_end']
+    prefix = config['prefix']
+    batch_size = config['batch_size']
+    fps = config['fps']
+    delete = config['delete']  # Already lowercase string ('yes' or 'no')
+    working_dir_name = config['working_dir_name']
+    video_path_template = config['video_path_template']
+    images_extract_dir = config['images_extract_dir']
+    temp_processing_dir = config['temp_processing_dir']
+    rendered_dir = config['rendered_dir']
+    overlap_dir = config['overlap_dir']
+    verified_img_dir = config['verified_img_dir']
+    verified_mask_dir = config['verified_mask_dir']
+    final_video_path = config['final_video_path']
+    images_ending_count = config['images_ending_count']
 
-    for i in range(args.video_start, args.video_start + args.video_end):
-        if os.path.exists(args.working_dir_name):
-            if args.delete.lower() == 'yes':
-                shutil.rmtree(args.working_dir_name)
-                logger.info(f"Cleared working directory: {args.working_dir_name}")
+    for i in range(video_start, video_start + video_end):
+        if os.path.exists(working_dir_name):
+            if delete == 'yes':
+                shutil.rmtree(working_dir_name)
+                logger.info(f"Cleared working directory: {working_dir_name}")
             else:
                 confirm = input(
-                    f"Do you want to clear prev working directory '{args.working_dir_name}'? (yes/no): "
+                    f"Do you want to clear prev working directory '{working_dir_name}'? (yes/no): "
                 ).lower()
                 if confirm == 'yes':
-                    shutil.rmtree(args.working_dir_name)
-                    logger.info(f"Cleared working directory: {args.working_dir_name}")
+                    shutil.rmtree(working_dir_name)
+                    logger.info(f"Cleared working directory: {working_dir_name}")
                 else:
-                    logger.info(f"Working directory '{args.working_dir_name}' not deleted")
+                    logger.info(f"Working directory '{working_dir_name}' not deleted")
                     sys.exit(1000)
 
         run_pipeline(
-            fps=args.fps,
+            fps=fps,
             video_number=i,
-            prefix=args.prefix,
-            batch_size=args.batch_size,
-            delete=args.delete.lower(),
-            video_path_template=args.video_path_template.replace('working_dir', args.working_dir_name),
-            images_extract_dir=args.images_extract_dir.replace('working_dir', args.working_dir_name),
-            temp_processing_dir=args.temp_processing_dir.replace('working_dir', args.working_dir_name),
-            rendered_dirs=args.rendered_dir.replace('working_dir', args.working_dir_name),
-            overlap_dir=args.overlap_dir.replace('working_dir', args.working_dir_name),
-            verified_img_dir=args.verified_img_dir.replace('working_dir', args.working_dir_name),
-            verified_mask_dir=args.verified_mask_dir.replace('working_dir', args.working_dir_name),
-            final_video_path=args.final_video_path,
-            images_ending_count=args.images_ending_count
+            prefix=prefix,
+            batch_size=batch_size,
+            delete=delete,
+            video_path_template=video_path_template.replace('working_dir', working_dir_name),
+            images_extract_dir=images_extract_dir.replace('working_dir', working_dir_name),
+            temp_processing_dir=temp_processing_dir.replace('working_dir', working_dir_name),
+            rendered_dirs=rendered_dir.replace('working_dir', working_dir_name),
+            overlap_dir=overlap_dir.replace('working_dir', working_dir_name),
+            verified_img_dir=verified_img_dir.replace('working_dir', working_dir_name),
+            verified_mask_dir=verified_mask_dir.replace('working_dir', working_dir_name),
+            final_video_path=final_video_path,
+            images_ending_count=images_ending_count
         )
 
-        if os.path.exists(args.working_dir_name):
-            if args.delete.lower() == 'yes':
-                shutil.rmtree(args.working_dir_name)
-                logger.info(f"Cleared working directory: {args.working_dir_name}")
+        if os.path.exists(working_dir_name):
+            if delete == 'yes':
+                shutil.rmtree(working_dir_name)
+                logger.info(f"Cleared working directory: {working_dir_name}")
             else:
                 confirm = input(
-                    f"Are you sure you want to delete the working directory '{args.working_dir_name}'? (yes/no): "
+                    f"Are you sure you want to delete the working directory '{working_dir_name}'? (yes/no): "
                 ).lower()
                 if confirm == 'yes':
-                    shutil.rmtree(args.working_dir_name)
-                    logger.info(f"Cleared working directory: {args.working_dir_name}")
+                    shutil.rmtree(working_dir_name)
+                    logger.info(f"Cleared working directory: {working_dir_name}")
                 else:
-                    logger.info(f"Working directory '{args.working_dir_name}' not deleted")
+                    logger.info(f"Working directory '{working_dir_name}' not deleted")
 
     logger.info("Pipeline completed for all videos.")
 

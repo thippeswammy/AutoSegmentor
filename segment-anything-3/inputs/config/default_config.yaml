@@ -1,0 +1,17 @@
+# config.yml
+video_start: 1
+video_end: 1
+prefix: Img
+batch_size: 5
+fps: 30
+delete: True
+working_dir_name: working_dir
+video_path_template: ./inputs/VideoInputs/Video{}.mp4
+images_extract_dir: ./working_dir/images
+temp_processing_dir: ./working_dir/temp
+rendered_dir: ./working_dir/render
+overlap_dir: ./working_dir/overlap
+verified_img_dir: ./working_dir/verified/images
+verified_mask_dir: ./working_dir/verified/mask
+final_video_path: ./outputs
+images_ending_count: 20

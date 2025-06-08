@@ -7,7 +7,7 @@ __pycache__/
 build/*
 _C.*
 checkpoints/*.pt
-segment-anything-3/VideoInputs
+segment-anything-3/inputs/VideoInputs
 segment-anything-3/outputs
 segment-anything-3/dist
 segment-anything-3/temp
@@ -15,7 +15,7 @@ segment-anything-3/temp
 /notebooks/videos/bedroom.zip
 /segment-anything-3/working_dir
 /DataVisualizationEditingTool/output.pickle
-/segment-anything-3/UserPrompts/points_labels_Img99.json
+/segment-anything-3/inputs/UserPrompts/points_labels_Img99.json
 /segment-anything-3/sam2_video_predictor.spec
 /DataVisualizationEditingTool/test1.py
 /DataVisualizationEditingTool/test2.py
