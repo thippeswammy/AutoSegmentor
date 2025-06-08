@@ -2,8 +2,8 @@ import os
 import re
 import shutil
 
-from Utils.FileManager import ensure_directory, clear_directory
-from Utils.logger_config import logger
+from .FileManager import ensure_directory, clear_directory
+from .logger_config import logger
 
 
 class FrameHandler:

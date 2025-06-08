@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import cv2
 import numpy as np
-from Utils.logger_config import logger
+from .logger_config import logger
 
 
 class UserInteractionHandler:

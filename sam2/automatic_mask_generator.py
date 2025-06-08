@@ -35,25 +35,25 @@ from sam2.utils.amg import (
 
 class SAM2AutomaticMaskGenerator:
     def __init__(
-        self,
-        model: SAM2Base,
-        points_per_side: Optional[int] = 32,
-        points_per_batch: int = 64,
-        pred_iou_thresh: float = 0.8,
-        stability_score_thresh: float = 0.95,
-        stability_score_offset: float = 1.0,
-        mask_threshold: float = 0.0,
-        box_nms_thresh: float = 0.7,
-        crop_n_layers: int = 0,
-        crop_nms_thresh: float = 0.7,
-        crop_overlap_ratio: float = 512 / 1500,
-        crop_n_points_downscale_factor: int = 1,
-        point_grids: Optional[List[np.ndarray]] = None,
-        min_mask_region_area: int = 0,
-        output_mode: str = "binary_mask",
-        use_m2m: bool = False,
-        multimask_output: bool = True,
-        **kwargs,
+            self,
+            model: SAM2Base,
+            points_per_side: Optional[int] = 32,
+            points_per_batch: int = 64,
+            pred_iou_thresh: float = 0.8,
+            stability_score_thresh: float = 0.95,
+            stability_score_offset: float = 1.0,
+            mask_threshold: float = 0.0,
+            box_nms_thresh: float = 0.7,
+            crop_n_layers: int = 0,
+            crop_nms_thresh: float = 0.7,
+            crop_overlap_ratio: float = 512 / 1500,
+            crop_n_points_downscale_factor: int = 1,
+            point_grids: Optional[List[np.ndarray]] = None,
+            min_mask_region_area: int = 0,
+            output_mode: str = "binary_mask",
+            use_m2m: bool = False,
+            multimask_output: bool = True,
+            **kwargs,
     ) -> None:
         """
         Using a SAM 2 model, generates masks for the entire image.
@@ -104,7 +104,7 @@ class SAM2AutomaticMaskGenerator:
         """
 
         assert (points_per_side is None) != (
-            point_grids is None
+                point_grids is None
         ), "Exactly one of points_per_side or point_grid must be provided."
         if points_per_side is not None:
             self.point_grids = build_all_layer_point_grids(
@@ -249,11 +249,11 @@ class SAM2AutomaticMaskGenerator:
         return data
 
     def _process_crop(
-        self,
-        image: np.ndarray,
-        crop_box: List[int],
-        crop_layer_idx: int,
-        orig_size: Tuple[int, ...],
+            self,
+            image: np.ndarray,
+            crop_box: List[int],
+            crop_layer_idx: int,
+            orig_size: Tuple[int, ...],
     ) -> MaskData:
         # Crop the image and calculate embeddings
         x0, y0, x1, y1 = crop_box
@@ -292,12 +292,12 @@ class SAM2AutomaticMaskGenerator:
         return data
 
     def _process_batch(
-        self,
-        points: np.ndarray,
-        im_size: Tuple[int, ...],
-        crop_box: List[int],
-        orig_size: Tuple[int, ...],
-        normalize=False,
+            self,
+            points: np.ndarray,
+            im_size: Tuple[int, ...],
+            crop_box: List[int],
+            orig_size: Tuple[int, ...],
+            normalize=False,
     ) -> MaskData:
         orig_h, orig_w = orig_size
 
@@ -385,7 +385,7 @@ class SAM2AutomaticMaskGenerator:
 
     @staticmethod
     def postprocess_small_regions(
-        mask_data: MaskData, min_area: int, nms_thresh: float
+            mask_data: MaskData, min_area: int, nms_thresh: float
     ) -> MaskData:
         """
         Removes small disconnected regions and holes in masks, then reruns
@@ -439,7 +439,7 @@ class SAM2AutomaticMaskGenerator:
         new_iou_preds = []
 
         for cur_points, cur_point_labels, low_res_mask in batch_iterator(
-            points_per_batch, points, point_labels, low_res_masks
+                points_per_batch, points, point_labels, low_res_masks
         ):
             best_masks, best_iou_preds, _ = self.predictor._predict(
                 cur_points[:, None, :],

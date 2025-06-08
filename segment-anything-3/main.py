@@ -20,8 +20,8 @@ def load_config(config_path="inputs/config/default_config.yaml"):
 
     Raises:
         FileNotFoundError: If the config file does not exist.
-        yaml.YAMLError: If the YAML file is invalid.
-        KeyError: If required configuration keys are missing.
+        Yaml.YAMLError: If the YAML file is invalid.
+        KeyError: If required, configuration keys are missing.
         ValueError: If the 'delete' option is invalid.
     """
     try:
@@ -135,6 +135,7 @@ def main():
                 else:
                     logger.info(f"Working directory '{working_dir_name}' not deleted")
 
+        logger.info('-' * 60)
     logger.info("Pipeline completed for all videos.")
 
 

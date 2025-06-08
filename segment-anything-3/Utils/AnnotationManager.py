@@ -2,8 +2,9 @@ import json
 from os.path import exists
 
 import numpy as np
-from Utils.FileManager import ensure_directory
-from Utils.logger_config import logger
+
+from .FileManager import ensure_directory
+from .logger_config import logger
 
 
 class AnnotationManager:
@@ -35,7 +36,7 @@ class AnnotationManager:
             self.labels_collection = [np.array(entry["labels"], dtype=np.int32) for entry in data]
             self.frame_indices = [int(entry["frame_idx"]) for entry in data]
 
-            logger.info(f"Loaded {len(self.points_collection)} annotations from {filename}")
+            logger.debug(f"Loaded {len(self.points_collection)} annotations from {filename}")
         except Exception as e:
             logger.error(f"Error loading points and labels from {filename}: {e}")
 
@@ -70,7 +71,7 @@ class AnnotationManager:
         try:
             with open(filename, 'w', encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            logger.info(f"Saved {len(data)} annotations to {filename}")
+            logger.debug(f"Saved {len(data)} annotations to {filename}")
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
@@ -79,7 +80,8 @@ class AnnotationManager:
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         if len(self.points_collection) >= total_batches:
             logger.info("Sufficient points and labels data for all batches")
-            return 0
+            return len(self.points_collection) * self.config.batch_size
         missing_batches = total_batches - len(self.points_collection)
-        logger.info(f"Missing points and labels for {missing_batches} batches")
+        logger.info(
+            f"Missing points and labels for {missing_batches} batches from {total_batches - missing_batches + 1}")
         return len(self.points_collection) * self.config.batch_size

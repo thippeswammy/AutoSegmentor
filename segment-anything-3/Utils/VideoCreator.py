@@ -2,7 +2,7 @@ import os
 import threading
 
 import cv2
-from Utils.logger_config import logger
+from .logger_config import logger
 from tqdm import tqdm
 
 
@@ -41,7 +41,7 @@ class VideoCreator:
         if not cap.isOpened():
             logger.error(f"Failed to create valid video: {video_name}")
         else:
-            logger.info(f"Video saved as {video_name}")
+            logger.debug(f"Video saved as {video_name}")
         cap.release()
 
     def run(self):

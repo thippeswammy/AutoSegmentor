@@ -3,7 +3,7 @@ import re
 import shutil
 import sys
 
-from Utils.logger_config import logger
+from .logger_config import logger
 
 
 def get_resource_path(relative_path):

@@ -1,4 +1,4 @@
-from Utils.FileManager import get_resource_path, ensure_directory
+from .FileManager import get_resource_path, ensure_directory
 
 
 class SAM2Config:

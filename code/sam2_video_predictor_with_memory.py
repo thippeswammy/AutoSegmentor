@@ -41,7 +41,7 @@ def resource_path(relative_path):
         base_path = sys._MEIPASS
     except AttributeError:
         # In development, use the current directory
-        base_path = os.path.abspath(".")
+        base_path = os.path.abspath("../segment-anything-3")
 
     # Construct the full path and normalize it
     full_path = os.path.normpath(os.path.join(base_path, relative_path))

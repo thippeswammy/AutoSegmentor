@@ -4,15 +4,16 @@ import cv2
 import numpy as np
 import pygetwindow as gw
 import torch
-from Utils.AnnotationManager import AnnotationManager
-from Utils.Config import SAM2Config
-from Utils.FileManager import clear_directory
-from Utils.FrameExtractor import FrameExtractor
-from Utils.FrameHandler import FrameHandler
-from Utils.MaskProcessor import MaskProcessor
-from Utils.SAM2Model import SAM2Model
-from Utils.UserInteraction import UserInteractionHandler
-from Utils.logger_config import logger
+
+from .AnnotationManager import AnnotationManager
+from .Config import SAM2Config
+from .FileManager import clear_directory
+from .FrameExtractor import FrameExtractor
+from .FrameHandler import FrameHandler
+from .MaskProcessor import MaskProcessor
+from .SAM2Model import SAM2Model
+from .UserInteraction import UserInteractionHandler
+from .logger_config import logger
 
 print(torch.cuda.get_device_name(0))
 
@@ -226,7 +227,6 @@ class SAM2VideoProcessor(SAM2Model):
     def run(self):
         """Run the SAM2 video predictor pipeline."""
         start_batch_idx = self.annotation_manager.check_data_sufficiency()
-        logger.info(f"Starting point collection from batch {start_batch_idx // self.config.batch_size}")
         batch_index = 0
         while batch_index < len(self.frame_paths):
             logger.info(
