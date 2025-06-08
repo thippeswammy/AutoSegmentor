@@ -1,6 +1,6 @@
 import torch
 import GPUtil
-from utils.UserUI.logger_config import logger
+from ..UserUI.logger_config import logger
 from sam2.build_sam import build_sam2_video_predictor
 
 class SAM2Model:

@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import cv2
 import numpy as np
+
 from .logger_config import logger
 
 
@@ -156,8 +157,8 @@ class UserInteractionHandler:
                             video_path=None,
                             frame_paths=[os.path.abspath(frame_path)]
                         )
-                        self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
-                            frame_path)
+                        self.current_frame = self.current_frame_only_text = (
+                            self).current_frame_only_with_points = cv2.imread(frame_path)
                         self.current_class_label = self.current_instance_id = 1
                         param = [inference_state_temp, frame_path]
                         cv2.setMouseCallback(self.window_name, click_event_callback, param)
