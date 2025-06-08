@@ -3,14 +3,14 @@ import re
 import shutil
 import sys
 
-from .logger_config import logger
+from utils.UserUI.logger_config import logger
 
 
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller."""
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+    return os.path.join(os.path.abspath(".."), relative_path)
 
 
 def ensure_directory(path):

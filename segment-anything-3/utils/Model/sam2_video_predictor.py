@@ -1,3 +1,4 @@
+import os
 import sys
 
 import cv2
@@ -5,15 +6,15 @@ import numpy as np
 import pygetwindow as gw
 import torch
 
-from .AnnotationManager import AnnotationManager
-from .SAM2Config import SAM2Config
-from .FileManager import clear_directory
-from .FrameExtractor import FrameExtractor
-from .FrameHandler import FrameHandler
-from .MaskProcessor import MaskProcessor
-from .SAM2Model import SAM2Model
-from .UserInteraction import UserInteractionHandler
-from .logger_config import logger
+from utils.UserUI.AnnotationManager import AnnotationManager
+from utils.Model.SAM2Config import SAM2Config
+from utils.FileManagement.FileManager import clear_directory
+from utils.FileManagement.FrameExtractor import FrameExtractor
+from utils.FileManagement.FrameHandler import FrameHandler
+from utils.FileManagement.MaskProcessor import MaskProcessor
+from utils.Model.SAM2Model import SAM2Model
+from utils.UserUI.UserInteraction import UserInteractionHandler
+from utils.UserUI.logger_config import logger
 
 print(torch.cuda.get_device_name(0))
 

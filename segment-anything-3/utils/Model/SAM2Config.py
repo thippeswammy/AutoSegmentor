@@ -1,4 +1,4 @@
-from .FileManager import get_resource_path, ensure_directory
+from utils.FileManagement.FileManager import get_resource_path, ensure_directory
 
 
 class SAM2Config:
@@ -28,5 +28,5 @@ class SAM2Config:
         }
         self.memory_bank_size = memory_bank_size
         self.prompt_memory_size = prompt_memory_size
-        self.model_config_path = get_resource_path("../sam2_configs/sam2_hiera_l.yaml")
-        self.checkpoint_path = get_resource_path("../checkpoints/sam2_hiera_large.pt")
+        self.model_config_path = get_resource_path("./sam2_configs/sam2_hiera_l.yaml")
+        self.checkpoint_path = get_resource_path("./checkpoints/sam2_hiera_large.pt")

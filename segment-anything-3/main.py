@@ -4,8 +4,8 @@ import sys
 
 import yaml
 
-from Utils.logger_config import logger
-from Utils.pipeline import run_pipeline
+from utils.UserUI.logger_config import logger
+from utils.pipeline import run_pipeline
 
 
 def load_config(config_path="inputs/config/default_config.yaml"):

@@ -3,8 +3,8 @@ from os.path import exists
 
 import numpy as np
 
-from .FileManager import ensure_directory
-from .logger_config import logger
+from utils.FileManagement.FileManager import ensure_directory
+from utils.UserUI.logger_config import logger
 
 
 class AnnotationManager:

@@ -1,11 +1,11 @@
 import sys
 
-from .FileManager import ensure_directory
-from .ImageCopier import ImageCopier
-from .ImageOverlayProcessor import ImageOverlayProcessor
-from .VideoCreator import VideoCreator
-from .logger_config import logger
-from .sam2_video_predictor import SAM2VideoProcessor
+from .FileManagement.FileManager import ensure_directory
+from .FileManagement.ImageCopier import ImageCopier
+from .FileManagement.ImageOverlayProcessor import ImageOverlayProcessor
+from .FileManagement.VideoCreator import VideoCreator
+from .Model.sam2_video_predictor import SAM2VideoProcessor
+from .UserUI.logger_config import logger
 
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
