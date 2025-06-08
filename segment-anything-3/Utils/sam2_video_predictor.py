@@ -6,7 +6,7 @@ import pygetwindow as gw
 import torch
 
 from .AnnotationManager import AnnotationManager
-from .Config import SAM2Config
+from .SAM2Config import SAM2Config
 from .FileManager import clear_directory
 from .FrameExtractor import FrameExtractor
 from .FrameHandler import FrameHandler
@@ -26,14 +26,14 @@ class SAM2VideoProcessor(SAM2Model):
                  rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
                  window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5):
         self.inference_state = None
-        config = SAM2Config(
+        sam2Config = SAM2Config(
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
             images_ending_count=images_ending_count, prefix=prefix, video_path_template=video_path_template,
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
             temp_processing_dir=temp_processing_dir, window_size=window_size,
             label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size
         )
-        super().__init__(config)
+        super().__init__(sam2Config)
         if video_path_template is None:
             logger.error("Missing the video file paths or video")
             sys.exit(1)
@@ -44,11 +44,11 @@ class SAM2VideoProcessor(SAM2Model):
             video_path_template=video_path_template, output_dir=images_extract_dir
         )
         extractor.run()
-        self.frame_handler = FrameHandler(config.frames_directory, config.temp_directory)
+        self.frame_handler = FrameHandler(sam2Config.frames_directory, sam2Config.temp_directory)
         self.frame_paths = self.frame_handler.get_frame_files()
-        self.annotation_manager = AnnotationManager(config, self.frame_paths)
-        self.user_interaction = UserInteractionHandler(config, self.annotation_manager, self)
-        self.mask_processor = MaskProcessor(config)
+        self.annotation_manager = AnnotationManager(sam2Config, self.frame_paths)
+        self.user_interaction = UserInteractionHandler(sam2Config, self.annotation_manager, self)
+        self.mask_processor = MaskProcessor(sam2Config)
 
     def click_event(self, event, x, y, flags, param):
         """Handle mouse events for point selection."""
