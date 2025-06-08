@@ -21,7 +21,7 @@ def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
     except AttributeError:
-        base_path = os.path.abspath("../segment-anything-3")
+        base_path = os.path.abspath("../sam3")
     return os.path.join(base_path, relative_path)
 
 

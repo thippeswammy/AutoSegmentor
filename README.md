@@ -120,7 +120,7 @@ python DatasetCreator.py
 The script uses a configuration dictionary defined in `DatasetCreator.py`. A sample configuration supporting multiple classes is:
 ```python
 CONFIG = {
-    "dataset_path": r"../../segment-anything-3/working_dir",
+    "dataset_path": r"../../sam3/working_dir",
     "SOURCE_mask_folder_name": "render",
     "SOURCE_original_folder_name": "images",
     "SOURCE_mask_type_ext": ".png",

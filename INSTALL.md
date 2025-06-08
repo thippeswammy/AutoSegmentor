@@ -59,7 +59,7 @@ I got `MissingConfigException: Cannot find primary config 'sam2_hiera_l.yaml'`
 
 This is usually because you haven't run the `pip install -e .` step above, so `sam2_configs` isn't in your Python's `sys.path`. Please run this installation step. In case it still fails after the installation step, you may try manually adding the root of this repo to `PYTHONPATH` via
 ```bash
-export SAM2_REPO_ROOT=/path/to/segment-anything-3  # path to this repo
+export SAM2_REPO_ROOT=/path/to/sam3  # path to this repo
 export PYTHONPATH="${SAM2_REPO_ROOT}:${PYTHONPATH}"
 ```
 to manually add `sam2_configs` into your Python's `sys.path`.

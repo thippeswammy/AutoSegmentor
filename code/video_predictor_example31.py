@@ -353,7 +353,7 @@ if __name__ == "__main__":
     #         os.makedirs(i)
     for i in range(78, 79):
         video_path_template = r'D:\downloadFiles\front_3\Video{}.mp4'
-        images_extract_dir = r'/segment-anything-3/videos/Images'
+        images_extract_dir = r'/sam3/videos/Images'
         processor = VideoFrameProcessor(video_number=i, prefixFileName='road', rendered_frames_dirs=None,
                                         batch_size=120, video_path_template=video_path_template,
                                         images_extract_dir=images_extract_dir)
