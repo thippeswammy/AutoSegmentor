@@ -17,8 +17,8 @@ sam3/temp
 /DataVisualizationEditingTool/output.pickle
 /sam3/inputs/UserPrompts/points_labels_Img99.json
 /sam3/sam2_video_predictor.spec
-/DataVisualizationEditingTool/test1.py
-/DataVisualizationEditingTool/test2.py
-/DataVisualizationEditingTool/test3.py
+/DataVisualizationEditingTool/temp/test1.py
+/DataVisualizationEditingTool/temp/test2.py
+/DataVisualizationEditingTool/temp/test3.py
 /DataVisualizationEditingTool/WorkingLane.npy
 /sam3/inputs/UserPrompts/points_labels_Img1.json
