@@ -6,13 +6,13 @@ __pycache__/
 *.egg*
 build/*
 _C.*
+/sav_dataset/example/sav_000001.mp4
+/notebooks/videos/bedroom.zip
 checkpoints/*.pt
 sam3/inputs/VideoInputs
 sam3/outputs
 sam3/dist
 sam3/temp
-/sav_dataset/example/sav_000001.mp4
-/notebooks/videos/bedroom.zip
 /sam3/working_dir
 /sam3/inputs/UserPrompts/points_labels_Img99.json
 /sam3/sam2_video_predictor.spec

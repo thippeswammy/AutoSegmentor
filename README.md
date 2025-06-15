@@ -109,6 +109,7 @@ The `sam2_video_predictor.py` script operates in two primary modes:
 
 ### 4. Creating a YOLO Dataset
 The `DatasetCreator.py` script processes SAM2-generated images and masks (from `working_dir/images` and `working_dir/render`) into a YOLO-compatible dataset with augmentations. It supports multiple classes (e.g., `road`, `cars`, `trucks`) by mapping mask colors to class IDs and creates a dataset structure with `train`, `valid`, and `test` splits, including images and YOLO-format label files.
+For more information, see the [README](./DatasetManager/YolovDatasetManager/README.md).
 
 Run the dataset creation script:
 ```bash
