@@ -1,4 +1,4 @@
-# SAM2 Video Processing Pipeline
+# SAM3
 
 This repository provides a comprehensive pipeline for video segmentation using the SAM2 (Segment Anything Model 2) model, with functionality to create YOLO-compatible datasets for training. The pipeline automates frame extraction, supports interactive point-based annotation, performs mask prediction, overlays masks on original images, compiles results into output videos, and processes images and masks into a YOLO dataset format with augmentations. Future enhancements will include support for additional dataset formats (e.g., COCO, Pascal VOC) for broader compatibility.
 
@@ -36,34 +36,19 @@ Ensure the SAM2 model checkpoint (`sam2_hiera_large.pt`) and configuration (`sam
 ## Usage
 
 ### 1. Prepare Inputs
-- Place input videos in the specified directory (e.g., `.\VideoInputs\Video1.mp4`, `.\VideoInputs\Video2.mp4`, ...).
+- Place input videos in the specified directory (e.g., `.\sam3/inputs/VideoInputs/Video1.mp4`, `.sam3/inputs/VideoInputs/Video2.mp4`, ...).
 - Ensure the SAM2 model checkpoint (`sam2_hiera_large.pt`) and configuration (`sam2_hiera_l.yaml`) are in the `checkpoints` and `sam2_configs` directories.
-- Verify that custom modules (`FrameExtractor`, `ImageCopier`, `ImageOverlayProcessor`, `VideoCreator`, `create_yolo_structure`) are available in the project directory.
 
 ### 2. Running the SAM2 Video Processing Pipeline
 Navigate to the project directory:
 ```bash
-cd .\segment-anything-3
+cd .\sam3
 ```
 
-Run the SAM2 pipeline to generate images, masks, and videos:
+Run the SAM3 pipeline to generate images, masks, and videos:
 ```bash
-python sam2_video_predictor.py ^
-  --video_start 1 ^
-  --video_end 2 ^
-  --prefix Img ^
-  --batch_size 120 ^
-  --fps 30 ^
-  --delete no ^
-  --working_dir_name working_dir ^
-  --video_path_template .\VideoInputs\Video{}.mp4 ^
-  --images_extract_dir .\working_dir\images ^
-  --temp_processing_dir .\working_dir\temp ^
-  --rendered_dir .\working_dir\render ^
-  --overlap_dir .\working_dir\overlap ^
-  --verified_img_dir .\working_dir\verified\images ^
-  --verified_mask_dir .\working_dir\verified\mask ^
-  --final_video_path .\outputs
+conf the at 'inputs/config/default_config.yaml' change according.
+python sam3_video_predictor.py
 ```
 
 #### Argument Descriptions
