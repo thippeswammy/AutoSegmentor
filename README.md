@@ -1,7 +1,7 @@
 # AutoSegmentor
 
 [![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
-[![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1vvW7xPivgNbbkHP49AU1s5goSi0Zlr0S/view?usp=sharing)
+[![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
 
 ![AutoSegmenter2](https://github.com/user-attachments/assets/9cb00e30-7c1a-4c6f-8f3d-ac2811424e00)
 
@@ -13,7 +13,7 @@ AutoSegmentor supports long videos and visually-rich content graphics, making it
 **You can create datasets for any required object or class simply by giving visual prompts—no manual labeling required.**
 
 > **Demo:**  
-> [Watch the demo video (long video, includes GFX)](https://drive.google.com/file/d/1vvW7xPivgNbbkHP49AU1s5goSi0Zlr0S/view?usp=sharing)
+> [Watch the demo video](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=drive_link)
 
 ---
 
@@ -30,12 +30,6 @@ AutoSegmentor supports long videos and visually-rich content graphics, making it
 - **Extensible Dataset Support:** (WIP) Future support for COCO, Pascal VOC, etc.
 - **Open Source:** MIT-licensed and community-friendly.
 
----
-
-## Demo
-
-- **Demo Video:** [Watch here (Google Drive, long video with GFX)](https://drive.google.com/file/d/1vvW7xPivgNbbkHP49AU1s5goSi0Zlr0S/view?usp=sharing)
-- **Source Code:** [https://github.com/thippeswammy/AutoSegmentor](https://github.com/thippeswammy/AutoSegmentor)
 
 ---
 
