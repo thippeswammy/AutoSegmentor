@@ -1,131 +1,144 @@
-# SAM2 Video Processing Pipeline
+# AutoSegmentor
 
-This repository provides a comprehensive pipeline for video segmentation using the SAM2 (Segment Anything Model 2) model by Meta AI, with functionality to create YOLO-compatible datasets for training. The pipeline automates frame extraction, supports interactive point-based annotation, performs mask prediction, overlays masks on original images, compiles results into output videos, and processes images and masks into a YOLO dataset format with augmentations. The codebase is organized under the `sam3` package, with modular components for file management, model handling, user interaction, and pipeline execution. Future enhancements will include support for additional dataset formats (e.g., COCO, Pascal VOC) for broader compatibility.
+[![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
+[![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1vvW7xPivgNbbkHP49AU1s5goSi0Zlr0S/view?usp=sharing)
+
+![AutoSegmenter2](https://github.com/user-attachments/assets/9cb00e30-7c1a-4c6f-8f3d-ac2811424e00)
+
+_AutoSegmentor is a game-changer for anyone working with video data in computer vision. This open-source project provides a comprehensive auto-labeling system that converts raw videos—including long videos and complex scenes—into structured datasets using Meta AI's cutting-edge [Segment Anything Model 2 (SAM2)](https://github.com/facebookresearch/segment-anything)._
+
+**Main purpose:**  
+Build an auto-labeling pipeline that converts raw videos into structured YOLO-compatible datasets using SAM2, with real-time segmentation enabled by CUDA acceleration, multithreading, and an interactive GUI annotation system.  
+AutoSegmentor supports long videos and visually-rich content (GFX/graphics), making it ideal for both standard and advanced video processing tasks.  
+**You can create datasets for any required object or class simply by giving visual prompts—no manual labeling required.**
+
+> **Demo:**  
+> [Watch the demo video (long video, includes GFX)](https://drive.google.com/file/d/1vvW7xPivgNbbkHP49AU1s5goSi0Zlr0S/view?usp=sharing)
+
+---
 
 ## Features
-- **Frame Extraction**: Extracts frames from input videos into images using `FrameExtractor`.
-- **Interactive Annotation**: Annotates frames with points and class labels via an OpenCV-based GUI, managed by `AnnotationManager` and `UserInteraction`.
-- **Batch Processing**: Processes frames in configurable batches for efficient GPU usage, handled by `FrameHandler`.
-- **Mask Prediction**: Uses SAM2 to predict segmentation masks for annotated objects, processed by `MaskProcessor`.
-- **Mask Overlay**: Overlays predicted masks on original images for verification using `ImageOverlayProcessor`.
-- **Verification Step**: Prompts user verification of overlays before finalizing output.
-- **Video Compilation**: Creates output videos (original, masks, and overlays) using `VideoCreator`.
-- **Dataset Creation**: Converts SAM2-generated masks and images into YOLO format with augmentations using `DatasetCreator`, supporting multiple classes (e.g., `road`, `cars`, `trucks`).
-- **Directory Management**: Manages temporary and output directories with optional cleanup using `FileManager`.
-- **Model Configuration**: Configures SAM2 model settings via `SAM2Config` and manages model initialization with `SAM2Model`.
+
+- **Automated Frame Extraction:** Extracts frames from short or long videos using a robust, configurable pipeline.
+- **Interactive Annotation:** Point-based, multi-class annotation with real-time OpenCV GUI.
+- **Batch & Real-time Processing:** Efficient batch segmentation with CUDA and multithreading.
+- **Mask Prediction & Overlay:** Predicts masks with SAM2 and overlays for easy verification.
+- **Output Video Compilation:** Produces original, mask, and overlay videos for review.
+- **YOLO Dataset Creation:** Converts masks/images into YOLO format with augmentations.
+- **Graphics (GFX) & Long Video Support:** Handles visually-rich videos and lengthy footage efficiently.
+- **Directory & File Management:** Automated temp/output dir handling and cleanup.
+- **Extensible Dataset Support:** (WIP) Future support for COCO, Pascal VOC, etc.
+- **Open Source:** MIT-licensed and community-friendly.
+
+---
+
+## Demo
+
+- **Demo Video:** [Watch here (Google Drive, long video with GFX)](https://drive.google.com/file/d/1vvW7xPivgNbbkHP49AU1s5goSi0Zlr0S/view?usp=sharing)
+- **Source Code:** [https://github.com/thippeswammy/AutoSegmentor](https://github.com/thippeswammy/AutoSegmentor)
+
+---
 
 ## Requirements
+
 - Python 3.8+
-- PyTorch (with CUDA support for GPU acceleration)
+- PyTorch (with CUDA for GPU acceleration)
 - OpenCV (`opencv-python`)
 - NumPy
 - GPUtil
 - tqdm
 - pygetwindow
 - Pillow (`PIL`)
-- SAM2 library and model checkpoint (`sam2_hiera_large.pt`)
+- **SAM2** library and checkpoint (`sam2_hiera_large.pt`)
 - Custom modules: `FileManager`, `FrameExtractor`, `FrameHandler`, `MaskProcessor`, `ImageCopier`, `ImageOverlayProcessor`, `VideoCreator`, `SAM2Config`, `SAM2Model`, `sam2_video_predictor`, `AnnotationManager`, `UserInteraction`, `pipeline`, `create_yolo_structure`
 - Platform dependencies for GUI (e.g., X11 on Linux or compatible display server on Windows)
 
-Install dependencies with:
+Install dependencies:
 ```bash
-pip install torch torchvision opencv-python numpy GPUtil tqdm pygetwindow pillow禁止
+pip install torch torchvision opencv-python numpy GPUtil tqdm pygetwindow pillow
+```
+_Ensure your GPU drivers & PyTorch are CUDA-ready if using GPU._
 
-Ensure the SAM2 model checkpoint (`sam2_hiera_large.pt`) and configuration (`sam2_hiera_l.yaml`) are placed in the `checkpoints` and `sam2_configs` directories, respectively. The `create_yolo_structure` module, required for dataset creation, must be in the `DatasetManager/YolovDatasetManager` directory.
+**SAM2 files:** Place `sam2_hiera_large.pt` in `checkpoints/`, and `sam2_hiera_l.yaml` in `sam2_configs/`.
+
+---
 
 ## Usage
 
 ### 1. Prepare Inputs
-- Place input videos in the specified directory (e.g., `sam3/inputs/VideoInputs/Video1.mp4`, `sam3/inputs/VideoInputs/Video2.mp4`, ...).
-- Ensure the SAM2 model checkpoint (`sam2_hiera_large.pt`) and configuration (`sam2_hiera_l.yaml`) are in the `checkpoints` and `sam2_configs` directories.
-- Verify that all custom modules are available in the `sam3/utils` directory structure.
 
-### 2. Running the SAM2 Video Processing Pipeline
+- Place input videos (including long or GFX-rich videos) in `sam3/inputs/VideoInputs/` (e.g., `Video1.mp4`, `Video2.mp4`, ...).
+- Ensure the SAM2 checkpoint and config are in `checkpoints/` and `sam2_configs/`.
+- Confirm all custom modules exist in `sam3/utils/`.
 
-The `sam3/sam3_video_predictor_demo.py` script orchestrates the video processing workflow, configured via a YAML file.
+### 2. Run the Main Pipeline
 
-**Prerequisites:**
-- Ensure input videos are in the location specified by `video_path_template` in the configuration file (e.g., `sam3/inputs/VideoInputs/Video{}.mp4`).
-- Verify that the SAM2 model checkpoint and configuration are in the `checkpoints` and `sam2_configs` directories, respectively.
+- Navigate to the root directory (where `sam3` is located):
 
-**Execution:**
-
-Navigate to the root directory of the project (where `sam3` is located):
 ```bash
-cd path/to/your/project_root
-```
-
-Run the main pipeline script:
-```bash
+cd path/to/your/AutoSegmentor
 python sam3/sam3_video_predictor_demo.py
 ```
-The script loads parameters from `sam3/inputs/config/default_config.yaml` by default. To use a different configuration file, modify the `config_path` variable in the `load_config` function in `sam3/sam3_video_predictor_demo.py`.
+- By default, this loads parameters from `sam3/inputs/config/default_config.yaml`.
 
-#### Configuration (`sam3/inputs/config/default_config.yaml`)
+#### Custom Configuration
 
-All operational parameters are defined in `sam3/inputs/config/default_config.yaml`. Users **must** modify this file to control:
+Edit `sam3/inputs/config/default_config.yaml` to control:
 - Input video range (`video_start`, `video_end`)
-- File naming (`prefix`)
-- Processing parameters (`batch_size`, `fps`)
-- Directory paths (`working_dir_name`, `images_extract_dir`, `rendered_dir`, etc.)
-- Cleanup behavior (`delete`)
+- Filename prefix (`prefix`)
+- Processing params (`batch_size`, `fps`)
+- Directory paths (e.g., `working_dir_name`, `images_extract_dir`)
+- Cleanup policy (`delete`: auto/manual)
 
-#### Configuration Details
+**Sample config keys:**
+```yaml
+video_start: 1
+video_end: 2
+prefix: "Img"
+batch_size: 8
+fps: 24
+delete: false
+working_dir_name: "working_dir"
+video_path_template: "sam3/inputs/VideoInputs/Video{}.mp4"
+...
+```
 
-Key parameters in `sam3/inputs/config/default_config.yaml`:
-- `video_start` (int): Starting video sequence number (e.g., 1 for `Video1.mp4`).
-- `video_end` (int): Number of videos to process (e.g., 2 for `Video1.mp4` and `Video2.mp4`).
-- `prefix` (str): Prefix for naming intermediate files (e.g., "Img").
-- `batch_size` (int): Number of frames processed per batch.
-- `fps` (int): Frames per second for output videos.
-- `delete` (bool): Controls cleanup of `working_dir_name` (`true` for automatic deletion, `false` for user prompt).
-- `working_dir_name` (str): Main directory for intermediate files (e.g., "working_dir").
-- `video_path_template` (str): Path template for input videos (e.g., `sam3/inputs/VideoInputs/Video{}.mp4`).
-- `images_extract_dir` (str): Directory for extracted frames (e.g., `sam3/working_dir/images`).
-- `temp_processing_dir` (str): Directory for temporary files (e.g., `sam3/working_dir/temp`).
-- `rendered_dir` (str): Directory for rendered masks (e.g., `sam3/working_dir/render`).
-- `overlap_dir` (str): Directory for overlaid images (e.g., `sam3/working_dir/overlap`).
-- `verified_img_dir` (str): Directory for verified original images (e.g., `sam3/working_dir/verified/images`).
-- `verified_mask_dir` (str): Directory for verified masks (e.g., `sam3/working_dir/verified/mask`).
-- `final_video_path` (str): Directory for output videos (e.g., `sam3/outputs`).
-- `images_ending_count` (int): Number of digits for frame numbering (e.g., 5 for `00001.jpg`).
-
-Modify these values in `sam3/inputs/config/default_config.yaml` to customize execution.
-
-#### Core Workflow of `sam3_video_predictor_demo.py`
-
-The script performs:
-1. **Loads Configuration**: Reads parameters from the YAML file using `load_config`.
-2. **Iterates Through Videos**: Processes videos from `video_start` to `video_end`.
-3. **Manages Working Directory**: Clears `working_dir_name` based on `delete` setting using `FileManager`.
-4. **Executes Processing Pipeline**: Calls `run_pipeline` (from `sam3/utils/pipeline.py`), which:
-   - Extracts frames using `FrameExtractor`.
-   - Manages batches with `FrameHandler`.
-   - Generates masks with `MaskProcessor` and `SAM2VideoProcessor`.
-   - Overlays masks with `ImageOverlayProcessor`.
-   - Copies verified images/masks with `ImageCopier`.
-   - Creates videos with `VideoCreator`.
-5. **Post-Processing Cleanup**: Manages `working_dir_name` based on `delete` setting.
+---
 
 ### 3. Annotation
 
-The `sam3_video_predictor_demo.py` script orchestrates the annotation and verification processes as part of the SAM2 video processing pipeline. It loads configuration parameters from `sam3/inputs/config/default_config.yaml` and delegates tasks to `run_pipeline` (from `sam3/utils/pipeline.py`), which coordinates frame extraction, annotation, mask prediction, overlay generation, verification, and video creation.
+The annotation and verification processes are orchestrated as part of the pipeline and are highly interactive:
 
-- **Interactive Annotation**:
-  - **Process**: The `SAM2VideoProcessor` (from `sam3/utils/Model/sam2_video_predictor.py`) uses `UserInteraction` and `AnnotationManager` (from `sam3/utils/UserUI/`) to provide an OpenCV-based GUI for annotating frames. Users add foreground/background points and class labels via mouse clicks and keyboard controls. Annotations are saved as JSON files in `sam3/inputs/UserPrompts/points_labels_<prefix><video_number>.json`.
-  - **Details**: Users select points (left-click for foreground, right-click for background), assign class labels (1-9), and manage instance IDs (`Tab`/`Shift+Tab`). A `Zoom View` window shows a magnified area around the cursor. Annotations are used by `MaskProcessor` to generate segmentation masks via the SAM2 model.
+- Uses an OpenCV-based GUI for point-and-click annotation.
+- Save annotations as JSON per video in `sam3/inputs/UserPrompts/points_labels_<prefix><video_number>.json`.
+- Supported keyboard and mouse controls:
+  - **1-9**: Change class label (mapped to `class_to_id`).
+  - **Left Click**: Add foreground point.
+  - **Right Click**: Add background point.
+  - **u**: Undo last point.
+  - **r**: Reset points for current frame.
+  - **Tab**: Increment instance ID.
+  - **Shift + Tab**: Decrement instance ID.
+  - **f**: Jump to specific frame index.
+  - **Enter**: Save points and proceed.
+  - **q**: Quit annotation.
 
-### 4. Creating a YOLO Dataset
-The `DatasetCreator.py` script processes images and masks from `sam3/working_dir/images` and `sam3/working_dir/render` into a YOLO-compatible dataset with augmentations, supporting multiple classes (e.g., `road`, `cars`, `trucks`).
+A zoom window shows a magnified area around the cursor for precision annotation.
 
-Run the dataset creation script:
+---
+
+### 4. Create YOLO Dataset
+
+- Converts processed images/masks into YOLO V8-compatible datasets, with augmentations (color jitter, blur, noise, etc.).
+- Multi-class support via color mapping.
+
+Run:
 ```bash
 cd DatasetManager/YolovDatasetManager
 python DatasetCreator.py
 ```
 
-#### Configuration for `DatasetCreator.py`
-Sample configuration in `DatasetCreator.py`:
+**Example CONFIG in `DatasetCreator.py`:**
 ```python
 CONFIG = {
     "dataset_path": r"../sam3/working_dir",
@@ -145,9 +158,9 @@ CONFIG = {
         "trucks": 2
     },
     "color_to_label": {
-        (255, 255, 255): 0,  # road
-        (0, 0, 255): 1,      # cars
-        (255, 0, 0): 2       # trucks
+        (255, 255, 255): 0,   # road
+        (0, 0, 255): 1,       # cars
+        (255, 0, 0): 2        # trucks
     },
     "class_names": ["road", "cars", "trucks"],
     "dataset_saving_working_dir": r".\DatasetManager",
@@ -158,33 +171,41 @@ CONFIG = {
     "ToDataTypeFormate": ""
 }
 ```
+**Note:** `color_to_label` must match the mask colors output by `MaskProcessor` & set in `SAM2Config`.
 
-#### Multiple Class Support and Instance ID Management
-- **Multiple Classes**: Maps mask colors to class IDs in `color_to_label`, aligned with `label_colors` in `SAM2Config`.
-- **Instance ID Management**: Uses `Tab`/`Shift+Tab` to increment/decrement instance IDs per class, encoding labels as `class_id * 1000 + instance_id`.
-- **YOLO Format**: Converts masks to polygon annotations (e.g., `0 0.1 0.2 ...` for `road`).
+**Multiple Classes & Instance ID:**  
+Maps mask colors to class IDs in `color_to_label`, and uses keyboard shortcuts for instance ID management (labels are encoded as `class_id * 1000 + instance_id`).
 
-#### Augmentations
-- Color jitter, Gaussian blur, average blur, Gaussian noise, salt-and-pepper noise.
+**YOLO Format:**  
+Converts masks to polygon annotations (e.g., `0 0.1 0.2 ...` for `road`).
 
-#### Future Dataset Formats
-- Support for COCO and Pascal VOC formats is planned.
+**Augmentations:**  
+Color jitter, Gaussian blur, average blur, Gaussian noise, salt-and-pepper noise.
 
-### 5. Output
-- **SAM2 Pipeline Outputs**:
+**Future formats:**  
+COCO and Pascal VOC support are planned.
+
+---
+
+## Output Structure
+
+- **AutoSegmentor Pipeline Outputs:**
   - Verified images and masks in `sam3/working_dir/verified/images` and `sam3/working_dir/verified/mask`.
-  - Videos in `sam3/outputs`:
+  - Videos in `sam3/outputs/`:
     - `OrgVideo<video_number>.mp4`: Original frames.
     - `MaskVideo<video_number>.mp4`: Predicted masks.
     - `OverlappedVideo<video_number>.mp4`: Overlaid images.
-- **YOLO Dataset Outputs**:
+- **YOLO Dataset Outputs:**
   - Dataset in `dataset_saving_working_dir/<folder_name>` (e.g., `DatasetManager/road_dataset`):
     - `train/images/`, `train/labels/`
     - `valid/images/`, `valid/labels/`
     - `test/images/`, `test/labels/` (if `test_split` > 0).
 
-### 6. Component Scripts
-- **FileManager.py**: Utilities for directory creation (`ensure_directory`), clearing (`clear_directory`), and frame path retrieval (`get_frame_paths`).
+---
+
+## Component Scripts
+
+- **FileManager.py**: Utilities for directory creation, clearing, and frame path retrieval.
 - **FrameExtractor.py**: Extracts video frames into images with configurable limits and progress tracking.
 - **FrameHandler.py**: Manages frame paths and batch copying to a temporary directory.
 - **MaskProcessor.py**: Converts masks to color images, generates bounding boxes, and processes batch masks with SAM2.
@@ -193,37 +214,24 @@ CONFIG = {
 - **VideoCreator.py**: Creates videos from image folders using multi-threading.
 - **SAM2Config.py**: Configures SAM2 model parameters (e.g., paths, label colors, batch size).
 - **SAM2Model.py**: Initializes the SAM2 model, manages device selection (CPU/GPU), and monitors GPU memory.
-- **sam2_video_predictor.py**: Core processing class (`SAM2VideoProcessor`) for frame annotation, mask prediction, and user interaction.
-- **AnnotationManager.py**: Manages annotation data (points, labels, frame indices), saving/loading to/from JSON.
+- **sam2_video_predictor.py**: Core processing class for frame annotation, mask prediction, and user interaction.
+- **AnnotationManager.py**: Manages annotation data, saving/loading to/from JSON.
 - **UserInteraction.py**: Handles GUI for annotation, including mouse/keyboard controls and zoom view.
-- **pipeline.py**: Orchestrates the pipeline, integrating frame extraction, mask processing, overlay generation, and video creation.
+- **pipeline.py**: Orchestrates the pipeline, integrating all stages.
 - **logger_config.py**: Configures logging for debugging and monitoring.
 
-## Keyboard and Mouse Controls for Annotation
-- **1-9**: Change class label (mapped to `class_to_id`).
-- **Left Click**: Add foreground point.
-- **Right Click**: Add background point.
-- **u**: Undo last point.
-- **r**: Reset points for current frame.
-- **Tab**: Increment instance ID.
-- **Shift + Tab**: Decrement instance ID.
-- **f**: Jump to specific frame index.
-- **Enter**: Save points and proceed.
-- **q**: Quit annotation.
-
-A `Zoom View` window shows a magnified view around the mouse cursor.
+---
 
 ## Directory Structure
+
 ```
-SAM2/
+AutoSegmentor/
 ├── DatasetManager/
 │   └── YolovDatasetManager/
 │       ├── create_yolo_structure.py
 │       └── DatasetCreator.py
 ├── checkpoints/
 │   └── sam2_hiera_large.pt
-├── sam2/
-│   └── __init__.py
 ├── sam2_configs/
 │   └── sam2_hiera_l.yaml
 ├── sam3/
@@ -272,24 +280,30 @@ SAM2/
 │   │       └── mask/
 ```
 
-## Notes
-- Ensure GPU drivers and PyTorch are configured for CUDA if using a GPU.
-- The pipeline requires user interaction for annotation/verification unless `delete` is `true`.
-- Video filenames must follow `video_path_template` (e.g., `Video1.mp4`).
-- Frame filenames must follow `<prefix>_<frame_index>.jpg` (e.g., `Img_00000.jpg`).
-- The `color_to_label` in `DatasetCreator.py` must match `label_colors` in `SAM2Config`.
-- All custom modules must be in the `sam3/utils` directory structure.
+---
 
 ## Troubleshooting
-- **Missing SAM2 Checkpoint**: Ensure `sam2_hiera_large.pt` and `sam2_hiera_l.yaml` are in `checkpoints` and `sam2_configs`.
-- **OpenCV Window Issues**: Verify system GUI support (e.g., X11 on Linux).
-- **Invalid Frame Filenames**: Ensure frames follow the expected naming pattern.
-- **GPU Errors**: Check GPU availability with `GPUtil.showUtilization()` and PyTorch CUDA support.
-- **Missing Modules**: Verify all custom modules are in `sam3/utils`.
-- **YOLO Dataset Issues**: Ensure `color_to_label` matches mask colors from `MaskProcessor`.
+
+- **Missing SAM2 Checkpoint:** Ensure `sam2_hiera_large.pt` is in `checkpoints/`, and YAML config in `sam2_configs/`.
+- **OpenCV Window Issues:** Verify system GUI support (e.g., X11 on Linux).
+- **Invalid Frame Filenames:** Ensure frames follow the expected naming pattern.
+- **GPU Errors:** Check GPU availability with `GPUtil.showUtilization()` and PyTorch CUDA support.
+- **Missing Modules:** Verify all custom modules are in `sam3/utils`.
+- **YOLO Dataset Issues:** Ensure `color_to_label` matches mask colors from `MaskProcessor`.
+
+---
 
 ## Acknowledgements
-- [SAM2](https://github.com/facebookresearch/segment-anything) by Meta AI
-- PyTorch, OpenCV, and the open-source community
+
+- [Meta AI's SAM2](https://github.com/facebookresearch/segment-anything)
+- PyTorch, OpenCV, and the open-source vision community
+
+---
+
+## Get Involved
+
+AutoSegmentor is open source and welcomes contributions!  
+**Star, fork, or open issues at:**  
+[https://github.com/thippeswammy/AutoSegmentor](https://github.com/thippeswammy/AutoSegmentor)
 
 **For questions or bug reports, please open an issue.**
