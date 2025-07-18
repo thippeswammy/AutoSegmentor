@@ -9,7 +9,7 @@ _AutoSegmentor is a game-changer for anyone working with video data in computer 
 
 **Main purpose:**  
 Build an auto-labeling pipeline that converts raw videos into structured YOLO-compatible datasets using SAM2, with real-time segmentation enabled by CUDA acceleration, multithreading, and an interactive GUI annotation system.  
-AutoSegmentor supports long videos and visually-rich content (GFX/graphics), making it ideal for both standard and advanced video processing tasks.  
+AutoSegmentor supports long videos and visually-rich content graphics, making it ideal for both standard and advanced video processing tasks.  
 **You can create datasets for any required object or class simply by giving visual prompts—no manual labeling required.**
 
 > **Demo:**  
@@ -25,7 +25,7 @@ AutoSegmentor supports long videos and visually-rich content (GFX/graphics), mak
 - **Mask Prediction & Overlay:** Predicts masks with SAM2 and overlays for easy verification.
 - **Output Video Compilation:** Produces original, mask, and overlay videos for review.
 - **YOLO Dataset Creation:** Converts masks/images into YOLO format with augmentations.
-- **Graphics (GFX) & Long Video Support:** Handles visually-rich videos and lengthy footage efficiently.
+- **Long Video Support:** Handles visually-rich videos and lengthy footage efficiently.
 - **Directory & File Management:** Automated temp/output dir handling and cleanup.
 - **Extensible Dataset Support:** (WIP) Future support for COCO, Pascal VOC, etc.
 - **Open Source:** MIT-licensed and community-friendly.
@@ -67,7 +67,7 @@ _Ensure your GPU drivers & PyTorch are CUDA-ready if using GPU._
 
 ### 1. Prepare Inputs
 
-- Place input videos (including long or GFX-rich videos) in `sam3/inputs/VideoInputs/` (e.g., `Video1.mp4`, `Video2.mp4`, ...).
+- Place input videos (including long) in `sam3/inputs/VideoInputs/` (e.g., `Video1.mp4`, `Video2.mp4`, ...).
 - Ensure the SAM2 checkpoint and config are in `checkpoints/` and `sam2_configs/`.
 - Confirm all custom modules exist in `sam3/utils/`.
 
