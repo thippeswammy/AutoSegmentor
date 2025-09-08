@@ -15,6 +15,23 @@ class DataLoader:
         self.file_order = file_order  # custom order provided by user
 
     def load_data(self):
+        """Load and process .npy files from a specified directory.
+        
+        This function retrieves all .npy files from the directory specified by
+        `self.directory`. It respects a custom file order if provided, and processes
+        each file to extract and reshape data points. The function handles various data
+        shapes and computes additional attributes, including distances for scaling. It
+        returns the merged data and the list of file names, while also managing
+        potential errors during file loading.
+        
+        Args:
+            self (object): The instance of the class containing the directory and file order attributes.
+        
+        Returns:
+            tuple: A tuple containing:
+                - np.ndarray: The merged data from all processed files.
+                - list: The list of file names that were successfully loaded.
+        """
         all_files = [f for f in os.listdir(self.directory) if f.endswith('.npy')]
         if not all_files:
             print(f"No .npy files found in directory: {self.directory}")
