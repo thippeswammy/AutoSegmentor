@@ -71,6 +71,7 @@ class CurveManager:
             print(f"Error finalizing draw: {e}")
 
     def preview_smooth(self, selected_indices, lane_id, start_idx, end_idx):
+        """Preview a smoothed segment of points."""
         try:
             new_points = self._smooth_segment(selected_indices, lane_id, start_idx, end_idx, preview=True)
             return new_points
@@ -121,6 +122,25 @@ class CurveManager:
             return []
 
     def _smooth_segment(self, selected_indices, lane_id, start_idx, end_idx, preview=False):
+        """Smooth a segment of points based on selected indices and specified endpoints.
+        
+        This function takes a set of selected indices and smooths the segment defined
+        by the start and end indices. It first checks for the validity of the indices
+        and retrieves the corresponding points. It then identifies adjacent points
+        outside the selected segment to ensure a smooth transition. The function
+        applies a spline fitting algorithm with weighted endpoints to generate a new
+        set of smoothed points, while maintaining the original start and end points.
+        
+        Args:
+            selected_indices (list): A list of indices representing the points to be smoothed.
+            lane_id (int): Identifier for the lane associated with the segment.
+            start_idx (int): The index of the starting point of the segment.
+            end_idx (int): The index of the ending point of the segment.
+            preview (bool?): If True, displays a debug plot of the smoothing process. Defaults to False.
+        
+        Returns:
+            np.ndarray: An array of new smoothed points corresponding to the selected segment.
+        """
         if len(selected_indices) < 2:
             print("Need at least 2 points to smooth")
             return None
