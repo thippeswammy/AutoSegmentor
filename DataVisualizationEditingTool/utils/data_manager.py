@@ -157,7 +157,26 @@ class DataManager:
             print(f"Error removing points below: {e}")
 
     def merge_lanes(self, lane_id_1, lane_id_2, point_1, point_2, point_1_type, point_2_type):
-        """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct start/end connections."""
+        """Merge lane_id_2 into lane_id_1, ensuring continuous index sequence with correct
+        start/end connections.
+        
+        This function merges two lanes by first validating the input points and their
+        types. It sorts the lane data, determines the appropriate segments to merge
+        based on the connection points, and recalculates the yaw for the merged data.
+        The function also handles potential duplicate indices and updates the overall
+        data structure, including file names and history.
+        
+        Args:
+            lane_id_1 (int): The identifier for the first lane.
+            lane_id_2 (int): The identifier for the second lane.
+            point_1 (int): The index of the first connection point.
+            point_2 (int): The index of the second connection point.
+            point_1_type (str): The type of the first connection point ('start' or 'end').
+            point_2_type (str): The type of the second connection point ('start' or 'end').
+        
+        Returns:
+            tuple: A tuple containing the updated indices and types of the connection points.
+        """
         if point_1 > point_2:
             lane_id_1, point_1, point_1_type, lane_id_2, point_2, point_2_type = (
                 lane_id_2, point_2, point_2_type, lane_id_1, point_1, point_1_type)
