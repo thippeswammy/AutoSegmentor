@@ -53,6 +53,7 @@ class EventHandler:
         self.plot_manager.rs.onselect = self.on_select
 
     def setup_buttons(self):
+        """Set up the user interface buttons for the application."""
         ax_toggle = plt.axes([0.01, 0.95, 0.1, 0.04])
         self.buttons['toggle'] = Button(ax_toggle, 'Select Mode')
         self.buttons['toggle'].on_clicked(self.on_toggle_mode)
@@ -112,6 +113,18 @@ class EventHandler:
         self.fig.canvas.draw()
 
     def update_button_states(self):
+        """Update the states of various buttons based on the current modes.
+        
+        This function modifies the properties of buttons in the user interface
+        according to the current drawing, selection, and smoothing modes. It sets the
+        event states, background colors, and label colors for each button, ensuring
+        that the UI reflects the active modes and conditions. The function also handles
+        the enabling and disabling of buttons based on the state of other modes, such
+        as merging and removing points.
+        
+        Args:
+            self: The instance of the class containing the button states and modes.
+        """
         self.buttons['linecurve'].eventson = self.draw_mode
         self.buttons['linecurve'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
         self.buttons['linecurve'].label.set_color('black' if self.draw_mode else 'gray')
@@ -142,6 +155,16 @@ class EventHandler:
         self.fig.canvas.draw_idle()
 
     def update_smoothing_weight(self, val):
+        """def update_smoothing_weight(self, val):
+        Update the smoothing weight in the CurveManager.  This method updates the
+        smoothing weight in the CurveManager if it exists.  It also updates the status
+        message to reflect the new smoothing weight.  If smoothing is active and the
+        necessary indices are set, it triggers a  preview update by calculating the
+        preview points and plotting them on the  graph. The previous preview line is
+        removed before drawing the new one.
+        
+        Args:
+            val: The new smoothing weight to be set."""
         if self.curve_manager:
             self.curve_manager.smoothing_weight = val  # Store the weight in CurveManager
             print(f"Updated smoothing weight to {val}")
@@ -162,6 +185,7 @@ class EventHandler:
                     self.plot_manager.fig.canvas.draw_idle()
 
     def toggle_grid(self, event):
+        """Toggle the visibility of the grid in the plot."""
         self.plot_manager.grid_visible = not self.plot_manager.grid_visible
         self.plot_manager.ax.grid(self.plot_manager.grid_visible)
         self.update_status(f"Grid {'enabled' if self.plot_manager.grid_visible else 'disabled'}")
@@ -372,6 +396,7 @@ class EventHandler:
         self.update_point_sizes()
 
     def finalize_merge(self):
+        """Finalize the merging of two lanes."""
         if self.merge_point_1 is None or self.merge_point_2 is None or self.merge_lane_1 == self.merge_lane_2:
             print("Two different lanes must be selected for merging")
             self.update_status("Select two different lanes")
@@ -527,6 +552,15 @@ class EventHandler:
         self.update_status("Point added")
 
     def update_point_sizes(self):
+        """Update the sizes of points in scatter plots based on various conditions.
+        
+        This function iterates through the lane scatter plots managed by the
+        plot_manager and updates the sizes of the points based on their indices and
+        specific conditions such as highlighted lanes, merge points, and smoothing
+        selections. It handles different modes for size adjustments and ensures that
+        the plot is redrawn after the updates. If any errors occur during the process,
+        they are caught and printed.
+        """
         if self.plot_manager is None:
             print("Plot manager not set, skipping update_point_sizes")
             return
@@ -563,6 +597,16 @@ class EventHandler:
             print(f"Error updating point sizes: {e}")
 
     def on_pick(self, event):
+        """Handles the picking event for scatter plot points.
+        
+        This method processes mouse pick events on scatter plot artists.  It first
+        checks if the right mouse button was clicked and if the  plot manager is
+        active. If selection mode is not enabled, it  clears the selected indices. If
+        the picked artist is valid, it  retrieves the corresponding global index,
+        deletes the associated  data point, updates the selected indices, and refreshes
+        the plot  accordingly. Finally, it updates the status to indicate that a  point
+        has been deleted.
+        """
         if self.plot_manager is None or event.mouseevent.button != 3 or self.plot_manager.rs.active:
             return
         if not self.selection_mode:
@@ -685,12 +729,14 @@ class EventHandler:
         self.update_status("Drawing finalized")
 
     def update_status(self, message=""):
+        """Updates the status message and sets a timer to clear it."""
         try:
             self.plot_manager.update_status(message)
             self.last_status_time = time.time()
 
             if message:
                 def clear_status():
+                    """Clears the status if the timeout has been reached."""
                     if time.time() - self.last_status_time >= self.status_timeout:
                         self.plot_manager.update_status("")
                         self.fig.canvas.draw_idle()
