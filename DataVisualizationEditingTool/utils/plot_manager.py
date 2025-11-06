@@ -81,6 +81,18 @@ class PlotManager:
 
     def on_motion(self, event):
         # Use self.data_manager.nodes instead of .data
+        """Handle motion events to update tooltip and nearest point.
+        
+        This method checks if the mouse event is within the axes and if there are any
+        nodes available.  If so, it calculates the distance from the mouse position to
+        each node and updates the tooltip  with the closest node's information if it is
+        within a specified distance. The nearest point is  visually represented on the
+        plot, and the canvas is redrawn to reflect these changes. If the  mouse is
+        outside the axes or no nodes are present, the tooltip is hidden.
+        
+        Args:
+            event: The motion event containing mouse position data.
+        """
         if event.inaxes != self.ax or self.data_manager.nodes.size == 0:
             self.tooltip.set_visible(False)
             if self.nearest_point:
@@ -123,6 +135,17 @@ class PlotManager:
             print(f"Error during motion: {e}")
 
     def on_legend_pick(self, event):
+        """Handle legend pick events to highlight lanes.
+        
+        This method checks if the picked artist is part of the legend and retrieves the
+        corresponding lane ID from self.data_manager.nodes. It toggles the highlighted
+        lane based on the current selection and updates the point sizes accordingly.
+        Additionally, it updates the status message to reflect the current highlighted
+        lane state. The canvas is then redrawn to reflect these changes.
+        
+        Args:
+            event: The event object containing information about the legend pick.
+        """
         if event.artist in self.ax.legend_.get_lines():
             try:
                 idx = self.ax.legend_.get_lines().index(event.artist)
@@ -151,6 +174,20 @@ class PlotManager:
             legend_line.set_pickradius(5)
 
     def update_plot(self, nodes, edges, selected_indices=None):
+        """Update the plot with nodes and edges data.
+        
+        This function clears existing plot elements and updates the visualization based
+        on the provided nodes and edges. It handles the plotting of edges, nodes, start
+        points, and selected points, while also managing the state of the plot and any
+        associated event handlers. The function ensures that the plot is refreshed
+        efficiently and handles potential errors during the update process.
+        
+        Args:
+            nodes (np.ndarray): An array of node data, where each node contains point_id, x, y, yaw, and
+                original_lane_id.
+            edges (np.ndarray): An array of edges, where each edge is defined by a pair of node IDs.
+            selected_indices (list?): A list of indices for selected nodes. Defaults to None.
+        """
         if selected_indices is None:
             selected_indices = self.selected_indices
         self.selected_indices = selected_indices  # row indices of nodes
