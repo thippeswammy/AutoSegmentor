@@ -8,6 +8,7 @@ from DataVisualizationEditingTool.utils.data_loader import DataLoader
 from DataVisualizationEditingTool.utils.data_manager import DataManager
 from DataVisualizationEditingTool.utils.event_handler import EventHandler
 from DataVisualizationEditingTool.utils.plot_manager import PlotManager
+from DataVisualizationEditingTool.utils.curve_manager import CurveManager
 
 
 def main():
@@ -15,7 +16,7 @@ def main():
     base_path = os.getcwd()  # Not sys._MEIPASS
 
     # Use that to find the 'lanes' folder
-    lanes_path = os.path.join(base_path, 'lanes/TEMP')
+    lanes_path = os.path.join(base_path, 'lanes/New_tests')
 
     if not os.path.isdir(lanes_path):
         raise ValueError(f"Directory does not exist: {lanes_path}")
