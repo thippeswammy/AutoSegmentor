@@ -13,6 +13,7 @@ from DataVisualizationEditingTool.utils.curve_manager import CurveManager
 
 def main():
     # Get path where the user is running the .exe from
+    """Main function to load data and initialize managers for processing."""
     base_path = os.getcwd()  # Not sys._MEIPASS
 
     # Use that to find the 'lanes' folder
