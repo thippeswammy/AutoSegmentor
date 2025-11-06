@@ -26,11 +26,13 @@ class DataManager:
         print(f"DataManager initialized with {len(self.nodes)} nodes and {len(self.edges)} edges.")
 
     def _get_new_point_id(self):
+        """Retrieve and increment the next point ID."""
         new_id = self._next_point_id
         self._next_point_id += 1
         return new_id
 
     def add_node(self, x, y, original_lane_id):
+        """Adds a new node to the graph with specified coordinates and lane ID."""
         try:
             new_point_id = self._get_new_point_id()
             new_node = np.array([[new_point_id, x, y, 0.0, original_lane_id]])
@@ -84,6 +86,7 @@ class DataManager:
             print(f"Error adding edge: {e}")
 
     def delete_points(self, point_ids_to_delete):
+        """Delete specified points and their associated edges from the graph."""
         if not point_ids_to_delete:
             return
         try:
@@ -107,6 +110,7 @@ class DataManager:
             print(f"Error deleting points: {e}")
 
     def change_ids(self, point_ids, new_original_lane_id):
+        """Change the original lane ID for specified point IDs."""
         if not point_ids:
             return
         try:
@@ -130,6 +134,7 @@ class DataManager:
         pass
 
     def remove_points_below(self, index, lane_id):
+        """Not implemented for graph model."""
         print("Function 'remove_points_below' is not implemented for graph model.")
         pass
 
@@ -138,6 +143,14 @@ class DataManager:
         pass
 
     def _create_networkx_graph(self):
+        """Create a directed graph using NetworkX.
+        
+        This function initializes a directed graph (DiGraph) and populates it  with
+        nodes and edges based on the data stored in `self.nodes` and  `self.edges`.
+        Each node is added with specific attributes such as  coordinates and lane ID,
+        while edges are created between the specified  node pairs. The function ensures
+        that the graph is only populated if  there are nodes or edges present.
+        """
         G = nx.DiGraph()
         if self.nodes.size > 0:
             for node_data in self.nodes:
@@ -155,6 +168,14 @@ class DataManager:
         return G
 
     def save_all_lanes(self):
+        """Save all lanes to a temporary workspace.
+        
+        This function creates a temporary directory named 'workspace-Temp'  and clears
+        any existing files or directories within it. It then saves  the graph nodes and
+        edges as NumPy files, and serializes the NetworkX  graph to a pickle file. The
+        function handles exceptions during file  operations and prints error messages
+        if any issues occur.
+        """
         folder = "workspace-Temp"
         try:
             os.makedirs(folder, exist_ok=True)
@@ -187,6 +208,7 @@ class DataManager:
     # --- FUNCTIONS BELOW WERE MISSING ---
 
     def clear_data(self):
+        """Clears all nodes, edges, and related data."""
         try:
             self.nodes = np.array([])
             self.edges = np.array([])
@@ -200,6 +222,7 @@ class DataManager:
             print(f"Error clearing data: {e}")
 
     def undo(self):
+        """Reverts the last action in the history."""
         try:
             if len(self.history) <= 1:
                 print("Nothing to undo")
@@ -242,6 +265,7 @@ class DataManager:
     # --- END OF MISSING FUNCTIONS ---
 
     def save(self):
+        """Saves nodes and edges to files and creates a NetworkX graph."""
         try:
             os.makedirs("./files", exist_ok=True)
             nodes_filename = "./files/WorkingNodes.npy"
@@ -268,6 +292,8 @@ class DataManager:
             return None
 
     def _auto_save_backup(self):
+        """Automatically saves a backup of nodes and edges if the backup interval has
+        passed."""
         try:
             if time.time() - self.last_backup < self.backup_interval:
                 return
