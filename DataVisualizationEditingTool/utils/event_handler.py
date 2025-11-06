@@ -73,6 +73,7 @@ class EventHandler:
 
     def setup_buttons(self):
         # ... (Button layout is the same as your file) ...
+        """Sets up the buttons for the user interface."""
         ax_toggle = plt.axes([0.01, 0.95, 0.1, 0.04])
         self.buttons['toggle'] = Button(ax_toggle, 'Select Mode')
         self.buttons['toggle'].on_clicked(self.on_toggle_mode)
@@ -135,6 +136,18 @@ class EventHandler:
 
     def update_button_states(self):
         # Draw Buttons
+        """Update the states of various buttons in the user interface.
+        
+        This function manages the visual and interactive states of buttons based on the
+        current modes and selections. It updates the properties of buttons such as
+        'draw', 'linecurve', 'straighten', 'cancel', 'export', 'remove_between',
+        'remove_below', and 'toggle' according to the active modes like draw_mode,
+        smoothing_point_selection, and selection_mode. The function also ensures that
+        the canvas is redrawn to reflect these changes.
+        
+        Args:
+            self: The instance of the class containing the button states and modes.
+        """
         self.buttons['draw'].eventson = True
         self.buttons['linecurve'].eventson = self.draw_mode
         self.buttons['linecurve'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
@@ -231,6 +244,7 @@ class EventHandler:
         self.update_button_states()
 
     def on_remove_between(self, event):
+        """Enters Remove Between mode and updates the UI status."""
         self.clear_operation_modes(back_to_select=False)
         self.remove_between_mode = True
         print("Entered Remove Between mode.")
@@ -238,6 +252,7 @@ class EventHandler:
         self.update_button_states()
 
     def clear_operation_modes(self, back_to_select=True):
+        """Clears operation modes and resets selection state."""
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
@@ -333,11 +348,21 @@ class EventHandler:
         self.merge_point_2_id = None
 
     def clear_remove_state(self):
+        """Resets the state of removal parameters."""
         self.remove_between_mode = False
         self.remove_start_id = None
         self.remove_end_id = None
 
     def finalize_remove_between(self):
+        """Finalize the removal of nodes between two specified points.
+        
+        This function checks if the start and end node IDs are set, and if a
+        CurveManager is available. It then finds the path between the specified  nodes
+        and identifies any nodes that need to be removed. If valid nodes  are found, it
+        deletes them, reconnects the start and end nodes, and  updates the plot
+        accordingly. The function also manages the status  updates and operation modes
+        throughout the process.
+        """
         if self.remove_start_id is None or self.remove_end_id is None:
             self.update_status("Error: Start or end node not set.")
             self.clear_operation_modes(back_to_select=True)
@@ -430,6 +455,17 @@ class EventHandler:
             self.update_status("Export failed")
 
     def on_click(self, event):
+        """Handle mouse click events for various interactive modes in the plot.
+        
+        This function processes mouse click events to manage different modes such as
+        drawing,  node addition, selection, smoothing, removal, and merging. It updates
+        the plot and  status based on the current mode and the user's actions, ensuring
+        that the appropriate  nodes and edges are manipulated according to the defined
+        behaviors for each mode.
+        
+        Args:
+            event: The mouse event containing information about the click position and button.
+        """
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             return
 
@@ -530,6 +566,15 @@ class EventHandler:
         self.update_status(f"Added node {new_point_id} (Lane {lane_id_to_use})")
 
     def update_point_sizes(self):
+        """Update the sizes of points in scatter plots based on various conditions.
+        
+        This function adjusts the sizes of points in the lane scatter plots managed by
+        the plot_manager. It first checks if there are any nodes to process and
+        retrieves the selected indices. For each plot, it determines the base size of
+        the points based on the lane ID and applies specific size adjustments for merge
+        points and selected rows. Finally, it updates the scatter plot sizes and
+        refreshes the canvas.
+        """
         if self.plot_manager is None:
             return
         try:
