@@ -23,6 +23,7 @@ class CurveManager:
             print(f"Error adding draw point: {e}")
 
     def update_draw_line(self):
+        """Update the drawn line based on the current draw points."""
         if self.current_line:
             self.current_line.remove()
             self.current_line = None
@@ -68,17 +69,20 @@ class CurveManager:
         self.plot_manager.fig.canvas.draw_idle()
 
     def _get_node_coords(self, point_id):
-        """Helper to get (x, y) for a point_id."""
+        """Retrieve the (x, y) coordinates for a given point_id."""
         node_mask = (self.data_manager.nodes[:, 0] == point_id)
         if np.any(node_mask):
             return self.data_manager.nodes[node_mask][0, 1:3]  # [x, y]
         return None
 
     def _find_path(self, start_id, end_id):
-        """
-        Finds a path from start_id to end_id using BFS, searching
-        only in the forward direction.
-        Returns a list of point_ids [start_id, ..., end_id] or None.
+        """Finds a path from start_id to end_id using BFS in a forward direction.
+        
+        This function utilizes a breadth-first search (BFS) algorithm to explore paths
+        from the start_id to the end_id. It constructs an adjacency list from the edges
+        in self.data_manager, allowing for efficient traversal. The search continues
+        until the end_id is found or all possible paths are exhausted, returning the
+        path as a list of point_ids or None if no path exists.
         """
         if self.data_manager.edges.size == 0:
             return None
@@ -143,7 +147,15 @@ class CurveManager:
         self.event_handler.update_status("Preview generated. Adjust sliders or 'Confirm Smooth'.")
 
     def apply_smooth(self):
-        """Applies the smoothing to the data_manager.nodes array."""
+        """Applies smoothing to the data_manager.nodes array.
+        
+        This function retrieves the smoothing path IDs from the event_handler and
+        checks if any paths are available for smoothing.  It then computes the new
+        smoothed points using the _smooth_segment method. If the smoothing is
+        successful and the point count matches,  it updates the nodes in the
+        data_manager with the new coordinates and yaw values. Finally, it saves the
+        current state to history  and updates the plot to reflect the changes.
+        """
         path_ids = self.event_handler.smoothing_path_ids
         if not path_ids:
             print("No path to apply smoothing to.")
@@ -229,9 +241,21 @@ class CurveManager:
             return []
 
     def _smooth_segment(self, path_ids, preview=False):
-        """
-        Internal function to calculate smoothed points for a given path of IDs.
-        This re-implements the logic from your old _smooth_segment.
+        """Calculate smoothed points for a given path of IDs.
+        
+        This function retrieves the (x, y) coordinates for the specified path IDs and
+        calculates smoothed points using spline fitting. It first checks for adjacent
+        points to the start and end of the path, adjusts the fitting points and weights
+        accordingly, and then applies spline mathematics to generate the smoothed
+        output.  If the input path is insufficient or if spline fitting fails, it
+        handles these  cases gracefully.
+        
+        Args:
+            path_ids (list): A list of IDs representing the path to be smoothed.
+            preview (bool): A flag indicating whether to preview the smoothing process.
+        
+        Returns:
+            np.ndarray: An array of smoothed points if successful, otherwise None.
         """
         if len(path_ids) < 2:
             print("Need at least 2 points to smooth")
