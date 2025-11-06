@@ -40,6 +40,7 @@ class EventHandler:
         self.last_status_time = 0
 
     def set_plot_manager(self, plot_manager):
+        """Sets the plot manager and initializes the curve manager."""
         self.plot_manager = plot_manager
         try:
             self.curve_manager = CurveManager(self.data_manager, self.plot_manager, self)
@@ -68,6 +69,7 @@ class EventHandler:
 
     def setup_buttons(self):
         # ... (Button layout is the same as your file) ...
+        """Sets up the user interface buttons for the application."""
         ax_toggle = plt.axes([0.01, 0.95, 0.1, 0.04])
         self.buttons['toggle'] = Button(ax_toggle, 'Select Mode')
         self.buttons['toggle'].on_clicked(self.on_toggle_mode)
@@ -129,6 +131,17 @@ class EventHandler:
 
     def update_button_states(self):
         # Draw Buttons
+        """Update the states of various buttons in the user interface.
+        
+        This function manages the visual and interactive states of buttons based on the
+        current modes and selections. It updates the properties of buttons such as
+        'draw', 'linecurve', 'straighten', 'cancel', 'export', 'remove_above',
+        'remove_below', and 'toggle' to reflect the current application state. The
+        function also ensures that the canvas is redrawn to reflect these changes.
+        
+        Args:
+            self: The instance of the class containing the button states and modes.
+        """
         self.buttons['draw'].eventson = True
         self.buttons['linecurve'].eventson = self.draw_mode
         self.buttons['linecurve'].ax.set_facecolor('white' if self.draw_mode else 'lightgray')
@@ -170,6 +183,17 @@ class EventHandler:
         self.fig.canvas.draw_idle()
 
     def on_slider_update(self, val):
+        """Update the smoothing parameters based on the slider value.
+        
+        This method checks if smoothing point selection is enabled and if the
+        smoothing start and end IDs are set. If so, it updates the smoothing  weight
+        from the slider and triggers a preview of the smoothing effect  using the
+        specified start and end IDs. Additionally, it updates the  status message to
+        inform the user about the preview update.
+        
+        Args:
+            val: The value from the slider that influences the smoothing weight.
+        """
         if self.smoothing_point_selection and self.smoothing_start_id is not None and self.smoothing_end_id is not None:
             if self.curve_manager:
                 self.curve_manager.smoothing_weight = self.plot_manager.slider_weight.val
@@ -180,6 +204,7 @@ class EventHandler:
 
     def update_smoothing_weight(self, val):
         # Defer
+        """Disable smoothing functionality."""
         print("Smoothing disabled for now.")
         pass
 
@@ -190,7 +215,7 @@ class EventHandler:
         self.fig.canvas.draw()
 
     def on_toggle_mode(self, event):
-        """Toggles between Select and Add/Delete modes."""
+        """Toggles between selection and add/delete modes."""
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
@@ -206,6 +231,7 @@ class EventHandler:
         self.update_status()
 
     def on_toggle_draw_mode(self, event):
+        """Toggle the drawing mode and update the status and button states."""
         was_already_draw = self.draw_mode
         self.clear_operation_modes(back_to_select=False)
 
@@ -219,6 +245,7 @@ class EventHandler:
         self.update_button_states()
 
     def clear_operation_modes(self, back_to_select=True):
+        """Clears operation modes and resets selection state."""
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
@@ -235,6 +262,7 @@ class EventHandler:
         self.plot_manager.rs.set_active(back_to_select)
 
     def on_toggle_linecurve(self, event):
+        """Toggle the drawing mode between line and curve."""
         if not self.draw_mode or not self.curve_manager:
             self.update_status("Enter Draw Mode first")
             return
@@ -245,6 +273,7 @@ class EventHandler:
         self.update_status()
 
     def on_straighten(self, event):
+        """Handles the smoothing operation based on the current state."""
         if not self.curve_manager:
             self.update_status("Error: CurveManager not available.")
             return
@@ -275,6 +304,7 @@ class EventHandler:
         pass
 
     def on_remove_above(self, event):
+        """Handles the removal of items above a certain threshold."""
         self.update_status("Remove Above is disabled for now.")
         print("Remove Above is disabled for now.")
 
@@ -283,18 +313,21 @@ class EventHandler:
         print("Remove Below is disabled for now.")
 
     def on_cancel_operation(self, event):
+        """Handles the cancellation of an operation."""
         print("Operation canceled")
         self.clear_operation_modes(back_to_select=True)  # Default back to select mode
         self.update_button_states()
         self.update_status("Operation canceled")
 
     def on_clear_selection(self, event):
+        """Clears the current selection and updates the UI."""
         print("Cleared selection")
         self.clear_operation_modes(back_to_select=True)  # Default back to select mode
         self.update_button_states()
         self.update_status("Selection cleared")
 
     def clear_smoothing_state(self):
+        """Reset the smoothing state and update the plot if necessary."""
         self.smoothing_point_selection = False
         self.smoothing_start_id = None
         self.smoothing_end_id = None
@@ -309,17 +342,20 @@ class EventHandler:
             self.plot_manager.fig.canvas.draw_idle()
 
     def clear_merge_state(self):
+        """Reset the merge state variables."""
         self.merge_mode = False
         self.merge_point_1_id = None
         self.merge_point_2_id = None
 
     def clear_remove_state(self):
+        """Resets the removal state variables to their default values."""
         self.remove_above_mode = False
         self.remove_below_mode = False
         self.remove_point_idx = None
         self.remove_lane_id = None
 
     def on_connect_nodes(self, event):
+        """Initiates the node connection process."""
         self.clear_operation_modes(back_to_select=False)
         self.merge_mode = True
 
@@ -355,6 +391,7 @@ class EventHandler:
             self.update_status("Save failed")
 
     def export_selected(self, event):
+        """Exports selected points to a .npy file."""
         if not self.plot_manager.selected_indices:
             self.update_status("Select points to export")
             return
@@ -454,6 +491,18 @@ class EventHandler:
         self.update_status(f"Added node {new_point_id} (Lane {lane_id_to_use})")
 
     def update_point_sizes(self):
+        """Update the sizes of points in scatter plots based on various conditions.
+        
+        This function adjusts the sizes of points in the lane scatter plots managed by
+        the plot_manager. It first checks if there are any nodes to process and
+        retrieves the selected indices. For each plot, it determines the base size of
+        the points based on the lane ID and modifies sizes for specific points if they
+        are in merge mode or selected. Finally, it updates the scatter plot sizes and
+        refreshes the canvas.
+        
+        Args:
+            self: The instance of the class containing the plot_manager and data_manager.
+        """
         if self.plot_manager is None:
             return
         try:
@@ -493,7 +542,7 @@ class EventHandler:
             print(f"Error updating point sizes: {e}")
 
     def clear_all_modes(self):
-        """Helper to reset all operation states."""
+        """Reset all operation states."""
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
@@ -508,6 +557,17 @@ class EventHandler:
         self.update_button_states()
 
     def on_pick(self, event):
+        """def on_pick(self, event):
+        Handles the picking event for scatter plot artists.  This method processes
+        mouse pick events on scatter plot artists. It first checks if the plot manager
+        is active and if the right mouse button was clicked. If the artist is part of
+        the lane scatter plots, it retrieves the corresponding global row index and
+        deletes the associated point from the data manager. The plot is then updated to
+        reflect the changes, and the status is updated to inform the user of the
+        deletion.
+        
+        Args:
+            event: The event object containing information about the pick event."""
         if self.plot_manager is None or event.mouseevent.button != 3 or self.plot_manager.rs.active:
             return
 
@@ -526,6 +586,12 @@ class EventHandler:
         self.update_status(f"Deleted node {point_id_to_delete}")
 
     def on_select(self, eclick, erelease):
+        """Handles the selection of nodes based on mouse click events.
+        
+        Args:
+            eclick: The mouse click event for the selection start.
+            erelease: The mouse click event for the selection end.
+        """
         if not self.selection_mode:
             return
         try:
@@ -548,6 +614,17 @@ class EventHandler:
             print(f"Error during selection: {e}")
 
     def on_key(self, event):
+        """Handle key events for various actions in the application.
+        
+        This function processes keyboard input to trigger specific actions based on the
+        key pressed. It includes functionality for undoing and redoing actions,
+        toggling modes, canceling operations, deleting items, finalizing drawings, and
+        selecting point lane IDs. The function also validates the selected ID against
+        the available file names in the data manager.
+        
+        Args:
+            event (Event): The key event containing information about the key pressed.
+        """
         key = event.key.lower()
         if key == 'ctrl+z':
             self.on_undo(event)
@@ -576,6 +653,7 @@ class EventHandler:
         self.on_cancel_operation(event)
 
     def on_delete(self, event):
+        """Handles the deletion of selected nodes in the plot."""
         if self.plot_manager is None or not self.selection_mode or not self.plot_manager.selected_indices:
             return
 
@@ -589,6 +667,7 @@ class EventHandler:
         self.update_status(f"Deleted {len(point_ids_to_delete)} nodes")
 
     def on_undo(self, event):
+        """Handles the undo action for the plot manager."""
         if self.plot_manager is None: return
         nodes, edges, success = self.data_manager.undo()
         if success:
@@ -599,6 +678,7 @@ class EventHandler:
             self.update_status("Nothing to undo")
 
     def on_redo(self, event):
+        """Handles the redo action in the plot manager."""
         if self.plot_manager is None: return
         nodes, edges, success = self.data_manager.redo()
         if success:
@@ -609,6 +689,7 @@ class EventHandler:
             self.update_status("Nothing to redo")
 
     def on_finalize_draw(self, event):
+        """Finalizes the drawing operation and updates the UI."""
         if not self.draw_mode or not self.curve_manager:
             return
         self.curve_manager.finalize_draw(self.selected_id)
@@ -621,11 +702,13 @@ class EventHandler:
         self.update_button_states()
 
     def update_status(self, message=""):
+        """Updates the status message and sets a timer to clear it."""
         try:
             self.plot_manager.update_status(message)
             self.last_status_time = time.time()
             if message:
                 def clear_status():
+                    """Clears the status if the timeout has been reached."""
                     if time.time() - self.last_status_time >= self.status_timeout:
                         self.plot_manager.update_status("")
                         self.fig.canvas.draw_idle()
