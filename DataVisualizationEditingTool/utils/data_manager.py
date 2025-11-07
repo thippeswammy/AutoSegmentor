@@ -185,6 +185,7 @@ class DataManager:
             print(f"Error saving graph data to temp: {e}")
 
     def clear_data(self):
+        """Clears all nodes, edges, and related data."""
         try:
             self.nodes = np.array([])
             self.edges = np.array([])
@@ -198,6 +199,7 @@ class DataManager:
             print(f"Error clearing data: {e}")
 
     def undo(self):
+        """Reverts the last action in the history."""
         try:
             if len(self.history) <= 1:
                 print("Nothing to undo")
@@ -218,6 +220,7 @@ class DataManager:
             return self.nodes, self.edges, False
 
     def redo(self):
+        """Performs a redo operation on the current state."""
         try:
             if not self.redo_stack:
                 print("Nothing to redo")
