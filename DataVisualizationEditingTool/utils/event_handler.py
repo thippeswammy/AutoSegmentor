@@ -403,6 +403,17 @@ class EventHandler:
             self.update_status("Export failed")
 
     def on_click(self, event):
+        """Handle click events for plotting and node management.
+        
+        This function processes mouse click events to manage nodes and curves in the
+        plot. It distinguishes between different modes such as drawing, smoothing,
+        removing, and merging nodes. Depending on the state of the application and the
+        mouse event, it updates the plot, adds nodes, or modifies existing connections,
+        while providing feedback to the user through status updates.
+        
+        Args:
+            event: The mouse event containing information about the click position and state.
+        """
         if self.plot_manager is None or event.inaxes != self.plot_manager.ax or event.button != 1:
             return
 
@@ -543,7 +554,7 @@ class EventHandler:
             print(f"Error updating point sizes: {e}")
 
     def clear_all_modes(self):
-        """Helper to reset all operation states."""
+        """Reset all operation states."""
         self.clear_smoothing_state()
         self.clear_merge_state()
         self.clear_remove_state()
@@ -557,6 +568,17 @@ class EventHandler:
         self.update_button_states()
 
     def on_pick(self, event):
+        """Handles the picking event for scatter plot artists.
+        
+        This method processes mouse pick events on scatter plot artists.  It checks if
+        the right mouse button was clicked and if the plot manager is active.
+        Depending on whether the control key is pressed, it either breaks connections
+        for a node  or deletes the node from the data manager, followed by updating the
+        plot and status.
+        
+        Args:
+            event: The event object containing information about the pick event.
+        """
         if self.plot_manager is None or event.mouseevent.button != 3 or self.plot_manager.rs.active:
             return
 
@@ -581,6 +603,7 @@ class EventHandler:
             self.update_status(f"Deleted node {point_id_to_use}")
 
     def on_select(self, eclick, erelease):
+        """Handles the selection of nodes based on mouse click events."""
         try:
             x1, y1 = eclick.xdata, eclick.ydata
             x2, y2 = erelease.xdata, erelease.ydata
