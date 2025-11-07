@@ -187,6 +187,21 @@ class CurveManager:
         self.plot_manager.update_plot(self.data_manager.nodes, self.data_manager.edges)
 
     def straighten_segment(self, selected_indices, lane_id, start_idx, end_idx):
+        """Straightens a segment of points based on selected indices.
+        
+        This function smooths a segment defined by the provided `selected_indices`,
+        `lane_id`, `start_idx`, and `end_idx`. It first calls the `_smooth_segment`
+        method to obtain new points. If the new points are valid, it updates the
+        corresponding segment in the data manager, calculates the angles for each
+        point, and updates the lane ID. The function also manages the history and  plot
+        updates accordingly.
+        
+        Args:
+            selected_indices (list): Indices of the selected points to be straightened.
+            lane_id (int): Identifier for the lane associated with the segment.
+            start_idx (int): Starting index of the segment to be straightened.
+            end_idx (int): Ending index of the segment to be straightened.
+        """
         try:
             new_points = self._smooth_segment(selected_indices, lane_id, start_idx, end_idx, preview=False)
             if new_points is None:
