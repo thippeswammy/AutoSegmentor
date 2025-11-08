@@ -12,6 +12,7 @@ from DataVisualizationEditingTool.utils.plot_manager import PlotManager
 
 def main():
     # Get path where the user is running the .exe from
+    """Main function to load data and initialize managers for plotting."""
     base_path = os.getcwd()  # Not sys._MEIPASS
 
     # Use that to find the 'lanes' folder
