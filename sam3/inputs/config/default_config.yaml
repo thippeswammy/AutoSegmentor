@@ -2,7 +2,7 @@
 video_start: 1
 video_end: 1
 prefix: Img
-batch_size: 5
+batch_size: 50
 fps: 30
 delete: True
 working_dir_name: working_dir
@@ -14,4 +14,4 @@ overlap_dir: ./working_dir/overlap
 verified_img_dir: ./working_dir/verified/images
 verified_mask_dir: ./working_dir/verified/mask
 final_video_path: ./outputs
-images_ending_count: 20
+images_ending_count: 200
