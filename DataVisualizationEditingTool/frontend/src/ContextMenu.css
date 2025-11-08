@@ -1,0 +1,22 @@
+.context-menu {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.context-menu ul {
+  list-style: none;
+  padding: 5px 0;
+  margin: 0;
+}
+
+.context-menu li {
+  padding: 8px 15px;
+  cursor: pointer;
+}
+
+.context-menu li:hover {
+  background-color: #f0f0f0;
+}
