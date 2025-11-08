@@ -5,6 +5,13 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 ## Available Scripts
 
 In the project directory, you can run:
+### `install packages`
+
+pip install flask-cors
+pip install flask flask-cors
+npm install axios react-chartjs-2 chart.js chartjs-plugin-zoom
+
+
 
 ### `npm start`
 
