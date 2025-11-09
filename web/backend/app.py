@@ -1,24 +1,34 @@
 import os
+
 import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 # --- Configuration ---
 # The backend will look for lane data in a subdirectory of the project root.
-DATA_DIRECTORY = 'lanes/TEMP'
+DATA_DIRECTORY = './../../lanes/TEMP'
 # ---------------------
 
 app = Flask(__name__)
 CORS(app)
 
-def load_data():
-    base_path = os.getcwd()
-    lanes_path = os.path.join(base_path, DATA_DIRECTORY)
 
+def load_data():
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct the absolute path to the data directory
+    lanes_path = os.path.abspath(os.path.join(script_dir, DATA_DIRECTORY))
+
+    print("Searching for data in:", lanes_path)
     if not os.path.isdir(lanes_path):
+        print(f"Directory not found: {lanes_path}")
         return None, None, None
 
     all_files = [f for f in os.listdir(lanes_path) if f.endswith('.npy')]
+    if not all_files:
+        print(f"No .npy files found in {lanes_path}")
+        return np.array([]), np.array([]), []
+
     # This is the default order from the original application
     custom_order = ["lane-0.npy", "lane-3.npy", "lane-2.npy", "lane-1.npy"]
 
@@ -76,6 +86,7 @@ def load_data():
 
     return all_nodes, all_edges, file_names
 
+
 @app.route('/api/data')
 def get_data():
     nodes, edges, file_names = load_data()
@@ -87,6 +98,7 @@ def get_data():
         'edges': edges.tolist(),
         'file_names': file_names
     })
+
 
 @app.route('/api/save', methods=['POST'])
 def save_data():
@@ -104,6 +116,7 @@ def save_data():
     np.save(edges_filename, edges)
 
     return jsonify({'message': 'Data saved successfully'})
+
 
 if __name__ == '__main__':
     # Note: Debug mode is disabled for security.
