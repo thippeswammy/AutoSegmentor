@@ -2,28 +2,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import * as d3 from 'd3';
 
-const Plot = () => {
-    const [data, setData] = useState(null);
-    const [nodes, setNodes] = useState([]);
-    const [selectedNodes, setSelectedNodes] = useState(new Set());
+const Plot = ({ selectedNodes, setSelectedNodes, gridVisible, pointSize, nodes, setNodes, edges, setEdges, fileNames }) => {
     const svgRef = useRef();
     const gRef = useRef();
     const tooltipRef = useRef();
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:5000/api/data')
-            .then(response => {
-                setData(response.data);
-                setNodes(response.data.nodes);
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-            });
-    }, []);
-
-    useEffect(() => {
-        if (data) {
-            const { edges } = data;
+        if (nodes) {
             const svg = d3.select(svgRef.current);
             const g = d3.select(gRef.current);
             const tooltip = d3.select(tooltipRef.current);
@@ -31,7 +16,8 @@ const Plot = () => {
 
             const width = 800;
             const height = 600;
-            svg.attr('width', width).attr('height', height);
+            const legendWidth = 150;
+            svg.attr('width', width + legendWidth).attr('height', height);
 
             const xExtent = d3.extent(nodes, d => d[1]) || [0, 1];
             const yExtent = d3.extent(nodes, d => d[2]) || [0, 1];
@@ -39,9 +25,18 @@ const Plot = () => {
             const xScale = d3.scaleLinear().domain(xExtent).range([50, width - 50]);
             const yScale = d3.scaleLinear().domain(yExtent).range([height - 50, 50]);
 
+            const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+            if (gridVisible) {
+                const xAxis = d3.axisBottom(xScale);
+                const yAxis = d3.axisLeft(yScale);
+                g.append('g').attr('transform', `translate(0, ${height - 50})`).call(xAxis);
+                g.append('g').attr('transform', `translate(50, 0)`).call(yAxis);
+            }
+
             const nodeCoords = {};
             nodes.forEach(node => {
-                nodeCoords[node[0]] = { x: xScale(node[1]), y: yScale(node[2]) };
+                nodeCoords[node[0]] = { x: xScale(node[1]), y: yScale(node[2]), lane: node[4] };
             });
 
             g.selectAll('line')
@@ -52,8 +47,8 @@ const Plot = () => {
                 .attr('y1', d => nodeCoords[d[0]]?.y)
                 .attr('x2', d => nodeCoords[d[1]]?.x)
                 .attr('y2', d => nodeCoords[d[1]]?.y)
-                .attr('stroke', 'black')
-                .attr('stroke-width', 1);
+                .attr('stroke', d => colorScale(nodeCoords[d[0]]?.lane))
+                .attr('stroke-width', 2);
 
             const drag = d3.drag()
                 .on('start', (event, d) => {
@@ -80,8 +75,8 @@ const Plot = () => {
                 .append('circle')
                 .attr('cx', d => xScale(d[1]))
                 .attr('cy', d => yScale(d[2]))
-                .attr('r', 5)
-                .attr('fill', d => selectedNodes.has(d[0]) ? 'red' : 'blue')
+                .attr('r', pointSize)
+                .attr('fill', d => selectedNodes.has(d[0]) ? 'red' : colorScale(d[4]))
                 .on('click', (event, d) => {
                     const newSelectedNodes = new Set(selectedNodes);
                     if (newSelectedNodes.has(d[0])) {
@@ -102,6 +97,38 @@ const Plot = () => {
                 })
                 .call(drag);
 
+            const toIds = new Set(edges.map(edge => edge[1]));
+            const startNodes = nodes.filter(node => !toIds.has(node[0]));
+
+            g.selectAll('rect.start-node')
+                .data(startNodes)
+                .enter()
+                .append('rect')
+                .attr('class', 'start-node')
+                .attr('x', d => xScale(d[1]) - pointSize)
+                .attr('y', d => yScale(d[2]) - pointSize)
+                .attr('width', pointSize * 2)
+                .attr('height', pointSize * 2)
+                .attr('fill', d => colorScale(d[4]));
+
+            const legend = g.append('g')
+                .attr('transform', `translate(${width}, 20)`);
+
+            fileNames.forEach((name, i) => {
+                const legendRow = legend.append('g')
+                    .attr('transform', `translate(0, ${i * 20})`);
+
+                legendRow.append('rect')
+                    .attr('width', 10)
+                    .attr('height', 10)
+                    .attr('fill', colorScale(i));
+
+                legendRow.append('text')
+                    .attr('x', 20)
+                    .attr('y', 10)
+                    .text(name);
+            });
+
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 10])
                 .on('zoom', (event) => {
@@ -110,50 +137,10 @@ const Plot = () => {
 
             svg.call(zoom);
         }
-    }, [data, nodes, selectedNodes]);
-
-    const handleSave = () => {
-        const newEdges = data.edges.filter(edge => {
-            const fromNodeExists = nodes.some(node => node[0] === edge[0]);
-            const toNodeExists = nodes.some(node => node[0] === edge[1]);
-            return fromNodeExists && toNodeExists;
-        });
-
-        axios.post('http://127.0.0.1:5000/api/save', { nodes: nodes, edges: newEdges })
-            .then(response => {
-                console.log('Data saved successfully');
-            })
-            .catch(error => {
-                console.error('Error saving data:', error);
-            });
-    };
-
-    const handleDelete = () => {
-        const newNodes = nodes.filter(node => !selectedNodes.has(node[0]));
-        const newEdges = data.edges.filter(edge => !selectedNodes.has(edge[0]) && !selectedNodes.has(edge[1]));
-
-        setNodes(newNodes);
-        setData({ ...data, edges: newEdges });
-        setSelectedNodes(new Set());
-    };
-
-    useEffect(() => {
-        const handleKeyDown = (event) => {
-            if (event.key === 'Delete') {
-                handleDelete();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [selectedNodes, nodes, data]);
+    }, [nodes, edges, selectedNodes, fileNames, setSelectedNodes, gridVisible, pointSize, setNodes]);
 
     return (
         <div>
-            <h1>Lane Visualization</h1>
-            <button onClick={handleSave}>Save</button>
-            <button onClick={handleDelete}>Delete Selected</button>
             <div ref={tooltipRef} style={{ position: 'absolute', visibility: 'hidden', backgroundColor: 'white', border: '1px solid black', padding: '5px' }}></div>
             <svg ref={svgRef}>
                 <g ref={gRef}></g>

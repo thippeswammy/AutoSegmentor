@@ -3,17 +3,23 @@ import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+# --- Configuration ---
+# The backend will look for lane data in a subdirectory of the project root.
+DATA_DIRECTORY = 'lanes/TEMP'
+# ---------------------
+
 app = Flask(__name__)
 CORS(app)
 
 def load_data():
     base_path = os.getcwd()
-    lanes_path = os.path.join(base_path, 'lanes/TEMP')
+    lanes_path = os.path.join(base_path, DATA_DIRECTORY)
 
     if not os.path.isdir(lanes_path):
         return None, None, None
 
     all_files = [f for f in os.listdir(lanes_path) if f.endswith('.npy')]
+    # This is the default order from the original application
     custom_order = ["lane-0.npy", "lane-3.npy", "lane-2.npy", "lane-1.npy"]
 
     files = [f for f in custom_order if f in all_files]
@@ -74,7 +80,7 @@ def load_data():
 def get_data():
     nodes, edges, file_names = load_data()
     if nodes is None:
-        return jsonify({'error': 'Data directory not found'}), 404
+        return jsonify({'error': f"Data directory '{DATA_DIRECTORY}' not found"}), 404
 
     return jsonify({
         'nodes': nodes.tolist(),
@@ -100,4 +106,5 @@ def save_data():
     return jsonify({'message': 'Data saved successfully'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Note: Debug mode is disabled for security.
+    app.run(host='0.0.0.0', port=5000)
