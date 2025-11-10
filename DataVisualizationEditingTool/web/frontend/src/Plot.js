@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as d3 from 'd3';
 import './Plot.css';
 
-const Plot = ({ drawMode, connectMode, data, setData, selectedNodes, handleNodeSelect }) => {
+const Plot = ({ drawMode, lineMode, connectMode, removeBetweenMode, reversePathMode, smoothMode, data, setData, selectedNodes, handleNodeSelect, gridVisible, pointSize }) => {
   const svgRef = useRef();
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -36,6 +36,17 @@ const Plot = ({ drawMode, connectMode, data, setData, selectedNodes, handleNodeS
 
       svg.selectAll('*').remove();
 
+      if (gridVisible) {
+        const xAxis = d3.axisBottom(xScale);
+        const yAxis = d3.axisLeft(yScale);
+        svg.append("g")
+          .attr("transform", `translate(0,${height - margin.bottom})`)
+          .call(xAxis);
+        svg.append("g")
+          .attr("transform", `translate(${margin.left},0)`)
+          .call(yAxis);
+      }
+
       svg.append('g').selectAll('.edge')
         .data(data.edges)
         .enter()
@@ -60,6 +71,21 @@ const Plot = ({ drawMode, connectMode, data, setData, selectedNodes, handleNodeS
         .attr('stroke', 'black')
         .attr('stroke-width', 0.5);
 
+      if (lineMode && selectedNodes.length === 2) {
+        const startNode = data.nodes.find(n => n[0] === selectedNodes[0]);
+        const endNode = data.nodes.find(n => n[0] === selectedNodes[1]);
+        if (startNode && endNode) {
+            svg.append('line')
+                .attr('class', 'preview-line')
+                .attr('x1', xScale(startNode[1]))
+                .attr('y1', yScale(startNode[2]))
+                .attr('x2', xScale(endNode[1]))
+                .attr('y2', yScale(endNode[2]))
+                .attr('stroke', 'red')
+                .attr('stroke-width', 2);
+        }
+      }
+
       const color = d3.scaleOrdinal(d3.schemeCategory10);
       const nodes = svg.append('g').selectAll('.node')
         .data(data.nodes)
@@ -68,7 +94,7 @@ const Plot = ({ drawMode, connectMode, data, setData, selectedNodes, handleNodeS
         .attr('class', 'node')
         .attr('cx', d => xScale(d[1]))
         .attr('cy', d => yScale(d[2]))
-        .attr('r', d => selectedNodes.includes(d[0]) ? 8 : 5)
+        .attr('r', d => selectedNodes.includes(d[0]) ? pointSize * 1.5 : pointSize)
         .attr('fill', d => selectedNodes.includes(d[0]) ? 'red' : color(d[4]))
         .on('click', (event, d) => {
           if (!drawMode) {
@@ -104,7 +130,7 @@ const Plot = ({ drawMode, connectMode, data, setData, selectedNodes, handleNodeS
         setData({ ...data, nodes: newNodes });
       });
     }
-  }, [dataRef.current, drawMode, connectMode, selectedNodes, setData, handleNodeSelect]);
+  }, [dataRef.current, drawMode, lineMode, connectMode, removeBetweenMode, reversePathMode, smoothMode, selectedNodes, setData, handleNodeSelect, gridVisible, pointSize]);
 
   return (
     <div className="plot">
