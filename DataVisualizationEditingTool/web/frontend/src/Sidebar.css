@@ -1,0 +1,32 @@
+.sidebar {
+  width: 200px;
+  padding: 10px;
+  border-right: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-section {
+  margin-bottom: 20px;
+}
+
+.sidebar button {
+  display: block;
+  width: 100%;
+  margin-bottom: 5px;
+  padding: 8px;
+  text-align: left;
+}
+
+.sidebar button.active {
+  background-color: lightgreen;
+}
+
+.sidebar label {
+  display: block;
+  margin-top: 10px;
+}
+
+.sidebar input[type="range"] {
+  width: 100%;
+}
