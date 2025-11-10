@@ -2,10 +2,15 @@ import React from 'react';
 import axios from 'axios';
 import './Sidebar.css';
 
-const Sidebar = ({ drawMode, toggleDrawMode, data }) => {
+const Sidebar = ({
+  drawMode, toggleDrawMode,
+  connectMode, toggleConnectMode,
+  data, clearSelection,
+  selectedNodes, handleConnectNodes
+}) => {
   const handleSave = () => {
     if (data) {
-      axios.post('/api/save', { nodes: data.nodes })
+      axios.post('/api/save', { nodes: data.nodes, edges: data.edges })
         .then(response => {
           console.log('Data saved successfully:', response.data);
           alert('Data saved!');
@@ -14,6 +19,14 @@ const Sidebar = ({ drawMode, toggleDrawMode, data }) => {
           console.error('Error saving data:', error);
           alert('Error saving data.');
         });
+    }
+  };
+
+  const onConnectClick = () => {
+    if (connectMode && selectedNodes.length === 2) {
+      handleConnectNodes();
+    } else {
+      toggleConnectMode();
     }
   };
 
@@ -31,9 +44,14 @@ const Sidebar = ({ drawMode, toggleDrawMode, data }) => {
       </div>
       <div className="sidebar-section">
         <button>Cancel Operation</button>
-        <button>Clear Selection</button>
+        <button onClick={clearSelection}>Clear Selection</button>
         <button onClick={handleSave}>Save</button>
-        <button>Connect Nodes</button>
+        <button
+          onClick={onConnectClick}
+          className={connectMode ? 'active' : ''}
+        >
+          {connectMode && selectedNodes.length === 2 ? 'Confirm Connection' : 'Connect Nodes'}
+        </button>
         <button>Export Selected</button>
         <button>Toggle Grid</button>
         <button>Remove Between</button>
