@@ -17,6 +17,7 @@ function App() {
   const [pointSize, setPointSize] = useState(5);
   const [smoothness, setSmoothness] = useState(1);
   const [smoothingWeight, setSmoothingWeight] = useState(20);
+  const [highlightedLane, setHighlightedLane] = useState(null);
 
   const toggleDrawMode = () => {
     setDrawMode(!drawMode);
@@ -92,6 +93,10 @@ function App() {
 
   const handleSmoothingWeightChange = (newWeight) => {
     setSmoothingWeight(newWeight);
+  };
+
+  const handleHighlightLane = (laneId) => {
+    setHighlightedLane(prevLane => (prevLane === laneId ? null : laneId));
   };
 
   const cancelOperation = () => {
@@ -256,6 +261,27 @@ function App() {
     }
   }, [selectedNodes, connectMode, removeBetweenMode, reversePathMode, smoothMode, handleConnectNodes, handleRemoveBetween, handleReversePath, handleSmooth]);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        cancelOperation();
+      } else if (event.key === 'Delete') {
+        if (selectedNodes.length > 0) {
+          const newNodes = data.nodes.filter(node => !selectedNodes.includes(node[0]));
+          const newEdges = data.edges.filter(edge => !selectedNodes.includes(edge[0]) && !selectedNodes.includes(edge[1]));
+          setData({ ...data, nodes: newNodes, edges: newEdges });
+          setSelectedNodes([]);
+        }
+      } else if (event.key === 'd') {
+        toggleDrawMode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedNodes, data, cancelOperation, toggleDrawMode]);
+
   const clearSelection = () => {
     setSelectedNodes([]);
   };
@@ -300,6 +326,8 @@ function App() {
         handleNodeSelect={handleNodeSelect}
         gridVisible={gridVisible}
         pointSize={pointSize}
+        highlightedLane={highlightedLane}
+        handleHighlightLane={handleHighlightLane}
       />
     </div>
   );

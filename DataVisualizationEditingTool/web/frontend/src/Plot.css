@@ -1,4 +1,12 @@
 .plot {
   flex-grow: 1;
   padding: 20px;
+  position: relative;
+}
+
+.tooltip {
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 5px;
+  border-radius: 3px;
 }
