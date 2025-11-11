@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import Sidebar from './Sidebar';
 import Plot from './Plot';
@@ -137,7 +137,7 @@ function App() {
   const handleNodeSelect = (nodeId) => {
     setSelectedNodes(prevSelected => {
       if (connectMode || removeBetweenMode || reversePathMode || smoothMode || lineMode) {
-        if (prevSelected.length < 2) {
+        if (prevSelected.length === 1) {
           return [...prevSelected, nodeId];
         } else {
           return [nodeId];
@@ -151,9 +151,9 @@ function App() {
     });
   };
 
-  const handleConnectNodes = () => {
-    if (selectedNodes.length === 2) {
-      const newEdge = [selectedNodes[0], selectedNodes[1]];
+  const handleConnectNodes = (nodeIds) => {
+    if (nodeIds.length === 2) {
+      const newEdge = [nodeIds[0], nodeIds[1]];
       setData(prevData => ({
         ...prevData,
         edges: [...prevData.edges, newEdge]
@@ -162,9 +162,9 @@ function App() {
     }
   };
 
-  const handleRemoveBetween = () => {
-    if (selectedNodes.length === 2) {
-      const path = findPath(selectedNodes[0], selectedNodes[1], data.edges);
+  const handleRemoveBetween = (nodeIds) => {
+    if (nodeIds.length === 2) {
+      const path = findPath(nodeIds[0], nodeIds[1], data.edges);
       if (path) {
         const nodesToRemove = path.slice(1, -1);
         const nodeIdsToRemove = new Set(nodesToRemove);
@@ -176,9 +176,9 @@ function App() {
     }
   };
 
-  const handleReversePath = () => {
-    if (selectedNodes.length === 2) {
-      const path = findPath(selectedNodes[0], selectedNodes[1], data.edges);
+  const handleReversePath = (nodeIds) => {
+    if (nodeIds.length === 2) {
+      const path = findPath(nodeIds[0], nodeIds[1], data.edges);
       if (path) {
         const pathEdges = [];
         for (let i = 0; i < path.length - 1; i++) {
@@ -197,17 +197,17 @@ function App() {
     }
   };
 
-  const handleSmooth = () => {
-    if (selectedNodes.length === 2) {
-      const path = findPath(selectedNodes[0], selectedNodes[1], data.edges);
+  const handleSmooth = (nodeIds) => {
+    if (nodeIds.length === 2) {
+      const path = findPath(nodeIds[0], nodeIds[1], data.edges);
       if (path) {
         const pathNodes = path.map(nodeId => data.nodes.find(n => n[0] === nodeId));
         const points = pathNodes.map(node => [node[1], node[2]]);
 
-        const lineGenerator = d3.line().curve(d3.curveCatmullRom.alpha(smoothness / 10));
+        const lineGenerator = d3.line().curve(d3.curveCatmullRom.alpha(smoothness / 30));
         const pathData = lineGenerator(points);
 
-        const numNewPoints = Math.floor(path.length * (smoothingWeight / 10));
+        const numNewPoints = Math.floor(points.length * (smoothingWeight / 20));
         const svgPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
         svgPath.setAttribute("d", pathData);
         const totalLength = svgPath.getTotalLength();
@@ -247,6 +247,15 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (selectedNodes.length === 2) {
+      if (connectMode) handleConnectNodes(selectedNodes);
+      if (removeBetweenMode) handleRemoveBetween(selectedNodes);
+      if (reversePathMode) handleReversePath(selectedNodes);
+      if (smoothMode) handleSmooth(selectedNodes);
+    }
+  }, [selectedNodes, connectMode, removeBetweenMode, reversePathMode, smoothMode, handleConnectNodes, handleRemoveBetween, handleReversePath, handleSmooth]);
+
   const clearSelection = () => {
     setSelectedNodes([]);
   };
@@ -269,10 +278,6 @@ function App() {
         data={data}
         selectedNodes={selectedNodes}
         clearSelection={clearSelection}
-        handleConnectNodes={handleConnectNodes}
-        handleRemoveBetween={handleRemoveBetween}
-        handleReversePath={handleReversePath}
-        handleSmooth={handleSmooth}
         toggleGrid={toggleGrid}
         pointSize={pointSize}
         handlePointSizeChange={handlePointSizeChange}

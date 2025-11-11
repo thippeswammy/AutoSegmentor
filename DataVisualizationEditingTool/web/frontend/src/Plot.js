@@ -36,18 +36,20 @@ const Plot = ({ drawMode, lineMode, connectMode, removeBetweenMode, reversePathM
 
       svg.selectAll('*').remove();
 
+      const g = svg.append('g');
+
       if (gridVisible) {
         const xAxis = d3.axisBottom(xScale);
         const yAxis = d3.axisLeft(yScale);
-        svg.append("g")
+        g.append("g")
           .attr("transform", `translate(0,${height - margin.bottom})`)
           .call(xAxis);
-        svg.append("g")
+        g.append("g")
           .attr("transform", `translate(${margin.left},0)`)
           .call(yAxis);
       }
 
-      svg.append('g').selectAll('.edge')
+      g.append('g').selectAll('.edge')
         .data(data.edges)
         .enter()
         .append('line')
@@ -75,7 +77,7 @@ const Plot = ({ drawMode, lineMode, connectMode, removeBetweenMode, reversePathM
         const startNode = data.nodes.find(n => n[0] === selectedNodes[0]);
         const endNode = data.nodes.find(n => n[0] === selectedNodes[1]);
         if (startNode && endNode) {
-            svg.append('line')
+            g.append('line')
                 .attr('class', 'preview-line')
                 .attr('x1', xScale(startNode[1]))
                 .attr('y1', yScale(startNode[2]))
@@ -87,7 +89,7 @@ const Plot = ({ drawMode, lineMode, connectMode, removeBetweenMode, reversePathM
       }
 
       const color = d3.scaleOrdinal(d3.schemeCategory10);
-      const nodes = svg.append('g').selectAll('.node')
+      const nodes = g.append('g').selectAll('.node')
         .data(data.nodes)
         .enter()
         .append('circle')
@@ -108,6 +110,13 @@ const Plot = ({ drawMode, lineMode, connectMode, removeBetweenMode, reversePathM
           const newEdges = data.edges.filter(edge => edge[0] !== nodeId && edge[1] !== nodeId);
           setData({ ...data, nodes: newNodes, edges: newEdges });
         });
+
+      const zoomed = (event) => {
+        g.attr('transform', event.transform);
+      };
+
+      const zoom = d3.zoom().on('zoom', zoomed);
+      svg.call(zoom);
 
       svg.on('click', (event) => {
         if (!drawMode || d3.select(event.target).classed('node')) return;

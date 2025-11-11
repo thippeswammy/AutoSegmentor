@@ -10,7 +10,7 @@ const Sidebar = ({
   reversePathMode, toggleReversePathMode,
   smoothMode, toggleSmoothMode,
   data, clearSelection,
-  selectedNodes, handleConnectNodes, handleRemoveBetween, handleReversePath, handleSmooth,
+  selectedNodes,
   toggleGrid, pointSize, handlePointSizeChange,
   smoothness, handleSmoothnessChange,
   smoothingWeight, handleSmoothingWeightChange,
@@ -27,38 +27,6 @@ const Sidebar = ({
           console.error('Error saving data:', error);
           alert('Error saving data.');
         });
-    }
-  };
-
-  const onConnectClick = () => {
-    if (connectMode && selectedNodes.length === 2) {
-      handleConnectNodes();
-    } else {
-      toggleConnectMode();
-    }
-  };
-
-  const onRemoveBetweenClick = () => {
-    if (removeBetweenMode && selectedNodes.length === 2) {
-      handleRemoveBetween();
-    } else {
-      toggleRemoveBetweenMode();
-    }
-  };
-
-  const onReversePathClick = () => {
-    if (reversePathMode && selectedNodes.length === 2) {
-      handleReversePath();
-    } else {
-      toggleReversePathMode();
-    }
-  };
-
-  const onSmoothClick = () => {
-    if (smoothMode && selectedNodes.length === 2) {
-      handleSmooth();
-    } else {
-      toggleSmoothMode();
     }
   };
 
@@ -94,10 +62,10 @@ const Sidebar = ({
           Line
         </button>
         <button
-          onClick={onSmoothClick}
+          onClick={toggleSmoothMode}
           className={smoothMode ? 'active' : ''}
         >
-          {smoothMode && selectedNodes.length === 2 ? 'Confirm Smooth' : 'Smooth'}
+          Smooth
         </button>
       </div>
       <div className="sidebar-section">
@@ -105,24 +73,24 @@ const Sidebar = ({
         <button onClick={clearSelection}>Clear Selection</button>
         <button onClick={handleSave}>Save</button>
         <button
-          onClick={onConnectClick}
+          onClick={toggleConnectMode}
           className={connectMode ? 'active' : ''}
         >
-          {connectMode && selectedNodes.length === 2 ? 'Confirm Connection' : 'Connect Nodes'}
+          Connect Nodes
         </button>
         <button onClick={handleExport}>Export Selected</button>
         <button onClick={toggleGrid}>Toggle Grid</button>
         <button
-          onClick={onRemoveBetweenClick}
+          onClick={toggleRemoveBetweenMode}
           className={removeBetweenMode ? 'active' : ''}
         >
-          {removeBetweenMode && selectedNodes.length === 2 ? 'Confirm Removal' : 'Remove Between'}
+          Remove Between
         </button>
         <button
-          onClick={onReversePathClick}
+          onClick={toggleReversePathMode}
           className={reversePathMode ? 'active' : ''}
         >
-          {reversePathMode && selectedNodes.length === 2 ? 'Confirm Reversal' : 'Reverse Path'}
+          Reverse Path
         </button>
       </div>
       <div className="sidebar-section">
