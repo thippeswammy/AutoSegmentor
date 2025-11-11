@@ -5,7 +5,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 # Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # These imports assume your package structure
 from DataVisualizationEditingTool.utils.data_loader import DataLoader
@@ -21,8 +21,9 @@ DATA_MANAGER = None
 
 def load_data_globally():
     global DATA_MANAGER
-    base_path = os.getcwd()
-    lanes_path = os.path.join(base_path, 'backup_lanes')
+    # The script is in web/backend, so we need to go up two levels to the project root
+    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    lanes_path = os.path.join(base_path, 'lanes/TEMP')
 
     if not os.path.isdir(lanes_path):
         raise FileNotFoundError(f"Directory does not exist: {lanes_path}")
@@ -99,6 +100,82 @@ def delete_node():
     DATA_MANAGER.delete_points([node_id])
 
     return jsonify({"message": f"Node {node_id} deleted."}), 200
+
+@app.route('/api/connect_nodes', methods=['POST'])
+def connect_nodes():
+    if DATA_MANAGER is None:
+        return jsonify({"error": "Data not loaded."}), 500
+
+    data = request.json
+    start_id = data.get('start_id')
+    end_id = data.get('end_id')
+
+    if start_id is None or end_id is None:
+        return jsonify({"error": "start_id and end_id are required."}), 400
+
+    DATA_MANAGER.add_edge(start_id, end_id)
+    return jsonify({"message": f"Nodes {start_id} and {end_id} connected."}), 200
+
+@app.route('/api/remove_between', methods=['POST'])
+def remove_between():
+    if DATA_MANAGER is None:
+        return jsonify({"error": "Data not loaded."}), 500
+
+    data = request.json
+    start_id = data.get('start_id')
+    end_id = data.get('end_id')
+
+    if start_id is None or end_id is None:
+        return jsonify({"error": "start_id and end_id are required."}), 400
+
+    path_ids = DATA_MANAGER._find_path(start_id, end_id)
+
+    if not path_ids or len(path_ids) < 2:
+        return jsonify({"error": "No path found between the specified nodes."}), 404
+
+    edges_to_delete = []
+    for i in range(len(path_ids) - 1):
+        edges_to_delete.append((path_ids[i], path_ids[i+1]))
+        edges_to_delete.append((path_ids[i+1], path_ids[i])) # Also check for reverse direction
+
+    DATA_MANAGER.remove_edges(edges_to_delete)
+    return jsonify({"message": "Path removed successfully."}), 200
+
+@app.route('/api/reverse_path', methods=['POST'])
+def reverse_path():
+    if DATA_MANAGER is None:
+        return jsonify({"error": "Data not loaded."}), 500
+
+    data = request.json
+    start_id = data.get('start_id')
+    end_id = data.get('end_id')
+
+    if start_id is None or end_id is None:
+        return jsonify({"error": "start_id and end_id are required."}), 400
+
+    path_ids = DATA_MANAGER._find_path(start_id, end_id)
+
+    if not path_ids or len(path_ids) < 2:
+        return jsonify({"error": "No path found between the specified nodes."}), 404
+
+    DATA_MANAGER.reverse_path(path_ids)
+    return jsonify({"message": "Path reversed successfully."}), 200
+
+@app.route('/api/draw_node', methods=['POST'])
+def draw_node():
+    if DATA_MANAGER is None:
+        return jsonify({"error": "Data not loaded."}), 500
+
+    data = request.json
+    x = data.get('x')
+    y = data.get('y')
+    original_lane_id = data.get('original_lane_id')
+
+    if x is None or y is None or original_lane_id is None:
+        return jsonify({"error": "x, y, and original_lane_id are required."}), 400
+
+    new_node_id = DATA_MANAGER.add_node(x, y, original_lane_id)
+    return jsonify({"message": "Node drawn successfully.", "node_id": new_node_id}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

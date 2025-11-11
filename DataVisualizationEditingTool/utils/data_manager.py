@@ -2,6 +2,7 @@ import os
 import pickle
 import shutil
 import time
+from collections import deque
 
 import networkx as nx
 import numpy as np
@@ -25,6 +26,35 @@ class DataManager:
         self.backup_interval = 300  # 5 minutes
 
         print(f"DataManager initialized with {len(self.nodes)} nodes and {len(self.edges)} edges.")
+
+    def _find_path(self, start_id, end_id):
+        if self.edges.size == 0:
+            return None
+
+        adj = {}
+        for from_id, to_id in self.edges:
+            from_id, to_id = int(from_id), int(to_id)
+            adj.setdefault(from_id, []).append(to_id)
+            adj.setdefault(to_id, []).append(from_id)
+
+        if start_id not in adj:
+            return None
+
+        queue = deque([(start_id, [start_id])])
+        visited = {start_id}
+
+        while queue:
+            current_id, path = queue.popleft()
+
+            if current_id == end_id:
+                return path
+
+            for neighbor_id in adj.get(current_id, []):
+                if neighbor_id not in visited:
+                    visited.add(neighbor_id)
+                    new_path = path + [neighbor_id]
+                    queue.append((neighbor_id, new_path))
+        return None
 
     def _get_new_point_id(self):
         new_id = self._next_point_id
@@ -394,3 +424,83 @@ class DataManager:
 
         except Exception as e:
             print(f"Error deleting edges: {e}")
+
+    def remove_edges(self, edges_to_delete):
+        """Remove specified edges from the graph."""
+        if not edges_to_delete or self.edges.size == 0:
+            return
+
+        try:
+            edges_to_delete_set = set(map(tuple, edges_to_delete))
+            keep_mask = np.ones(len(self.edges), dtype=bool)
+
+            for i in range(len(self.edges)):
+                if tuple(self.edges[i]) in edges_to_delete_set:
+                    keep_mask[i] = False
+
+            self.edges = self.edges[keep_mask]
+
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.redo_stack = []
+            self._auto_save_backup()
+            print(f"Removed {len(edges_to_delete)} edges.")
+
+        except Exception as e:
+            print(f"Error removing edges: {e}")
+
+    def reverse_path(self, path_ids):
+        """Reverse the direction of all edges along a given path of node IDs."""
+        try:
+            edges_to_delete = []
+            edges_to_add = []
+
+            # Create a fast lookup set of all existing edges
+            existing_edges = set()
+            for edge in self.edges:
+                existing_edges.add((edge[0], edge[1]))
+
+            for i in range(len(path_ids) - 1):
+                A = path_ids[i]
+                B = path_ids[i + 1]
+
+                # Check which direction the edge currently exists in
+                if (A, B) in existing_edges:
+                    # Forward edge exists (A -> B), reverse it
+                    edges_to_delete.append((A, B))
+                    edges_to_add.append((B, A))
+                elif (B, A) in existing_edges:
+                    # Backward edge exists (B -> A), reverse it
+                    edges_to_delete.append((B, A))
+                    edges_to_add.append((A, B))
+                else:
+                    print(f"Warning: No edge found between {A} and {B} in either direction. Path is broken.")
+
+            if not edges_to_delete:
+                print("No matching edges found to reverse.")
+                return
+
+            # Build a mask to keep all edges *except* the ones we're deleting
+            keep_mask = np.ones(len(self.edges), dtype=bool)
+
+            edges_to_delete_set = set(edges_to_delete)
+            for i in range(len(self.edges)):
+                if (self.edges[i, 0], self.edges[i, 1]) in edges_to_delete_set:
+                    keep_mask[i] = False
+
+            # Apply the mask
+            self.edges = self.edges[keep_mask]
+
+            # Add the new reversed edges
+            if edges_to_add:
+                edges_to_add_np = np.array(edges_to_add, dtype=int)
+                self.edges = np.vstack([self.edges, edges_to_add_np])
+
+            # Save to history
+            self.history.append((self.nodes.copy(), self.edges.copy()))
+            self.redo_stack = []
+            self._auto_save_backup()
+
+            print(f"Reversed {len(edges_to_add)} edges in path.")
+
+        except Exception as e:
+            print(f"Error reversing path: {e}")
