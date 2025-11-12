@@ -13,16 +13,16 @@ const useStore = create((set) => ({
   nodes: [],
   edges: [],
   fileNames: [],
-  loading: true, // Add a loading state
+  selectedNodes: [],
+  mode: 'select', // select, draw, smooth_start, smooth_end, etc.
 
   // Actions
   fetchData: async () => {
     try {
       const response = await axios.get('http://localhost:5000/api/data');
-      set({ nodes: response.data.nodes, edges: response.data.edges, fileNames: response.data.file_names, loading: false });
+      set({ nodes: response.data.nodes, edges: response.data.edges, fileNames: response.data.file_names });
     } catch (error) {
       console.error("Error fetching data:", error);
-      set({ loading: false }); // Ensure loading is false even on error
     }
   },
 
@@ -40,22 +40,19 @@ const Sidebar = () => {
       <button onClick={() => setMode('draw')}>Draw</button>
       <button onClick={() => setMode('smooth_start')}>Smooth</button>
       <button onClick={() => setMode('connect')}>Connect Nodes</button>
+      {/* Add more buttons for other modes as needed */}
     </div>
   );
 };
 
 // 3. Plot Component
 const Plot = () => {
-  const { nodes, edges, loading, fetchData } = useStore();
+  const { nodes, edges, fetchData } = useStore();
   const chartRef = useRef(null);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   const data = {
     datasets: [
@@ -66,11 +63,11 @@ const Plot = () => {
         pointRadius: 5,
         type: 'scatter',
       },
+      // Edges will be drawn on the canvas directly
     ],
   };
 
   const options = {
-.
     plugins: {
       zoom: {
         zoom: {
@@ -89,12 +86,22 @@ const Plot = () => {
       },
     },
     onClick: (event, elements) => {
+      // Handle click events on the chart
       if (elements.length > 0) {
         const elementIndex = elements[0].index;
+        // You can now access the clicked node's data
         console.log('Clicked node:', nodes[elementIndex]);
       }
     }
   };
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart) {
+      // Custom drawing logic was here
+    }
+  }, [nodes, edges]);
+
 
   return <Chart ref={chartRef} type='scatter' data={data} options={options} />;
 };
