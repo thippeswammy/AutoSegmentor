@@ -422,6 +422,8 @@ class DataManager:
     #         print(f"Error during renumbering: {e}")
 
     def _auto_save_backup(self):
+        """Automatically saves a backup of nodes and edges if the backup interval has
+        passed."""
         try:
             if time.time() - self.last_backup < self.backup_interval:
                 return
