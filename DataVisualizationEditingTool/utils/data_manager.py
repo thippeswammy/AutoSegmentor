@@ -228,10 +228,14 @@ class DataManager:
         pass
 
     def _create_networkx_graph(self):
-        """
-        Creates a NetworkX graph with:
-        Node: t (point_id), x, y, yaw, zone=0, width=0, indicator=0
-        Edge: weight=EuclideanDistance
+        """Creates a directed NetworkX graph from node and edge data.
+        
+        This function initializes a directed graph and populates it with nodes and
+        edges based on the  attributes of the `self.nodes` and `self.edges`. Each node
+        is added with specific attributes  including position and orientation, while
+        edges are created with weights calculated as the  Euclidean distance between
+        connected nodes. The function ensures that only valid nodes are  considered
+        when creating edges.
         """
         G = nx.DiGraph()
 
@@ -422,6 +426,8 @@ class DataManager:
     #         print(f"Error during renumbering: {e}")
 
     def _auto_save_backup(self):
+        """Automatically saves a backup of nodes and edges if the backup interval has
+        elapsed."""
         try:
             if time.time() - self.last_backup < self.backup_interval:
                 return
