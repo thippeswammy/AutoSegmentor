@@ -42,7 +42,14 @@ class GraphViewer:
         self.plot_graph(None)  # Pass None as the event object
 
     def load_graph_data(self):
-        """Loads the graph data from the pickle file."""
+        """Load graph data from a pickle file.
+        
+        This function attempts to load a graph from the specified pickle file  located
+        at self.graph_file_path. It checks if the loaded data is a  NetworkX graph or a
+        dictionary containing a graph. If the data is  valid, it assigns the graph to
+        self.G1 and prints the number of nodes  and edges. In case of errors,
+        appropriate messages are printed, and  self.G1 is set to None.
+        """
         print(f"Loading graph from: {self.graph_file_path}")
         try:
             with open(self.graph_file_path, "rb") as f:
@@ -92,11 +99,8 @@ class GraphViewer:
             self.pos = nx.spring_layout(self.G1)
 
     def plot_graph(self, event):
-        """
-        Reloads data, clears the old plot, and draws the new graph.
-        The 'event' parameter is required by the button widget callback.
-        """
         # Reload the data
+        """Reloads data, clears the old plot, and draws the new graph."""
         if not self.load_graph_data():
             return  # Stop if loading failed
 
