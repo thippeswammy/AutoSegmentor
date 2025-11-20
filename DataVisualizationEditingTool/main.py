@@ -9,6 +9,14 @@ from DataVisualizationEditingTool.utils.plot_manager import PlotManager
 
 
 def main():
+    """Main function to load, merge, and manage data for processing.
+    
+    This function orchestrates the loading of existing working data and new raw
+    data files.  It calculates necessary parameters, merges the datasets, and
+    initializes various managers  for handling events and plotting. The function
+    also ensures that unique identifiers are  maintained across merged datasets to
+    prevent conflicts.
+    """
     base_path = os.getcwd()
     files_dir = os.path.join(base_path, 'files')
     original_data_path = os.path.join(base_path, 'originalData')
