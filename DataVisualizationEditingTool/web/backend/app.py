@@ -1,11 +1,16 @@
 import os
 import sys
+
 import numpy as np
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 # Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+print("PROJECT_ROOT =", PROJECT_ROOT)
+
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 # These imports assume your package structure
 from DataVisualizationEditingTool.utils.data_loader import DataLoader
@@ -18,6 +23,7 @@ CORS(app)
 
 # Global DataManager instance
 DATA_MANAGER = None
+
 
 def load_data_globally():
     global DATA_MANAGER
@@ -32,6 +38,7 @@ def load_data_globally():
     loader = DataLoader(lanes_path, file_order=custom_order)
     nodes, edges, file_names = loader.load_data()
     DATA_MANAGER = DataManager(nodes, edges, file_names)
+
 
 @app.route('/api/data')
 def get_data():
@@ -51,6 +58,7 @@ def get_data():
     }
 
     return jsonify(response_data)
+
 
 @app.route('/api/smooth', methods=['POST'])
 def smooth_data():
@@ -75,6 +83,7 @@ def smooth_data():
     # For now, we just return the smoothed points
     return jsonify({"smoothed_points": new_points.tolist()})
 
+
 @app.route('/api/save', methods=['POST'])
 def save_data():
     if DATA_MANAGER is None:
@@ -85,6 +94,7 @@ def save_data():
         return jsonify({"message": f"Data saved to {filename}"}), 200
     else:
         return jsonify({"error": "Save failed"}), 500
+
 
 @app.route('/api/delete_node', methods=['POST'])
 def delete_node():
@@ -101,6 +111,7 @@ def delete_node():
 
     return jsonify({"message": f"Node {node_id} deleted."}), 200
 
+
 @app.route('/api/connect_nodes', methods=['POST'])
 def connect_nodes():
     if DATA_MANAGER is None:
@@ -115,6 +126,7 @@ def connect_nodes():
 
     DATA_MANAGER.add_edge(start_id, end_id)
     return jsonify({"message": f"Nodes {start_id} and {end_id} connected."}), 200
+
 
 @app.route('/api/remove_between', methods=['POST'])
 def remove_between():
@@ -135,11 +147,12 @@ def remove_between():
 
     edges_to_delete = []
     for i in range(len(path_ids) - 1):
-        edges_to_delete.append((path_ids[i], path_ids[i+1]))
-        edges_to_delete.append((path_ids[i+1], path_ids[i])) # Also check for reverse direction
+        edges_to_delete.append((path_ids[i], path_ids[i + 1]))
+        edges_to_delete.append((path_ids[i + 1], path_ids[i]))  # Also check for reverse direction
 
     DATA_MANAGER.remove_edges(edges_to_delete)
     return jsonify({"message": "Path removed successfully."}), 200
+
 
 @app.route('/api/reverse_path', methods=['POST'])
 def reverse_path():
@@ -161,6 +174,7 @@ def reverse_path():
     DATA_MANAGER.reverse_path(path_ids)
     return jsonify({"message": "Path reversed successfully."}), 200
 
+
 @app.route('/api/draw_node', methods=['POST'])
 def draw_node():
     if DATA_MANAGER is None:
@@ -176,6 +190,7 @@ def draw_node():
 
     new_node_id = DATA_MANAGER.add_node(x, y, original_lane_id)
     return jsonify({"message": "Node drawn successfully.", "node_id": new_node_id}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)
