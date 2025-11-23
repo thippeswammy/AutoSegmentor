@@ -1,138 +1,139 @@
+import os
+
+import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import numpy as np
-import os
-import sys
-
-# This is to ensure the script can find the utility modules
-# It assumes the script is run from the root of the repository
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
-
-
-from DataVisualizationEditingTool.utils.data_loader import DataLoader
-from DataVisualizationEditingTool.utils.data_manager import DataManager
-from DataVisualizationEditingTool.utils.curve_manager import CurveManager
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Globals to hold our data and managers
-data_manager = None
-curve_manager = None
+# Construct path to the data directory relative to this script's location
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+DATA_DIRECTORY = os.path.abspath(os.path.join(APP_ROOT, '..', '..', 'lanes', 'TEMP'))
+print("DATA_DIRECTORY_DATA_DIRECTORY", DATA_DIRECTORY)
+import json
 
-def initialize_app():
-    """Load initial data and initialize managers."""
-    global data_manager, curve_manager
 
-    # Construct a path to the data files relative to this script's location
-    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../'))
-    lanes_path = os.path.join(base_path, 'DataVisualizationEditingTool/lanes/TEMP')
+def load_data():
+    """
+    Loads lane data from .npy files and edge data from .json files.
+    """
+    nodes_list = []
+    edges_list = []
+    file_names = []
 
-    if not os.path.isdir(lanes_path):
-        print(f"Error: Data directory not found at {lanes_path}")
-        # Initialize with empty data to allow the app to run
-        nodes, edges, file_names = np.array([]), np.array([]), []
-    else:
-        loader = DataLoader(lanes_path)
-        nodes, edges, file_names = loader.load_data()
+    custom_order = ["lane-0.npy", "lane-3.npy", "lane-2.npy", "lane-1.npy"]
 
-    data_manager = DataManager(nodes, edges, file_names)
+    node_id_offset = 0
+    for filename in custom_order:
+        if filename.endswith('.npy'):
+            file_path = os.path.join(DATA_DIRECTORY, filename)
+            if os.path.exists(file_path):
+                lane_data = np.load(file_path)
+                num_points = lane_data.shape[0]
+                lane_id = len(file_names)
 
-    # The original CurveManager is tightly coupled with Matplotlib's PlotManager.
-    # We will need to refactor it or create a mock for the backend.
-    # For now, we will work around it where necessary.
-    # curve_manager = CurveManager(data_manager, None, None)
+                point_ids = np.arange(node_id_offset, node_id_offset + num_points).reshape(-1, 1)
+                lane_ids = np.full((num_points, 1), lane_id)
 
-    print("Backend application initialized.")
+                nodes = np.hstack([point_ids, lane_data, lane_ids])
+                nodes_list.append(nodes)
+                file_names.append(filename)
 
-@app.route('/api/data', methods=['GET'])
+                # Load corresponding edges if they exist
+                edge_filename = filename.replace('.npy', '_edges.json')
+                edge_file_path = os.path.join(DATA_DIRECTORY, edge_filename)
+                if os.path.exists(edge_file_path):
+                    with open(edge_file_path, 'r') as f:
+                        edges_for_lane = json.load(f)
+                        edges_list.extend(edges_for_lane)
+                else:
+                    # Default edges
+                    for i in range(num_points - 1):
+                        edges_list.append([
+                            int(point_ids[i][0]),
+                            int(point_ids[i + 1][0])
+                        ])
+
+                node_id_offset += num_points
+
+    if not nodes_list:
+        return np.array([]), np.array([]), []
+
+    nodes = np.vstack(nodes_list)
+    return nodes, np.array(edges_list), file_names
+
+
+@app.route('/api/data')
 def get_data():
-    """Endpoint to get all current node and edge data."""
-    if data_manager is None:
-        return jsonify({"error": "Data manager not initialized"}), 500
+    nodes, edges, file_names = load_data()
 
-    nodes_list = data_manager.nodes.tolist() if data_manager.nodes.size > 0 else []
-    edges_list = data_manager.edges.tolist() if data_manager.edges.size > 0 else []
+    if nodes.size == 0:
+        return jsonify({"error": "No data found"}), 404
+
+    # Convert numpy arrays to lists for JSON serialization
+    nodes_list = nodes.tolist()
+    edges_list = edges.tolist()
 
     return jsonify({
         "nodes": nodes_list,
         "edges": edges_list,
-        "file_names": data_manager.file_names
+        "file_names": file_names
     })
 
-@app.route('/api/add_node', methods=['POST'])
-def add_node():
-    data = request.json
-    x = data.get('x')
-    y = data.get('y')
-    original_lane_id = data.get('original_lane_id')
-    new_node_id = data_manager.add_node(x, y, original_lane_id)
-    return jsonify({"message": "Node added successfully", "node_id": new_node_id})
-
-@app.route('/api/add_edge', methods=['POST'])
-def add_edge():
-    data = request.json
-    from_id = data.get('from_id')
-    to_id = data.get('to_id')
-    data_manager.add_edge(from_id, to_id)
-    return jsonify({"message": "Edge added successfully"})
-
-@app.route('/api/delete_nodes', methods=['POST'])
-def delete_nodes():
-    data = request.json
-    node_ids = data.get('node_ids')
-    data_manager.delete_points(node_ids)
-    return jsonify({"message": "Nodes deleted successfully"})
-
-@app.route('/api/undo', methods=['POST'])
-def undo():
-    nodes, edges, success = data_manager.undo()
-    return jsonify({
-        "success": success,
-        "nodes": nodes.tolist(),
-        "edges": edges.tolist()
-    })
-
-@app.route('/api/redo', methods=['POST'])
-def redo():
-    nodes, edges, success = data_manager.redo()
-    return jsonify({
-        "success": success,
-        "nodes": nodes.tolist(),
-        "edges": edges.tolist()
-    })
 
 @app.route('/api/save', methods=['POST'])
-def save():
-    """Saves the current nodes and edges to .npy files."""
+def save_data():
+    data = request.get_json()
+    if not data or 'nodes' not in data or 'edges' not in data:
+        return jsonify({"error": "Invalid data"}), 400
+
+    nodes = np.array(data['nodes'])
+    edges = data['edges']
+
+    lanes_to_save = {}
+    node_id_to_lane_id = {}
+    for node in nodes:
+        lane_id = int(node[4])
+        node_id = int(node[0])
+        node_id_to_lane_id[node_id] = lane_id
+        if lane_id not in lanes_to_save:
+            lanes_to_save[lane_id] = []
+        lanes_to_save[lane_id].append(node[1:4])
+
+    custom_order = ["lane-0.npy", "lane-3.npy", "lane-2.npy", "lane-1.npy"]
+
     try:
-        # Save nodes and edges for each lane
-        unique_lane_ids = np.unique(data_manager.nodes[:, 4].astype(int))
+        active_lane_ids = set(lanes_to_save.keys())
 
-        # Create a directory to save the files
-        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'lanes', 'TEMP_SAVED')
-        os.makedirs(output_dir, exist_ok=True)
+        for lane_id, filename in enumerate(custom_order):
+            file_path = os.path.join(DATA_DIRECTORY, filename)
+            edge_filename = filename.replace('.npy', '_edges.json')
+            edge_file_path = os.path.join(DATA_DIRECTORY, edge_filename)
 
-        for lane_id in unique_lane_ids:
-            # Filter nodes by lane_id
-            lane_nodes = data_manager.nodes[data_manager.nodes[:, 4] == lane_id]
+            if lane_id in active_lane_ids:
+                points = lanes_to_save[lane_id]
+                lane_data = np.array(points)
+                np.save(file_path, lane_data)
 
-            # Save nodes to .npy file
-            file_name = f'lane-{lane_id}.npy'
-            file_path = os.path.join(output_dir, file_name)
-            np.save(file_path, lane_nodes)
+                # Save edges for this lane
+                edges_for_lane = [
+                    edge for edge in edges
+                    if node_id_to_lane_id.get(edge[0]) == lane_id and node_id_to_lane_id.get(edge[1]) == lane_id
+                ]
+                with open(edge_file_path, 'w') as f:
+                    json.dump(edges_for_lane, f)
 
-        # Save all edges to a single file
-        edges_path = os.path.join(output_dir, 'all_edges.json')
-        edges_list = data_manager.edges.tolist()
-        import json
-        with open(edges_path, 'w') as f:
-            json.dump(edges_list, f)
+            else:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                if os.path.exists(edge_file_path):
+                    os.remove(edge_file_path)
 
         return jsonify({"message": "Data saved successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == '__main__':
-    initialize_app()
-    app.run(debug=True, port=5000)
+    app.run(debug=True)

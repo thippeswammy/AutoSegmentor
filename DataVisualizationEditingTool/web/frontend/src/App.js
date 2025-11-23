@@ -4,7 +4,8 @@ import { Chart } from 'react-chartjs-2';
 import 'chart.js/auto';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import axios from 'axios';
-import create from 'zustand';
+import { create } from 'zustand';
+
 
 ChartJS.register(...registerables, zoomPlugin);
 
@@ -70,7 +71,6 @@ const Plot = () => {
   };
 
   const options = {
-.
     plugins: {
       zoom: {
         zoom: {
