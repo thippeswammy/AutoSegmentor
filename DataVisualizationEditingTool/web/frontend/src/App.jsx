@@ -49,6 +49,14 @@ function App() {
     }
   }
 
+  /**
+   * Handles the addition of an edge between two selected points.
+   *
+   * This function checks if exactly two points are selected. If so, it sends a POST request to the API to add an edge
+   * between the selected points using their IDs. Upon a successful request, it fetches the updated state and sets a
+   * status message indicating that the edge has been added. In case of an error during the request, it logs the error
+   * to the console.
+   */
   const handleAddEdge = async () => {
     if (selectedPoints.length !== 2) return
     try {
@@ -60,6 +68,11 @@ function App() {
     }
   }
 
+  /**
+   * Handles the deletion of selected points.
+   *
+   * This function checks if there are any selected points to delete. If there are, it sends a POST request to the API to delete the selected points. Upon successful deletion, it resets the selected points, fetches the updated state, and sets a status message. In case of an error during the deletion process, it logs the error to the console.
+   */
   const handleDelete = async () => {
     if (selectedPoints.length === 0) return
     try {
@@ -72,6 +85,9 @@ function App() {
     }
   }
 
+  /**
+   * Handles the undo action by making an API call and updating the state.
+   */
   const handleUndo = async () => {
     try {
       await axios.post('/api/action/undo')
@@ -82,6 +98,9 @@ function App() {
     }
   }
 
+  /**
+   * Handles the redo action by making an API call and updating the state.
+   */
   const handleRedo = async () => {
     try {
       await axios.post('/api/action/redo')
@@ -106,6 +125,16 @@ function App() {
 
   // Keyboard Shortcuts
   useEffect(() => {
+    /**
+     * Handles key down events for specific keyboard shortcuts.
+     *
+     * The function checks if the event target is an input element and ignores the event if so.
+     * It processes key events for 'Delete', 'Backspace', 'Ctrl+Z', 'Ctrl+Y', and their variations,
+     * invoking the appropriate handler functions (handleDelete, handleUndo, handleRedo)
+     * while preventing default actions for certain combinations.
+     *
+     * @param e - The keyboard event object.
+     */
     const handleKeyDown = (e) => {
       // Ignore if input is focused (though we don't have many inputs)
       if (e.target.tagName === 'INPUT') return;
