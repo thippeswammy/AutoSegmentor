@@ -1,6 +1,20 @@
 import React, { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 
+/**
+ * Renders a Plotly component to visualize nodes and edges with interactive selection.
+ *
+ * The function prepares traces for edges and nodes, categorizing nodes by lane_id and handling start points.
+ * It also manages click events for selecting points and potentially adding nodes, while configuring the layout and interactivity of the plot.
+ *
+ * @param {Object} props - The properties for the PlotComponent.
+ * @param {Object} props.data - The data containing nodes, edges, and file names.
+ * @param {Array} props.selectedPoints - The currently selected point IDs.
+ * @param {Function} props.setSelectedPoints - Function to update the selected points.
+ * @param {Function} props.onAddNode - Function to handle adding a new node.
+ * @param {number} props.pointSize - The size of the points in the plot.
+ * @returns {JSX.Element} The rendered Plotly component.
+ */
 const PlotComponent = ({
     data,
     selectedPoints,
