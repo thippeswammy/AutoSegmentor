@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import PlotComponent from './components/Plot'
 import Toolbar from './components/Toolbar'
@@ -13,6 +13,7 @@ function App() {
   // View Settings
   const [pointSize, setPointSize] = useState(10)
   const [smoothness, setSmoothness] = useState(1.0)
+  const [smoothWeight, setSmoothWeight] = useState(20.0)
 
   const fetchState = async () => {
     try {
@@ -39,16 +40,6 @@ function App() {
     init()
   }, [])
 
-  const handleAddNode = async (x, y, laneId) => {
-    try {
-      await axios.post('/api/action/add_node', { x, y, lane_id: laneId })
-      fetchState()
-      setStatus("Node added")
-    } catch (error) {
-      console.error("Error adding node:", error)
-    }
-  }
-
   const handleAddEdge = async () => {
     if (selectedPoints.length !== 2) return
     try {
@@ -57,6 +48,7 @@ function App() {
       setStatus("Edge added")
     } catch (error) {
       console.error("Error adding edge:", error)
+      setStatus("Error adding edge")
     }
   }
 
@@ -67,6 +59,17 @@ function App() {
       setSelectedPoints([])
       fetchState()
       setStatus("Deleted selected points")
+    } catch (error) {
+      console.error("Error deleting:", error)
+    }
+  }
+
+  const handleRightClickDelete = async (pointId) => {
+    try {
+      await axios.post('/api/action/delete', { point_ids: [pointId] })
+      setSelectedPoints([])
+      fetchState()
+      setStatus(`Deleted point ${pointId}`)
     } catch (error) {
       console.error("Error deleting:", error)
     }
@@ -104,10 +107,40 @@ function App() {
     }
   }
 
+  const handleReverse = async () => {
+    if (selectedPoints.length !== 2) return
+    try {
+      setStatus("Reversing path...")
+      await axios.post('/api/action/reverse', { start_id: selectedPoints[0], end_id: selectedPoints[1] })
+      fetchState()
+      setStatus("Path reversed")
+    } catch (error) {
+      console.error("Error reversing:", error)
+      setStatus(error.response?.data?.detail || "Error reversing path")
+    }
+  }
+
+  const handleSmooth = async () => {
+    if (selectedPoints.length !== 2) return
+    try {
+      setStatus("Smoothing path...")
+      await axios.post('/api/action/smooth', {
+        start_id: selectedPoints[0],
+        end_id: selectedPoints[1],
+        smoothness: smoothness,
+        weight: smoothWeight
+      })
+      fetchState()
+      setStatus("Path smoothed")
+    } catch (error) {
+      console.error("Error smoothing:", error)
+      setStatus(error.response?.data?.detail || "Error smoothing path")
+    }
+  }
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if input is focused (though we don't have many inputs)
       if (e.target.tagName === 'INPUT') return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -127,10 +160,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPoints]); // Re-bind when selectedPoints changes to ensure handleDelete has current state? 
-  // Actually, handleDelete uses selectedPoints from closure. 
-  // Better to use useCallback or ref for selectedPoints if we don't want to re-bind often, 
-  // but re-binding on selection change is acceptable here.
+  }, [selectedPoints]);
 
   return (
     <div className="app-container">
@@ -146,7 +176,7 @@ function App() {
               data={data}
               selectedPoints={selectedPoints}
               setSelectedPoints={setSelectedPoints}
-              onAddNode={handleAddNode}
+              onRightClickDelete={handleRightClickDelete}
               pointSize={pointSize}
             />
           )}
@@ -158,11 +188,15 @@ function App() {
             onRedo={handleRedo}
             onSave={handleSave}
             onAddEdge={handleAddEdge}
+            onReverse={handleReverse}
+            onSmooth={handleSmooth}
             selectionCount={selectedPoints.length}
             pointSize={pointSize}
             setPointSize={setPointSize}
             smoothness={smoothness}
             setSmoothness={setSmoothness}
+            smoothWeight={smoothWeight}
+            setSmoothWeight={setSmoothWeight}
           />
         </div>
       </div>

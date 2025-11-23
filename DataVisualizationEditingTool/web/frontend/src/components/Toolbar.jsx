@@ -6,11 +6,15 @@ const Toolbar = ({
     onRedo,
     onSave,
     onAddEdge,
+    onReverse,
+    onSmooth,
     selectionCount,
     pointSize,
     setPointSize,
     smoothness,
-    setSmoothness
+    setSmoothness,
+    smoothWeight,
+    setSmoothWeight
 }) => {
     return (
         <>
@@ -42,7 +46,23 @@ const Toolbar = ({
                     disabled={selectionCount !== 2}
                     title="Select exactly 2 nodes to connect"
                 >
-                    Add Edge ({selectionCount === 2 ? 'Ready' : 'Select 2'})
+                    Add Edge
+                </button>
+
+                <button
+                    onClick={onReverse}
+                    disabled={selectionCount !== 2}
+                    title="Select 2 nodes to reverse path between them"
+                >
+                    Reverse Path
+                </button>
+
+                <button
+                    onClick={onSmooth}
+                    disabled={selectionCount !== 2}
+                    title="Select 2 nodes to smooth path between them"
+                >
+                    Smooth Path
                 </button>
             </div>
 
@@ -55,7 +75,7 @@ const Toolbar = ({
                     </label>
                     <input
                         type="range"
-                        min="1"
+                        min="4"
                         max="20"
                         value={pointSize}
                         onChange={(e) => setPointSize(parseInt(e.target.value))}
@@ -64,15 +84,29 @@ const Toolbar = ({
                 <div className="slider-container">
                     <label>
                         Smoothness
-                        <span>{smoothness}</span>
+                        <span>{smoothness.toFixed(1)}</span>
                     </label>
                     <input
                         type="range"
                         min="0.1"
-                        max="5.0"
+                        max="10.0"
                         step="0.1"
                         value={smoothness}
                         onChange={(e) => setSmoothness(parseFloat(e.target.value))}
+                    />
+                </div>
+                <div className="slider-container">
+                    <label>
+                        Smooth Weight
+                        <span>{smoothWeight.toFixed(0)}</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="1"
+                        max="100"
+                        step="1"
+                        value={smoothWeight}
+                        onChange={(e) => setSmoothWeight(parseFloat(e.target.value))}
                     />
                 </div>
             </div>
@@ -83,9 +117,10 @@ const Toolbar = ({
                     <div><b>Pan:</b> Click & Drag</div>
                     <div><b>Zoom:</b> Scroll</div>
                     <div><b>Select:</b> Click node</div>
-                    <div><b>Multi-Select:</b> Shift+Click</div>
-                    <div><b>Add Node:</b> Click empty space</div>
-                    <div><b>Delete:</b> Del / Backspace</div>
+                    <div><b>Multi:</b> Shift+Click</div>
+                    <div><b>Right-Click:</b> Delete point</div>
+                    <div><b>Delete:</b> Del/Backspace</div>
+                    <div><b>Undo:</b> Ctrl+Z</div>
                 </div>
             </div>
         </>

@@ -16,6 +16,7 @@ if project_root not in sys.path:
 
 from DataVisualizationEditingTool.utils.data_loader import DataLoader
 from DataVisualizationEditingTool.utils.data_manager import DataManager
+from curve_utils import CurveUtils
 
 app = FastAPI()
 
@@ -32,6 +33,7 @@ app.add_middleware(
 class AppState:
     def __init__(self):
         self.data_manager: Optional[DataManager] = None
+        self.curve_utils: Optional[CurveUtils] = None
         self.D = 1.0
 
 state = AppState()
@@ -65,6 +67,16 @@ class AddEdgeRequest(BaseModel):
 
 class DeleteRequest(BaseModel):
     point_ids: List[int]
+
+class ReverseRequest(BaseModel):
+    start_id: int
+    end_id: int
+
+class SmoothRequest(BaseModel):
+    start_id: int
+    end_id: int
+    smoothness: float = 1.0
+    weight: float = 20.0
 
 @app.get("/api/init", response_model=InitResponse)
 def init_data():
@@ -141,6 +153,7 @@ def init_data():
 
     # Initialize DataManager
     state.data_manager = DataManager(final_nodes, final_edges, file_names)
+    state.curve_utils = CurveUtils(state.data_manager)
     state.D = D
 
     return _get_state_response()
@@ -213,6 +226,37 @@ def save():
         return {"status": "success", "path": path}
     else:
         raise HTTPException(status_code=500, detail="Save failed")
+
+@app.post("/api/action/reverse")
+def reverse_path(req: ReverseRequest):
+    if state.data_manager is None or state.curve_utils is None:
+        raise HTTPException(status_code=400, detail="Not initialized")
+    
+    path_ids = state.curve_utils.find_path(req.start_id, req.end_id)
+    if not path_ids or len(path_ids) < 2:
+        raise HTTPException(status_code=400, detail="No path found between nodes")
+    
+    state.data_manager.reverse_path(path_ids)
+    return _get_state_response()
+
+@app.post("/api/action/smooth")
+def smooth_path(req: SmoothRequest):
+    if state.data_manager is None or state.curve_utils is None:
+        raise HTTPException(status_code=400, detail="Not initialized")
+    
+    path_ids = state.curve_utils.find_path(req.start_id, req.end_id)
+    if not path_ids or len(path_ids) < 2:
+        raise HTTPException(status_code=400, detail="No path found between nodes")
+    
+    new_points = state.curve_utils.smooth_segment(path_ids, req.smoothness, req.weight)
+    if new_points is None:
+        raise HTTPException(status_code=500, detail="Smoothing failed")
+    
+    success = state.curve_utils.apply_smooth(path_ids, new_points)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to apply smoothing")
+    
+    return _get_state_response()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
