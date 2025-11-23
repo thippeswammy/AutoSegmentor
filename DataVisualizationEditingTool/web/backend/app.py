@@ -146,6 +146,14 @@ def init_data():
     return _get_state_response()
 
 def _get_state_response():
+    """Retrieve the current state response data.
+    
+    This function checks if the state.data_manager is initialized. If it is not,
+    it returns a default response with empty nodes and edges. If the data_manager
+    contains nodes or edges, it constructs lists of NodeData and EdgeData objects
+    respectively, populating them with the relevant attributes. Finally, it returns
+    a dictionary containing the nodes, edges, file names, and the value of state.D.
+    """
     if state.data_manager is None:
         return {"nodes": [], "edges": [], "file_names": [], "D": 1.0}
     
@@ -175,6 +183,7 @@ def get_state():
 
 @app.post("/api/action/add_node")
 def add_node(req: AddNodeRequest):
+    """Adds a new node to the data manager."""
     if state.data_manager is None: raise HTTPException(status_code=400, detail="Not initialized")
     new_id = state.data_manager.add_node(req.x, req.y, req.lane_id)
     if new_id is None:
@@ -183,18 +192,21 @@ def add_node(req: AddNodeRequest):
 
 @app.post("/api/action/add_edge")
 def add_edge(req: AddEdgeRequest):
+    """Adds an edge to the data manager."""
     if state.data_manager is None: raise HTTPException(status_code=400, detail="Not initialized")
     state.data_manager.add_edge(req.from_id, req.to_id)
     return _get_state_response()
 
 @app.post("/api/action/delete")
 def delete_points(req: DeleteRequest):
+    """Delete specified points from the data manager."""
     if state.data_manager is None: raise HTTPException(status_code=400, detail="Not initialized")
     state.data_manager.delete_points(req.point_ids)
     return _get_state_response()
 
 @app.post("/api/action/undo")
 def undo():
+    """Reverts the last action performed by the data manager."""
     if state.data_manager is None: raise HTTPException(status_code=400, detail="Not initialized")
     state.data_manager.undo()
     return _get_state_response()
@@ -207,6 +219,7 @@ def redo():
 
 @app.post("/api/save")
 def save():
+    """Saves data and returns the status and path if successful."""
     if state.data_manager is None: raise HTTPException(status_code=400, detail="Not initialized")
     path = state.data_manager.save()
     if path:
