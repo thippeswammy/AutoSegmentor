@@ -7,14 +7,26 @@ class CurveUtils:
         self.data_manager = data_manager
 
     def _get_node_coords(self, point_id):
-        """Helper to get (x, y) for a point_id."""
+        """Retrieve the (x, y) coordinates for a given point_id."""
         node_mask = (self.data_manager.nodes[:, 0] == point_id)
         if np.any(node_mask):
             return self.data_manager.nodes[node_mask][0, 1:3]  # [x, y]
         return None
 
     def find_path(self, start_id, end_id):
-        """Finds a path from start_id to end_id using bidirectional BFS."""
+        """Finds a path from start_id to end_id using bidirectional BFS.
+        
+        This function utilizes a bidirectional breadth-first search (BFS) algorithm  to
+        find a path between two nodes identified by start_id and end_id. It first
+        constructs an adjacency list from the edges in self.data_manager. If the
+        start_id is not present in the adjacency list, it returns None. The function
+        then explores the graph using a queue to track the current path and visited
+        nodes, returning the path once the end_id is reached.
+        
+        Args:
+            start_id: The ID of the starting node.
+            end_id: The ID of the target node.
+        """
         if self.data_manager.edges.size == 0:
             return None
 
@@ -46,7 +58,24 @@ class CurveUtils:
         return None
 
     def smooth_segment(self, path_ids, smoothness=1.0, weight=20):
-        """Calculate smoothed points for a given path of IDs."""
+        """Calculate smoothed points for a given path of IDs.
+        
+        This function retrieves coordinates for the specified path IDs and applies a
+        smoothing algorithm to generate a new set of points. It first checks for
+        adjacent points to the start and end of the path, then constructs a weighted
+        fitting of the points using spline interpolation. The function handles edge
+        cases, such as insufficient points or fitting failures, and ensures that the
+        original start and end points are preserved in the output.
+        
+        Args:
+            path_ids (list): A list of IDs representing the path for which to smooth the points.
+            smoothness (float?): A factor that influences the degree of smoothing. Default is 1.0.
+            weight (int?): The weight applied to the start and end points during smoothing. Default is 20.
+        
+        Returns:
+            np.ndarray: An array of smoothed points corresponding to the input path IDs, or None if
+                smoothing fails or insufficient points are provided.
+        """
         if len(path_ids) < 2:
             return None
 
