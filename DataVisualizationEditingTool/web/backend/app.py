@@ -89,12 +89,12 @@ def init_data():
     
     # These files must exist in your 'original_data_path' folder
     # Matching main.py logic
-    files_path_ = ["lane-3.npy"] 
+    files_path_ = ["lane-0.npy","lane-1.npy","lane-2.npy","lane-3.npy"] 
     
     nodes_path = os.path.join(files_dir, 'WorkingNodes1.npy')
     edges_path = os.path.join(files_dir, 'WorkingEdges1.npy')
     files_path = [os.path.join(original_data_path, i) for i in files_path_]
-    
+
     final_nodes = np.array([])
     final_edges = np.array([])
     file_names = []
