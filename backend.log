@@ -1,0 +1,9 @@
+Loading data from: /app/DataVisualizationEditingTool/web/backend/../../lanes/TEMP1
+Loaded 1 files, total nodes: 76
+DataManager initialized with 76 nodes and 75 edges.
+ * Serving Flask app 'app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
