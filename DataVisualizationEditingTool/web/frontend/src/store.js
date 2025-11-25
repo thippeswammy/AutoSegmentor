@@ -151,7 +151,7 @@ export const useStore = create((set, get) => ({
     const { nodes, edges } = get();
     try {
         set({ status: 'Saving...' });
-        await axios.post(`${API__URL}/api/save`, { nodes, edges });
+        await axios.post(`${API_URL}/api/save`, { nodes, edges });
         set({ status: 'Save successful.' });
     } catch (error) {
         console.error("Error saving data:", error);
