@@ -1,3 +1,4 @@
+import os
 import sys
 
 from .FileManagement.FileManager import ensure_directory
@@ -5,16 +6,37 @@ from .FileManagement.ImageCopier import ImageCopier
 from .FileManagement.ImageOverlayProcessor import ImageOverlayProcessor
 from .FileManagement.VideoCreator import VideoCreator
 from .FileManagement.PoseExporter import PoseExporter
-from .Model.sam2_video_predictor import SAM2VideoProcessor
 from .UserUI.logger_config import logger
 
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
                  verified_img_dir, verified_mask_dir, prefix, batch_size, fps, final_video_path,
-                 temp_processing_dir, delete, images_ending_count, pose_config=None):
-    """Run the entire pipeline for a single video number."""
-    logger.info(f"Processing video {video_number}")
+                 temp_processing_dir, delete, images_ending_count, pose_config=None, run_mode="all"):
+    """Run the pipeline for a single video number.
 
+    Args:
+        run_mode: "all" = full pipeline, "mask_only" = SAM2 only, "pose_only" = pose export only.
+    """
+    logger.info(f"Processing video {video_number} (mode: {run_mode})")
+
+    if run_mode == "pose_only":
+        # Skip SAM2 — run only pose export using existing verified data
+        _run_pose_only(
+            video_number=video_number,
+            prefix=prefix,
+            batch_size=batch_size,
+            verified_mask_dir=verified_mask_dir,
+            pose_config=pose_config,
+            images_ending_count=images_ending_count,
+            video_path_template=video_path_template,
+            images_extract_dir=images_extract_dir,
+            rendered_dirs=rendered_dirs,
+            temp_processing_dir=temp_processing_dir,
+        )
+        return
+
+    # Full SAM2 pipeline (mode: "all" or "mask_only")
+    from .Model.sam2_video_predictor import SAM2VideoProcessor
     processor = SAM2VideoProcessor(
         video_number=video_number,
         prefix=prefix,
@@ -69,6 +91,51 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     )
     video_creator.run()
 
-    if pose_config and pose_config.get('enabled'):
+    if run_mode != "mask_only" and pose_config and pose_config.get('enabled'):
         exporter = PoseExporter(processor.config, verified_mask_dir, processor.annotation_manager)
         exporter.process_masks()
+
+
+def _run_pose_only(video_number, prefix, batch_size, verified_mask_dir,
+                   pose_config, images_ending_count, video_path_template,
+                   images_extract_dir, rendered_dirs, temp_processing_dir):
+    """Run only the pose export step using existing verified data."""
+    if not pose_config or not pose_config.get('enabled'):
+        logger.error("Pose estimation is not enabled in config. Cannot run pose_only mode.")
+        return
+
+    from .Model.SAM2Config import SAM2Config
+    from .UserUI.AnnotationManager import AnnotationManager
+
+    # Build a lightweight config (no SAM2 model needed)
+    config = SAM2Config(
+        video_number=video_number,
+        batch_size=batch_size,
+        prefix=prefix,
+        video_path_template=video_path_template,
+        images_extract_dir=images_extract_dir,
+        rendered_frames_dir=rendered_dirs,
+        temp_processing_dir=temp_processing_dir,
+        images_ending_count=images_ending_count,
+        pose_config=pose_config,
+    )
+
+    # Load existing annotations
+    verified_img_dir = verified_mask_dir.replace('mask', 'images')
+    frame_paths = sorted([
+        os.path.join(verified_img_dir, f)
+        for f in os.listdir(verified_img_dir)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+    ]) if os.path.exists(verified_img_dir) else []
+
+    if not frame_paths:
+        logger.error(f"No verified images found in {verified_img_dir}. Run full pipeline first.")
+        return
+
+    annotation_manager = AnnotationManager(config, frame_paths)
+    logger.info(f"Pose-only mode: {len(frame_paths)} verified frames, "
+                f"{len(annotation_manager.pose_keypoints_collection)} keypoint sets")
+
+    exporter = PoseExporter(config, verified_mask_dir, annotation_manager)
+    exporter.process_masks()
+

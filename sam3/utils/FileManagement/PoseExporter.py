@@ -11,7 +11,10 @@ class PoseExporter:
 
     For each batch:
       - Uses that batch's annotated keypoint coordinates as anchor points.
-      - Tracks them through all frames in the batch using optical flow.
+      - Tracks them through all frames in the batch using the configured tracker.
+    Supports two tracker backends:
+      - "cotracker": CoTracker3 (learned point tracker, processes entire batch at once)
+      - "lk": Lucas-Kanade sparse optical flow (frame-by-frame)
     Concatenates results across all batches.
     """
 
@@ -30,6 +33,56 @@ class PoseExporter:
             if self.config.pose_config else []
         )
 
+        # Determine tracker type
+        self.tracker_type = "lk"  # default fallback
+        if self.config.pose_config:
+            self.tracker_type = self.config.pose_config.get('tracker', 'lk').lower()
+
+    def _get_cotracker_config(self):
+        """Extract CoTracker config from pose_config."""
+        ct_cfg = self.config.pose_config.get('cotracker', {})
+        # Resolve checkpoint path relative to sam3 directory
+        checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        checkpoint = os.path.normpath(os.path.join(base_path, checkpoint))
+        window_len = ct_cfg.get('window_len', 60)
+        return checkpoint, window_len
+
+    def _track_batch_cotracker(self, batch_kps, batch_frame_paths):
+        """Track keypoints through a batch using CoTracker."""
+        from .CoTrackerKeypointTracker import CoTrackerKeypointTracker
+        checkpoint, window_len = self._get_cotracker_config()
+        tracker = CoTrackerKeypointTracker(
+            keypoint_defs=self.keypoints_def,
+            initial_coords=batch_kps,
+            frame_paths=batch_frame_paths,
+            checkpoint=checkpoint,
+            window_len=window_len,
+        )
+        return tracker.get_all_tracked()
+
+    def _track_batch_lk(self, batch_kps, batch_frame_paths):
+        """Track keypoints through a batch using Lucas-Kanade optical flow."""
+        first_frame = cv2.imread(batch_frame_paths[0])
+        if first_frame is None:
+            logger.error(f"  Failed to read: {batch_frame_paths[0]}")
+            return []
+
+        tracker = KeypointTracker(
+            keypoint_defs=self.keypoints_def,
+            initial_coords=batch_kps,
+            initial_frame=first_frame
+        )
+
+        for i in range(1, len(batch_frame_paths)):
+            frame = cv2.imread(batch_frame_paths[i])
+            if frame is None:
+                logger.warning(f"  Failed to read: {batch_frame_paths[i]}")
+                continue
+            tracker.track(frame, frame_index=i)
+
+        return tracker.get_all_tracked()
+
     def process_masks(self):
         """Run per-batch keypoint tracking and export to JSON."""
         if not self.config.pose_config or not self.config.pose_config.get('enabled'):
@@ -43,6 +96,7 @@ class PoseExporter:
             return
 
         logger.info(f"Starting Pose Export with per-batch keypoint tracking")
+        logger.info(f"  Tracker: {self.tracker_type}")
         logger.info(f"  Images: {verified_img_dir}")
         logger.info(f"  Output: {self.output_file}")
 
@@ -100,31 +154,16 @@ class PoseExporter:
             last_known_kps = batch_kps
             logger.info(f"  Batch {batch_idx + 1}: Tracking {len(batch_kps)} keypoints across {len(batch_frames)} frames")
 
-            # Read first frame of this batch
-            first_frame_path = os.path.join(verified_img_dir, batch_frames[0])
-            first_frame = cv2.imread(first_frame_path)
-            if first_frame is None:
-                logger.error(f"  Failed to read: {first_frame_path}")
-                continue
+            # Build full paths for batch frames
+            batch_frame_paths = [os.path.join(verified_img_dir, f) for f in batch_frames]
 
-            # Initialize tracker for this batch
-            tracker = KeypointTracker(
-                keypoint_defs=self.keypoints_def,
-                initial_coords=batch_kps,
-                initial_frame=first_frame
-            )
-
-            # Track through remaining frames in this batch
-            for i in range(1, len(batch_frames)):
-                frame_path = os.path.join(verified_img_dir, batch_frames[i])
-                frame = cv2.imread(frame_path)
-                if frame is None:
-                    logger.warning(f"  Failed to read: {frame_path}")
-                    continue
-                tracker.track(frame, frame_index=i)
+            # Track using configured backend
+            if self.tracker_type == "cotracker":
+                tracked_data = self._track_batch_cotracker(batch_kps, batch_frame_paths)
+            else:
+                tracked_data = self._track_batch_lk(batch_kps, batch_frame_paths)
 
             # Collect tracked data for this batch
-            tracked_data = tracker.get_all_tracked()
             for entry in tracked_data:
                 local_idx = entry["frame_index"]
                 global_idx = batch_start + local_idx

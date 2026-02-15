@@ -1,4 +1,5 @@
 # config.yml
+run_mode: "pose_only"    # "all" = full pipeline, "mask_only" = SAM2 masks only, "pose_only" = pose export only
 video_start: 2
 video_end: 1
 prefix: Img
@@ -14,12 +15,16 @@ overlap_dir: ./working_dir/overlap
 verified_img_dir: ./working_dir/verified/images
 verified_mask_dir: ./working_dir/verified/mask
 final_video_path: ./outputs
-images_ending_count: 3000
+images_ending_count: 400
 
 # Pose Estimation Configuration
 pose_estimation:
   enabled: true
-  class_id: 1            # All keypoints belong to this class (Pallet)
+  tracker: "cotracker"   # "cotracker" or "lk" (Lucas-Kanade optical flow)
+  cotracker:
+    checkpoint: "../co-tracker/checkpoints/scaled_offline.pth"
+    window_len: 60       
+  class_id: 1            # All keypoints belong to this class Pallet
   object_id: 1           # Instance ID for the pose object
   keypoints:
     - "top_left_box1"

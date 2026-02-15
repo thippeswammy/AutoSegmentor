@@ -166,9 +166,40 @@ class UserInteractionHandler:
                             break
 
             if prev_kps and len(prev_kps) == len(self.pose_keypoints):
-                # Pre-populate with previous keypoints
+                # Attempt CoTracker-based carry-forward if configured
+                tracked_kps = prev_kps  # Default: use as-is
+                tracker_type = (
+                    self.config.pose_config.get('tracker', 'lk').lower()
+                    if self.config.pose_config else 'lk'
+                )
+                if tracker_type == 'cotracker' and batch > 0:
+                    try:
+                        from ..FileManagement.CoTrackerKeypointTracker import track_between_frames
+                        # Get paths: last frame of prev batch, first frame of current batch
+                        prev_batch_end_idx = batch * self.config.batch_size - 1
+                        if 0 <= prev_batch_end_idx < len(frame_paths):
+                            prev_frame_path = frame_paths[prev_batch_end_idx]
+                            curr_frame_path = frame_path  # first frame of current batch
+                            ct_cfg = self.config.pose_config.get('cotracker', {})
+                            checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
+                            # Resolve relative to sam3 directory
+                            import os as _os
+                            base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
+                            checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
+                            window_len = ct_cfg.get('window_len', 60)
+                            result = track_between_frames(
+                                prev_kps, prev_frame_path, curr_frame_path,
+                                checkpoint=checkpoint, window_len=window_len
+                            )
+                            if result:
+                                tracked_kps = result
+                                logger.info(f"Batch {batch + 1}: CoTracker carry-forward tracking applied")
+                    except Exception as e:
+                        logger.warning(f"CoTracker carry-forward failed, using static copy: {e}")
+
+                # Pre-populate with tracked/previous keypoints
                 full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
-                for kp in sorted(prev_kps, key=lambda k: k["point_id"]):
+                for kp in sorted(tracked_kps, key=lambda k: k["point_id"]):
                     x, y = kp["x"], kp["y"]
                     self.selected_points.append([x, y])
                     self.selected_labels.append(full_label)
@@ -185,7 +216,7 @@ class UserInteractionHandler:
                                self.config.label_colors[self.pose_class_id], -1)
                 self.current_keypoint_index = len(self.pose_keypoints)
                 self.display_text = "Prev keypoints loaded. Enter=Accept, R=Re-click"
-                logger.info(f"Batch {batch + 1}: Pre-populated {len(prev_kps)} keypoints from previous data")
+                logger.info(f"Batch {batch + 1}: Pre-populated {len(tracked_kps)} keypoints from previous data")
             else:
                 if self.pose_keypoints:
                     self.display_text = f"Click: {self.pose_keypoints[0]}"

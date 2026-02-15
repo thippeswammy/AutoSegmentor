@@ -90,9 +90,10 @@ def main():
     final_video_path = config['final_video_path']
     images_ending_count = config['images_ending_count']
     pose_config = config.get('pose_estimation', None)
+    run_mode = config.get('run_mode', 'all').lower()
 
     for i in range(video_start, video_start + video_end):
-        if os.path.exists(working_dir_name):
+        if run_mode != 'pose_only' and os.path.exists(working_dir_name):
             if delete == 'yes':
                 shutil.rmtree(working_dir_name)
                 logger.info(f"Cleared working directory: {working_dir_name}")
@@ -122,7 +123,8 @@ def main():
             verified_mask_dir=verified_mask_dir.replace('working_dir', working_dir_name),
             final_video_path=final_video_path,
             images_ending_count=images_ending_count,
-            pose_config=pose_config
+            pose_config=pose_config,
+            run_mode=run_mode
         )
 
         if os.path.exists(working_dir_name):
