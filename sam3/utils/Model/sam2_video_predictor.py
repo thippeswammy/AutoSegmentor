@@ -25,14 +25,15 @@ class SAM2VideoProcessor(SAM2Model):
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
-                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5):
+                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5, pose_config=None):
         self.inference_state = None
         sam2Config = SAM2Config(
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
             images_ending_count=images_ending_count, prefix=prefix, video_path_template=video_path_template,
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
             temp_processing_dir=temp_processing_dir, window_size=window_size,
-            label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size
+            label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size,
+            pose_config=pose_config
         )
         super().__init__(sam2Config)
         if video_path_template is None:
@@ -82,6 +83,11 @@ class SAM2VideoProcessor(SAM2Model):
             self.user_prompt_adder(inference_state_temp, frame_path)
             self.user_interaction.draw_text_with_background(self.user_interaction.current_frame)
             logger.debug(f"Click: ({x}, {y}), Labels: {self.user_interaction.selected_labels}")
+            
+            if self.user_interaction.pose_mode:
+                self.user_interaction.record_pose_click(x, y)
+                self.user_interaction.next_keypoint()
+                
             cv2.imshow(self.user_interaction.window_name, self.user_interaction.current_frame)
         elif event == cv2.EVENT_MOUSEMOVE:
             if self.is_drawing:

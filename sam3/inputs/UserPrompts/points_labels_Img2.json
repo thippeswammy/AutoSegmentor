@@ -1,0 +1,681 @@
+[
+  {
+    "frame_idx": 0,
+    "points": [
+      [
+        242.0,
+        235.0
+      ],
+      [
+        281.0,
+        248.0
+      ],
+      [
+        293.0,
+        283.0
+      ],
+      [
+        253.0,
+        279.0
+      ],
+      [
+        444.0,
+        268.0
+      ],
+      [
+        575.0,
+        286.0
+      ],
+      [
+        574.0,
+        319.0
+      ],
+      [
+        452.0,
+        302.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 242,
+        "y": 235
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 281,
+        "y": 248
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 293,
+        "y": 283
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 253,
+        "y": 279
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 444,
+        "y": 268
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 575,
+        "y": 286
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 574,
+        "y": 319
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 452,
+        "y": 302
+      }
+    ]
+  },
+  {
+    "frame_idx": 50,
+    "points": [
+      [
+        291,
+        198
+      ],
+      [
+        405,
+        222
+      ],
+      [
+        405,
+        250
+      ],
+      [
+        299,
+        233
+      ],
+      [
+        453,
+        232
+      ],
+      [
+        584,
+        257
+      ],
+      [
+        582,
+        291
+      ],
+      [
+        460,
+        266
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 291,
+        "y": 198
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 405,
+        "y": 222
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 405,
+        "y": 250
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 299,
+        "y": 233
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 453,
+        "y": 232
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 584,
+        "y": 257
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 582,
+        "y": 291
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 460,
+        "y": 266
+      }
+    ]
+  },
+  {
+    "frame_idx": 100,
+    "points": [
+      [
+        279,
+        204
+      ],
+      [
+        392,
+        242
+      ],
+      [
+        398,
+        272
+      ],
+      [
+        292,
+        238
+      ],
+      [
+        441,
+        255
+      ],
+      [
+        577,
+        300
+      ],
+      [
+        575,
+        332
+      ],
+      [
+        448,
+        287
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 279,
+        "y": 204
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 392,
+        "y": 242
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 398,
+        "y": 272
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 292,
+        "y": 238
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 441,
+        "y": 255
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 577,
+        "y": 300
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 575,
+        "y": 332
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 448,
+        "y": 287
+      }
+    ]
+  },
+  {
+    "frame_idx": 150,
+    "points": [
+      [
+        331,
+        181
+      ],
+      [
+        453,
+        209
+      ],
+      [
+        455,
+        239
+      ],
+      [
+        343,
+        216
+      ],
+      [
+        510,
+        221
+      ],
+      [
+        648,
+        253
+      ],
+      [
+        642,
+        284
+      ],
+      [
+        511,
+        252
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 331,
+        "y": 181
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 453,
+        "y": 209
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 455,
+        "y": 239
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 343,
+        "y": 216
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 510,
+        "y": 221
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 648,
+        "y": 253
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 642,
+        "y": 284
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 511,
+        "y": 252
+      }
+    ]
+  },
+  {
+    "frame_idx": 200,
+    "points": [
+      [
+        213,
+        266
+      ],
+      [
+        205,
+        230
+      ],
+      [
+        339,
+        212
+      ],
+      [
+        344,
+        239
+      ],
+      [
+        396,
+        233
+      ],
+      [
+        396,
+        203
+      ],
+      [
+        518,
+        183
+      ],
+      [
+        516,
+        214
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 213,
+        "y": 266
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 205,
+        "y": 230
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 339,
+        "y": 212
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 344,
+        "y": 239
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 396,
+        "y": 233
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 396,
+        "y": 203
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 518,
+        "y": 183
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 516,
+        "y": 214
+      }
+    ]
+  },
+  {
+    "frame_idx": 250,
+    "points": [
+      [
+        202,
+        384
+      ],
+      [
+        198,
+        344
+      ],
+      [
+        332,
+        297
+      ],
+      [
+        338,
+        339
+      ],
+      [
+        379,
+        283
+      ],
+      [
+        491,
+        248
+      ],
+      [
+        492,
+        283
+      ],
+      [
+        382,
+        320
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 202,
+        "y": 384
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 198,
+        "y": 344
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 332,
+        "y": 297
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 338,
+        "y": 339
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 379,
+        "y": 283
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 491,
+        "y": 248
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 492,
+        "y": 283
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 382,
+        "y": 320
+      }
+    ]
+  },
+  {
+    "frame_idx": 300,
+    "points": [
+      [
+        209,
+        243
+      ],
+      [
+        346,
+        204
+      ],
+      [
+        345,
+        241
+      ],
+      [
+        215,
+        281
+      ],
+      [
+        390,
+        190
+      ],
+      [
+        501,
+        161
+      ],
+      [
+        497,
+        200
+      ],
+      [
+        391,
+        229
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "pose_keypoints": [
+      {
+        "name": "top_left_box1",
+        "point_id": 0,
+        "x": 209,
+        "y": 243
+      },
+      {
+        "name": "top_right_box1",
+        "point_id": 1,
+        "x": 346,
+        "y": 204
+      },
+      {
+        "name": "bottom_right_box1",
+        "point_id": 2,
+        "x": 345,
+        "y": 241
+      },
+      {
+        "name": "bottom_left_box1",
+        "point_id": 3,
+        "x": 215,
+        "y": 281
+      },
+      {
+        "name": "top_left_box2",
+        "point_id": 4,
+        "x": 390,
+        "y": 190
+      },
+      {
+        "name": "top_right_box2",
+        "point_id": 5,
+        "x": 501,
+        "y": 161
+      },
+      {
+        "name": "bottom_right_box2",
+        "point_id": 6,
+        "x": 497,
+        "y": 200
+      },
+      {
+        "name": "bottom_left_box2",
+        "point_id": 7,
+        "x": 391,
+        "y": 229
+      }
+    ]
+  }
+]

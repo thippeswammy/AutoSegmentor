@@ -1,6 +1,8 @@
 import os
 import shutil
 import sys
+sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import yaml
 
@@ -8,7 +10,7 @@ from utils.UserUI.logger_config import logger
 from utils.pipeline import run_pipeline
 
 
-def load_config(config_path="inputs/config/default_config.yaml"):
+def load_config(config_path=os.path.join(os.path.dirname(__file__), "inputs/config/default_config.yaml")):
     """
     Load configuration from a YAML file and validate required keys.
 
@@ -34,7 +36,7 @@ def load_config(config_path="inputs/config/default_config.yaml"):
             'working_dir_name', 'video_path_template', 'images_extract_dir',
             'temp_processing_dir', 'rendered_dir', 'overlap_dir',
             'verified_img_dir', 'verified_mask_dir', 'final_video_path',
-            'images_ending_count'
+            'images_ending_count', 'pose_estimation'
         ]
 
         # Check for missing keys
@@ -87,6 +89,7 @@ def main():
     verified_mask_dir = config['verified_mask_dir']
     final_video_path = config['final_video_path']
     images_ending_count = config['images_ending_count']
+    pose_config = config.get('pose_estimation', None)
 
     for i in range(video_start, video_start + video_end):
         if os.path.exists(working_dir_name):
@@ -118,7 +121,8 @@ def main():
             verified_img_dir=verified_img_dir.replace('working_dir', working_dir_name),
             verified_mask_dir=verified_mask_dir.replace('working_dir', working_dir_name),
             final_video_path=final_video_path,
-            images_ending_count=images_ending_count
+            images_ending_count=images_ending_count,
+            pose_config=pose_config
         )
 
         if os.path.exists(working_dir_name):

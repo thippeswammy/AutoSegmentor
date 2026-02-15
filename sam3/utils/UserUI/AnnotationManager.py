@@ -1,4 +1,5 @@
 import json
+import os
 from os.path import exists
 
 import numpy as np
@@ -16,6 +17,7 @@ class AnnotationManager:
         self.points_collection = []
         self.labels_collection = []
         self.frame_indices = []
+        self.pose_keypoints_collection = []  # Per-batch pose keypoint coords
         self.load_points_and_labels()
 
     def load_points_and_labels(self):
@@ -35,6 +37,7 @@ class AnnotationManager:
             self.points_collection = [np.array(entry["points"], dtype=np.float32) for entry in data]
             self.labels_collection = [np.array(entry["labels"], dtype=np.int32) for entry in data]
             self.frame_indices = [int(entry["frame_idx"]) for entry in data]
+            self.pose_keypoints_collection = [entry.get("pose_keypoints", []) for entry in data]
 
             logger.debug(f"Loaded {len(self.points_collection)} annotations from {filename}")
         except Exception as e:
@@ -42,11 +45,19 @@ class AnnotationManager:
 
     def save_points_and_labels(self, points_collection=None, labels_collection=None, frame_indices=None):
         """Save points and labels to JSON file."""
-        ensure_directory("./inputs/UserPrompts")
-        filename = f"./inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
+        # Calculate base path up to project root (AutoSegmentor)
+        # We want to save in sam3/inputs/UserPrompts
+        # __file__ is sam3/utils/UserUI/AnnotationManager.py
+        # root is 3 levels up: sam3/utils/UserUI -> sam3/utils -> sam3
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+        save_dir = os.path.join(base_path, "inputs/UserPrompts")
+        ensure_directory(save_dir)
+        filename = os.path.join(save_dir, f"points_labels_{self.config.prefix}{self.config.video_number}.json")
+        
         points_collection = points_collection or self.points_collection
         labels_collection = labels_collection or self.labels_collection
         frame_indices = frame_indices or self.frame_indices
+        pose_kps = self.pose_keypoints_collection
 
         # Safely convert numpy types to native Python types
         def safe_convert(item):
@@ -59,14 +70,16 @@ class AnnotationManager:
             else:
                 return item
 
-        data = [
-            {
+        data = []
+        for i, (frame_idx, points, labels) in enumerate(zip(frame_indices, points_collection, labels_collection)):
+            entry = {
                 "frame_idx": int(frame_idx),
                 "points": safe_convert(points),
                 "labels": safe_convert(labels),
             }
-            for frame_idx, points, labels in zip(frame_indices, points_collection, labels_collection)
-        ]
+            if i < len(pose_kps) and pose_kps[i]:
+                entry["pose_keypoints"] = pose_kps[i]
+            data.append(entry)
 
         try:
             with open(filename, 'w', encoding="utf-8") as f:

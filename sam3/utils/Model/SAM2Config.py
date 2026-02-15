@@ -1,3 +1,4 @@
+import os
 from ..FileManagement.FileManager import get_resource_path, ensure_directory
 
 
@@ -7,7 +8,7 @@ class SAM2Config:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, window_size=None,
-                 label_colors=None, memory_bank_size=5, prompt_memory_size=5):
+                 label_colors=None, memory_bank_size=5, prompt_memory_size=5, **kwargs):
         self.video_number = video_number
         self.batch_size = batch_size
         self.images_starting_count = images_starting_count
@@ -28,5 +29,19 @@ class SAM2Config:
         }
         self.memory_bank_size = memory_bank_size
         self.prompt_memory_size = prompt_memory_size
-        self.model_config_path = get_resource_path("./sam2_configs/sam2_hiera_l.yaml")
-        self.checkpoint_path = get_resource_path("./checkpoints/sam2_hiera_large.pt")
+        self.pose_config = kwargs.get('pose_config', None)
+        
+        # Calculate base path up to project root (AutoSegmentor)
+        # __file__ is sam3/utils/Model/SAM2Config.py
+        # root is 3 levels up: sam3/utils/Model -> sam3/utils -> sam3 -> AutoSegmentor
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+        
+        self.model_config_path = os.path.join(base_path, "sam2_configs/sam2_hiera_l.yaml")
+        # Ensure imports work for sam2 hydra config
+        if not os.path.exists(self.model_config_path):
+             # Fallback or try to use get_resource_path if packaged
+             self.model_config_path = get_resource_path("./sam2_configs/sam2_hiera_l.yaml")
+             
+        self.checkpoint_path = os.path.join(base_path, "checkpoints/sam2_hiera_large.pt")
+        if not os.path.exists(self.checkpoint_path):
+             self.checkpoint_path = get_resource_path("./checkpoints/sam2_hiera_large.pt")

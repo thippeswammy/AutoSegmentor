@@ -4,13 +4,14 @@ from .FileManagement.FileManager import ensure_directory
 from .FileManagement.ImageCopier import ImageCopier
 from .FileManagement.ImageOverlayProcessor import ImageOverlayProcessor
 from .FileManagement.VideoCreator import VideoCreator
+from .FileManagement.PoseExporter import PoseExporter
 from .Model.sam2_video_predictor import SAM2VideoProcessor
 from .UserUI.logger_config import logger
 
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
                  verified_img_dir, verified_mask_dir, prefix, batch_size, fps, final_video_path,
-                 temp_processing_dir, delete, images_ending_count):
+                 temp_processing_dir, delete, images_ending_count, pose_config=None):
     """Run the entire pipeline for a single video number."""
     logger.info(f"Processing video {video_number}")
 
@@ -22,7 +23,8 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         images_extract_dir=images_extract_dir,
         rendered_frames_dir=rendered_dirs,
         temp_processing_dir=temp_processing_dir,
-        images_ending_count=images_ending_count
+        images_ending_count=images_ending_count,
+        pose_config=pose_config
     )
     processor.run()
     overlay_processor = ImageOverlayProcessor(
@@ -66,3 +68,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         fps=fps
     )
     video_creator.run()
+
+    if pose_config and pose_config.get('enabled'):
+        exporter = PoseExporter(processor.config, verified_mask_dir, processor.annotation_manager)
+        exporter.process_masks()
