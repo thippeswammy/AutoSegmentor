@@ -15,10 +15,33 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
                  verified_img_dir, verified_mask_dir, prefix, batch_size, fps, final_video_path,
                  temp_processing_dir, delete, images_ending_count, pose_config=None, run_mode="all",
                  auto_prompt_encoding=True):
-    """Run the pipeline for a single video number.
-
+    """Run the pipeline for processing a video with various modes.
+    
+    This function orchestrates the entire video processing pipeline, allowing for
+    different modes of operation such as full processing, pose export only, or mask
+    generation. It initializes the necessary components, processes the video
+    frames, and manages the output, including copying verified images and
+    generating final video files. The function also includes user verification
+    steps to ensure the quality of the overlays before finalizing the output.
+    
     Args:
-        run_mode: "all" = full pipeline, "mask_only" = SAM2 only, "pose_only" = pose export only.
+        video_number (int): The identifier for the video being processed.
+        video_path_template (str): The template for the video file path.
+        images_extract_dir (str): Directory where extracted images are stored.
+        rendered_dirs (str): Directory containing rendered frames.
+        overlap_dir (str): Directory for storing overlay images.
+        verified_img_dir (str): Directory for verified images.
+        verified_mask_dir (str): Directory for verified masks.
+        prefix (str): Prefix for naming output files.
+        batch_size (int): Number of images to process in a batch.
+        fps (int): Frames per second for the output video.
+        final_video_path (str): Path for saving the final video.
+        temp_processing_dir (str): Temporary directory for processing files.
+        delete (str): Flag indicating whether to delete original images after processing.
+        images_ending_count (int): Count of images to consider for processing.
+        pose_config (dict?): Configuration for pose processing.
+        run_mode (str?): Mode of operation ("all", "mask_only", "pose_only").
+        auto_prompt_encoding (bool?): Flag for automatic prompt encoding.
     """
     pipeline_start = time.time()
     logger.info(f"Processing video {video_number} (mode: {run_mode})")
