@@ -18,6 +18,7 @@ class AnnotationManager:
         self.labels_collection = []
         self.frame_indices = []
         self.pose_keypoints_collection = []  # Per-batch pose keypoint coords
+        self._all_batches_logged = False  # Dedup flag for check_data_sufficiency
         self.load_points_and_labels()
 
     def load_points_and_labels(self):
@@ -92,9 +93,16 @@ class AnnotationManager:
         """Check if enough points and labels are available."""
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         if len(self.points_collection) >= total_batches:
-            logger.info("Sufficient points and labels data for all batches")
+            if not self._all_batches_logged:
+                logger.info(f"[DataCheck] All {total_batches} batches have prompts ready")
+                self._all_batches_logged = True
+            else:
+                logger.debug(f"[DataCheck] All {total_batches} batches have prompts ready (already reported)")
             return len(self.points_collection) * self.config.batch_size
-        missing_batches = total_batches - len(self.points_collection)
+        # Status changed — reset the flag so we log again once all become ready
+        self._all_batches_logged = False
+        available = len(self.points_collection)
         logger.info(
-            f"Missing points and labels for {missing_batches} batches from {total_batches - missing_batches + 1}")
-        return len(self.points_collection) * self.config.batch_size
+            f"[DataCheck] Prompts available for {available}/{total_batches} batches "
+            f"(missing batches {available + 1} to {total_batches})")
+        return available * self.config.batch_size

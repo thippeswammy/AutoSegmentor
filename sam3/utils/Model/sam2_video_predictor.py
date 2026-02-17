@@ -1,18 +1,19 @@
-import os
 import sys
+import threading
+import time
 
 import cv2
 import numpy as np
 import pygetwindow as gw
 import torch
 
-from ..UserUI.AnnotationManager import AnnotationManager
-from ..Model.SAM2Config import SAM2Config
 from ..FileManagement.FileManager import clear_directory
 from ..FileManagement.FrameExtractor import FrameExtractor
 from ..FileManagement.FrameHandler import FrameHandler
 from ..FileManagement.MaskProcessor import MaskProcessor
+from ..Model.SAM2Config import SAM2Config
 from ..Model.SAM2Model import SAM2Model
+from ..UserUI.AnnotationManager import AnnotationManager
 from ..UserUI.UserInteraction import UserInteractionHandler
 from ..UserUI.logger_config import logger
 
@@ -25,7 +26,8 @@ class SAM2VideoProcessor(SAM2Model):
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
-                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5, pose_config=None):
+                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5, pose_config=None,
+                 auto_prompt_encoding=True):
         self.inference_state = None
         sam2Config = SAM2Config(
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
@@ -33,7 +35,7 @@ class SAM2VideoProcessor(SAM2Model):
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
             temp_processing_dir=temp_processing_dir, window_size=window_size,
             label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size,
-            pose_config=pose_config
+            pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding
         )
         super().__init__(sam2Config)
         if video_path_template is None:
@@ -41,6 +43,7 @@ class SAM2VideoProcessor(SAM2Model):
             sys.exit(1)
         self.is_prompted = False
         self.is_drawing = is_drawing
+        self._predictor_lock = threading.Lock()
         extractor = FrameExtractor(
             video_number, prefixFileName=prefix, limitedImages=images_ending_count,
             video_path_template=video_path_template, output_dir=images_extract_dir
@@ -80,14 +83,11 @@ class SAM2VideoProcessor(SAM2Model):
             cv2.circle(self.user_interaction.current_frame_only_with_points, (x, y), 2,
                        self.config.label_colors[self.user_interaction.current_class_label], -1)
             self.user_interaction.selected_labels.append(full_label)
-            self.user_prompt_adder(inference_state_temp, frame_path)
-            self.user_interaction.draw_text_with_background(self.user_interaction.current_frame)
-            logger.debug(f"Click: ({x}, {y}), Labels: {self.user_interaction.selected_labels}")
-            
             if self.user_interaction.pose_mode:
                 self.user_interaction.record_pose_click(x, y)
                 self.user_interaction.next_keypoint()
-                
+
+            self.user_prompt_adder(inference_state_temp, frame_path)
             cv2.imshow(self.user_interaction.window_name, self.user_interaction.current_frame)
         elif event == cv2.EVENT_MOUSEMOVE:
             if self.is_drawing:
@@ -137,29 +137,35 @@ class SAM2VideoProcessor(SAM2Model):
 
     def user_prompt_adder(self, inference_state, frame_path):
         """Add user prompts and update the displayed frame."""
-        self.sam2_predictor.reset_state(inference_state)
-        box_points = None
-        if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
-                tuple, list)) and self.mask_processor.last_mask in [(None,),
-                                                                    [None]]):
-            box_points = self.auto_prompt_encoding(inference_state)
-        self.prompt_encoding(inference_state)
-        if self.is_prompted:
-            video_segments = {}
-            for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(
-                    inference_state, isSingle=True):
-                video_segments[out_frame_idx] = {
-                    out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
-                    for i, out_obj_id in enumerate(out_obj_ids)
-                }
-            mask = self.mask_processor.binary_mask_2_color_mask(
-                out_frame_idx, frame_path, video_segments, 0, self.config.temp_directory, False)
-            current_frame_org = self.user_interaction.current_frame_only_with_points.copy()
-            non_zero_mask = np.any(mask > 0, axis=-1)
-            non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)
-            blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
-            current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
-            self.user_interaction.current_frame = self.show_box(box_points, current_frame_org)
+        with self._predictor_lock:
+            self.sam2_predictor.reset_state(inference_state)
+            self.is_prompted = False
+            box_points = None
+            if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
+                    tuple, list)) and self.mask_processor.last_mask in [(None,),
+                                                                        [None]]):
+                box_points = self.auto_prompt_encoding(inference_state)
+            self.prompt_encoding(inference_state)
+            if self.is_prompted:
+                video_segments = {}
+                for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(
+                        inference_state, isSingle=True):
+                    video_segments[out_frame_idx] = {
+                        out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
+                        for i, out_obj_id in enumerate(out_obj_ids)
+                    }
+                mask = self.mask_processor.binary_mask_2_color_mask(
+                    out_frame_idx, frame_path, video_segments, 0, self.config.temp_directory, False)
+                current_frame_org = self.user_interaction.current_frame_only_with_points.copy()
+                non_zero_mask = np.any(mask > 0, axis=-1)
+                non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)
+                blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+                current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
+                self.user_interaction.current_frame = self.show_box(box_points, current_frame_org)
+            else:
+                self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
+
+            self.user_interaction.draw_text_with_background(self.user_interaction.current_frame)
             cv2.imshow(self.user_interaction.window_name, self.user_interaction.current_frame)
 
     @staticmethod
@@ -211,6 +217,8 @@ class SAM2VideoProcessor(SAM2Model):
 
     def auto_prompt_encoding(self, inference_state):
         """Encode automatic prompts from previous masks."""
+        if not self.config.auto_prompt_encoding:
+            return None
         points_list = []
         label_list = []
         box_prompt = self.mask_processor.mask_to_boxes(self.mask_processor.last_mask)
@@ -231,16 +239,81 @@ class SAM2VideoProcessor(SAM2Model):
             )
         return points_np
 
+    def _mask_generation_consumer(self, total_batches):
+        """Background consumer: generates masks for batches as prompts become available."""
+        for batch_num in range(total_batches):
+            batch_index = batch_num * self.config.batch_size
+
+            # Poll until prompt data is available for this batch
+            while len(self.annotation_manager.points_collection) <= batch_num:
+                target_file = f"./inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
+                logger.info(f"[MaskGen] Waiting for prompts for batch {batch_num + 1}/{total_batches} in {target_file}... (retrying in 5s)")
+                time.sleep(5)
+                self.annotation_manager.load_points_and_labels()
+
+            logger.info(
+                f"[MaskGen] Starting mask generation for batch {batch_num + 1}/{total_batches}")
+
+            # Copy frames to the shared temp directory
+            self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
+
+            # Generate mask (MaskProcessor now handles granular locking internally)
+            self.mask_processor.generate_mask(
+                batch_number=batch_num,
+                sam2_predictor=self.sam2_predictor,
+                temp_directory=self.config.temp_directory,
+                prompt_encoding=self.prompt_encoding,
+                auto_prompt_encoding=self.auto_prompt_encoding,
+                predictor_lock=self._predictor_lock
+            )
+            logger.info(f"[MaskGen] ══ Batch {batch_num + 1}/{total_batches} mask generation completed ══")
+
+        logger.info("[MaskGen] All batches processed. Background mask generation finished.")
+
     def run(self):
         """Run the SAM2 video predictor pipeline."""
-        start_batch_idx = self.annotation_manager.check_data_sufficiency()
+        total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
+        logger.info(f"[Pipeline] {len(self.frame_paths)} frames, {total_batches} batches (batch_size={self.config.batch_size})")
+
+        if not self.config.auto_prompt_encoding:
+            # --- Parallel mode: producer (main thread) + consumer (background) ---
+            consumer = threading.Thread(
+                target=self._mask_generation_consumer,
+                args=(total_batches,),
+                daemon=True
+            )
+            consumer.start()
+
+            # Check if all prompts are already available (pre-loaded from JSON)
+            start_batch_idx = self.annotation_manager.check_data_sufficiency()
+            if start_batch_idx >= len(self.frame_paths):
+                logger.info(f"[Annotation] All {total_batches} batches already have prompts — skipping interactive collection")
+            else:
+                # Collect user prompts only for batches that need them
+                for batch_num in range(total_batches):
+                    if batch_num * self.config.batch_size >= start_batch_idx:
+                        logger.info(f"[Annotation] Collecting prompts for batch {batch_num + 1}/{total_batches}")
+                        self.user_interaction.collect_user_points(
+                            batch_num,
+                            self.frame_paths,
+                            self.sam2_predictor,
+                            self.click_event,
+                            self.mask_processor
+                        )
+
+            # Wait for background mask generation to complete
+            consumer.join()
+            clear_directory(self.config.temp_directory)
+            return
+
+        # --- Sequential mode (auto_prompt_encoding=True): existing behavior ---
         batch_index = 0
         while batch_index < len(self.frame_paths):
             logger.info(
                 f"Processing batch {(batch_index // self.config.batch_size) + 1}/"
-                f"{(len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size}")
-            self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
+                f"{total_batches}")
             self.is_prompted = False
+            start_batch_idx = self.annotation_manager.check_data_sufficiency()
             if batch_index >= start_batch_idx:
                 self.user_interaction.collect_user_points(
                     batch_index // self.config.batch_size,
@@ -249,14 +322,15 @@ class SAM2VideoProcessor(SAM2Model):
                     self.click_event,
                     self.mask_processor
                 )
-            self.is_prompted = False
+            self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
             self.mask_processor.generate_mask(
                 batch_number=batch_index // self.config.batch_size,
                 sam2_predictor=self.sam2_predictor,
                 temp_directory=self.config.temp_directory,
                 prompt_encoding=self.prompt_encoding,
-                auto_prompt_encoding=self.auto_prompt_encoding
+                auto_prompt_encoding=self.auto_prompt_encoding,
+                predictor_lock=self._predictor_lock
             )
             batch_index += self.config.batch_size
-            logger.info('-' * 28 + " completed" + '-' * 28)
+            logger.info(f"[Pipeline] ══ Batch {(batch_index // self.config.batch_size)}/{total_batches} completed ══")
         clear_directory(self.config.temp_directory)

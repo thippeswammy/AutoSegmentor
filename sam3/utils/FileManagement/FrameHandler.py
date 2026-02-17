@@ -44,3 +44,5 @@ class FrameHandler:
             dst_path = os.path.join(self.temp_directory, new_filename)
             shutil.copy2(frame_path, dst_path)
             logger.debug(f"Copied {frame_path} to {dst_path}")
+
+

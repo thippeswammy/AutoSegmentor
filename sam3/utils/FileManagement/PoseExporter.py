@@ -89,25 +89,25 @@ class PoseExporter:
             logger.info("Pose estimation disabled. Skipping export.")
             return
 
-        # Get the verified images directory (parallel to mask dir)
-        verified_img_dir = self.verified_mask_dir.replace('mask', 'images')
-        if not os.path.exists(verified_img_dir):
-            logger.error(f"Verified images directory not found: {verified_img_dir}")
+        # Use the raw frames directory instead of verified images
+        frames_dir = self.config.frames_directory
+        if not os.path.exists(frames_dir):
+            logger.error(f"Frames directory not found: {frames_dir}")
             return
 
         logger.info(f"Starting Pose Export with per-batch keypoint tracking")
         logger.info(f"  Tracker: {self.tracker_type}")
-        logger.info(f"  Images: {verified_img_dir}")
+        logger.info(f"  Frames Dir: {frames_dir}")
         logger.info(f"  Output: {self.output_file}")
 
         # Get sorted frame files
         frame_files = sorted([
-            f for f in os.listdir(verified_img_dir)
+            f for f in os.listdir(frames_dir)
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))
         ])
 
         if not frame_files:
-            logger.warning(f"No frames found in {verified_img_dir}")
+            logger.warning(f"No frames found in {frames_dir}")
             return
 
         total_frames = len(frame_files)
@@ -155,7 +155,7 @@ class PoseExporter:
             logger.info(f"  Batch {batch_idx + 1}: Tracking {len(batch_kps)} keypoints across {len(batch_frames)} frames")
 
             # Build full paths for batch frames
-            batch_frame_paths = [os.path.join(verified_img_dir, f) for f in batch_frames]
+            batch_frame_paths = [os.path.join(frames_dir, f) for f in batch_frames]
 
             # Track using configured backend
             if self.tracker_type == "cotracker":

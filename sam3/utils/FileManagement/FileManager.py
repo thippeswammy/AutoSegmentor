@@ -29,6 +29,7 @@ def clear_directory(directory):
                     os.unlink(file_path)
                 elif os.path.isdir(file_path):
                     shutil.rmtree(file_path)
+                logger.debug(f"Cleared {file_path}")
             except Exception as e:
                 logger.error(f"Failed to delete {file_path}. Reason: {e}")
     else:

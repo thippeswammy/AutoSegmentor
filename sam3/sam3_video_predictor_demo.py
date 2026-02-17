@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import time
 sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -68,6 +69,29 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "inputs/conf
         sys.exit(1)
 
 
+def _handle_working_dir(working_dir_name, delete, prompt_msg):
+    """Handle working directory cleanup (auto-delete or prompt user).
+
+    Returns True if directory was cleared or didn't exist, False if user declined.
+    """
+    if not os.path.exists(working_dir_name):
+        return True
+
+    if delete == 'yes':
+        shutil.rmtree(working_dir_name)
+        logger.info(f"Cleared working directory: {working_dir_name}")
+        return True
+
+    confirm = input(prompt_msg).lower()
+    if confirm == 'yes':
+        shutil.rmtree(working_dir_name)
+        logger.info(f"Cleared working directory: {working_dir_name}")
+        return True
+    else:
+        logger.info(f"Working directory '{working_dir_name}' not deleted")
+        return False
+
+
 def main():
     # Load configuration from YAML file
     config = load_config()
@@ -91,22 +115,21 @@ def main():
     images_ending_count = config['images_ending_count']
     pose_config = config.get('pose_estimation', None)
     run_mode = config.get('run_mode', 'all').lower()
+    auto_prompt_encoding = config.get('auto_prompt_encoding', True)
 
-    for i in range(video_start, video_start + video_end):
-        if run_mode != 'pose_only' and os.path.exists(working_dir_name):
-            if delete == 'yes':
-                shutil.rmtree(working_dir_name)
-                logger.info(f"Cleared working directory: {working_dir_name}")
-            else:
-                confirm = input(
-                    f"Do you want to clear prev working directory '{working_dir_name}'? (yes/no): "
-                ).lower()
-                if confirm == 'yes':
-                    shutil.rmtree(working_dir_name)
-                    logger.info(f"Cleared working directory: {working_dir_name}")
-                else:
-                    logger.info(f"Working directory '{working_dir_name}' not deleted")
-                    sys.exit(1000)
+    total_videos = video_end
+    overall_start = time.time()
+
+    for idx, i in enumerate(range(video_start, video_start + video_end), start=1):
+        logger.info(f"{'═' * 20} Video {i} ({idx}/{total_videos}) {'═' * 20}")
+
+        if run_mode != 'pose_only':
+            cleared = _handle_working_dir(
+                working_dir_name, delete,
+                f"Do you want to clear prev working directory '{working_dir_name}'? (yes/no): "
+            )
+            if not cleared:
+                sys.exit(1000)
 
         run_pipeline(
             fps=fps,
@@ -124,26 +147,21 @@ def main():
             final_video_path=final_video_path,
             images_ending_count=images_ending_count,
             pose_config=pose_config,
-            run_mode=run_mode
+            run_mode=run_mode,
+            auto_prompt_encoding=auto_prompt_encoding
         )
 
-        if os.path.exists(working_dir_name):
-            if delete == 'yes':
-                shutil.rmtree(working_dir_name)
-                logger.info(f"Cleared working directory: {working_dir_name}")
-            else:
-                confirm = input(
-                    f"Are you sure you want to delete the working directory '{working_dir_name}'? (yes/no): "
-                ).lower()
-                if confirm == 'yes':
-                    shutil.rmtree(working_dir_name)
-                    logger.info(f"Cleared working directory: {working_dir_name}")
-                else:
-                    logger.info(f"Working directory '{working_dir_name}' not deleted")
+        _handle_working_dir(
+            working_dir_name, delete,
+            f"Are you sure you want to delete the working directory '{working_dir_name}'? (yes/no): "
+        )
 
-        logger.info('-' * 60)
-    logger.info("Pipeline completed for all videos.")
+        logger.info('═' * 60)
+
+    elapsed = time.time() - overall_start
+    logger.info(f"Pipeline completed for all {total_videos} video(s) in {elapsed:.1f}s")
 
 
 if __name__ == "__main__":
     main()
+

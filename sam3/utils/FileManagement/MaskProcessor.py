@@ -54,6 +54,10 @@ class MaskProcessor:
         else:
             frame_path = frame_filenames
         frame = cv2.imread(frame_path)
+        if frame is None:
+            logger.error(f"Failed to read frame: {frame_path}")
+            return (present_count + 1) if save else None
+        
         full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
         temp = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
         for out_obj_id in sorted(video_segments[out_frame_idx].keys(), reverse=True):
@@ -82,26 +86,40 @@ class MaskProcessor:
             return color_mask_image
         return present_count + 1
 
-    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding):
+    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None):
         """Generate masks for a batch of frames."""
         frame_file_names = sorted(
             [p for p in os.listdir(temp_directory) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
             key=lambda p: int(os.path.splitext(p)[0]) if p[:-4].isdigit() else float('inf')
         )
-        inference_state = sam2_predictor.init_state(video_path=temp_directory, frame_paths=None)
-        is_prompted = False
-        if self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
-            pass
-        else:
-            is_prompted = auto_prompt_encoding(inference_state) is not None
-        is_prompted = (prompt_encoding(inference_state, batch_number) is not None) or is_prompted
+        
+        # Helper to safely acquire lock if provided
+        class DummyLock:
+            def __enter__(self): pass
+            def __exit__(self, *args): pass
+        
+        lock = predictor_lock if predictor_lock else DummyLock()
+
+        with lock:
+            inference_state = sam2_predictor.init_state(video_path=temp_directory, frame_paths=None)
+            is_prompted = False
+            if self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
+                pass
+            else:
+                is_prompted = auto_prompt_encoding(inference_state) is not None
+            is_prompted = (prompt_encoding(inference_state, batch_number) is not None) or is_prompted
+
         if is_prompted:
             video_segments = {}
+            # Granular propagation: propagate one frame at a time if possible, or release lock between batches
+            # SAM2 propagate_in_video is a generator, we can wrap each step
             for out_frame_idx, out_obj_ids, out_mask_logits in sam2_predictor.propagate_in_video(inference_state):
-                video_segments[out_frame_idx] = {
-                    out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
-                    for i, out_obj_id in enumerate(out_obj_ids)
-                }
+                with lock:
+                    video_segments[out_frame_idx] = {
+                        out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
+                        for i, out_obj_id in enumerate(out_obj_ids)
+                    }
+            
             present_count = self.image_counter
             with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
                 futures = [

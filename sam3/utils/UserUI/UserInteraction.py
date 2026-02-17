@@ -83,10 +83,10 @@ class UserInteractionHandler:
 
         self.current_keypoint_index += 1
         if self.current_keypoint_index < len(self.pose_keypoints):
-             self.display_text = f"Click: {self.pose_keypoints[self.current_keypoint_index]}"
+             self.display_text = f"[{self.current_keypoint_index+1}/{len(self.pose_keypoints)}] Click: {self.pose_keypoints[self.current_keypoint_index]}"
              # class_label stays fixed — all keypoints share the same SAM2 obj_id
         else:
-             self.display_text = "All Keypoints Set. Press Enter."
+             self.display_text = f"[{len(self.pose_keypoints)}/{len(self.pose_keypoints)}] All Keypoints Set. Press Enter."
 
         self.draw_text_with_background(self.current_frame)
         cv2.imshow(self.window_name, self.current_frame)
@@ -179,7 +179,7 @@ class UserInteractionHandler:
                         prev_batch_end_idx = batch * self.config.batch_size - 1
                         if 0 <= prev_batch_end_idx < len(frame_paths):
                             prev_frame_path = frame_paths[prev_batch_end_idx]
-                            curr_frame_path = frame_path  # first frame of current batch
+                            curr_frame_path = frame_path 
                             ct_cfg = self.config.pose_config.get('cotracker', {})
                             checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
                             # Resolve relative to sam3 directory
@@ -193,7 +193,7 @@ class UserInteractionHandler:
                             )
                             if result:
                                 tracked_kps = result
-                                logger.info(f"Batch {batch + 1}: CoTracker carry-forward tracking applied")
+                                logger.info(f"[Annotation] Batch {batch + 1}: CoTracker carry-forward tracking applied")
                     except Exception as e:
                         logger.warning(f"CoTracker carry-forward failed, using static copy: {e}")
 
@@ -216,10 +216,10 @@ class UserInteractionHandler:
                                self.config.label_colors[self.pose_class_id], -1)
                 self.current_keypoint_index = len(self.pose_keypoints)
                 self.display_text = "Prev keypoints loaded. Enter=Accept, R=Re-click"
-                logger.info(f"Batch {batch + 1}: Pre-populated {len(tracked_kps)} keypoints from previous data")
+                logger.info(f"[Annotation] Batch {batch + 1}: Reviewing carry-forwarded points. Press Enter to confirm.")
             else:
                 if self.pose_keypoints:
-                    self.display_text = f"Click: {self.pose_keypoints[0]}"
+                    self.display_text = f"[1/{len(self.pose_keypoints)}] Click: {self.pose_keypoints[0]}"
                 else:
                     self.display_text = "Pose Mode Error: No Keypoints"
         else:
@@ -242,17 +242,21 @@ class UserInteractionHandler:
 
             self.draw_text_with_background(self.current_frame)
             cv2.imshow(self.window_name, self.current_frame)
-            key = cv2.waitKey(0)
+            
+            key = cv2.waitKey(30) & 0xFF
+            if key == 255:  # No key pressed
+                continue
+            
             if key == 13:  # Enter key
-                if self.selected_points:
-                    self.annotation_manager.points_collection.append(self.selected_points[:])
-                    self.annotation_manager.labels_collection.append(self.selected_labels[:])
-                    self.annotation_manager.frame_indices.append(frame_idx)
-                    if self.pose_mode and self.pose_click_coords:
-                        self.annotation_manager.pose_keypoints_collection.append(self.pose_click_coords[:])
-                    else:
-                        self.annotation_manager.pose_keypoints_collection.append([])
-                    self.annotation_manager.save_points_and_labels()
+                self.annotation_manager.points_collection.append(self.selected_points[:])
+                self.annotation_manager.labels_collection.append(self.selected_labels[:])
+                self.annotation_manager.frame_indices.append(frame_idx)
+                if self.pose_mode and self.pose_click_coords:
+                    self.annotation_manager.pose_keypoints_collection.append(self.pose_click_coords[:])
+                else:
+                    self.annotation_manager.pose_keypoints_collection.append([])
+                self.annotation_manager.save_points_and_labels()
+                
                 self.selected_points.clear()
                 self.selected_labels.clear()
                 self.pose_click_coords.clear()

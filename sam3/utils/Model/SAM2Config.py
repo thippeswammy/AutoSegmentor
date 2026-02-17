@@ -30,6 +30,7 @@ class SAM2Config:
         self.memory_bank_size = memory_bank_size
         self.prompt_memory_size = prompt_memory_size
         self.pose_config = kwargs.get('pose_config', None)
+        self.auto_prompt_encoding = kwargs.get('auto_prompt_encoding', True)
         
         # Calculate base path up to project root (AutoSegmentor)
         # __file__ is sam3/utils/Model/SAM2Config.py
