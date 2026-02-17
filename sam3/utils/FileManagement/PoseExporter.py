@@ -84,10 +84,16 @@ class PoseExporter:
         return tracker.get_all_tracked()
 
     def process_masks(self, precomputed_tracking=None):
-        """Run per-batch keypoint tracking and export to JSON.
-
+        """Run per-batch keypoint tracking and export the results to a JSON file.
+        
+        This function processes frames from a specified directory, tracking keypoints
+        in batches. It utilizes either precomputed tracking data or performs real-time
+        tracking based on the configured tracker type. The results are collected and
+        saved in a JSON format, with appropriate logging for each step, including
+        warnings for missing keypoints or frames.
+        
         Args:
-            precomputed_tracking: Optional list of per-batch tracked data from inline
+            precomputed_tracking (list?): A list of per-batch tracked data from inline
                 CoTracker processing. If provided, skips re-tracking for those batches.
         """
         if not self.config.pose_config or not self.config.pose_config.get('enabled'):
