@@ -158,12 +158,25 @@ class UserInteractionHandler:
                     prev_kps = stored
             # 2. If no stored annotation, carry forward from previous batch
             if prev_kps is None and batch > 0:
-                for b in range(batch - 1, -1, -1):
-                    if b < len(self.annotation_manager.pose_keypoints_collection):
-                        stored = self.annotation_manager.pose_keypoints_collection[b]
-                        if stored:
-                            prev_kps = stored
-                            break
+                # Prefer last-frame tracked positions from inline CoTracker (accurate boundary coords)
+                if hasattr(self.sam2_video_predictor, 'per_batch_tracked_data'):
+                    for b in range(batch - 1, -1, -1):
+                        if b < len(self.sam2_video_predictor.per_batch_tracked_data):
+                            prev_tracked = self.sam2_video_predictor.per_batch_tracked_data[b]
+                            if prev_tracked:
+                                last_entry = prev_tracked[-1]  # Last frame's tracking data
+                                prev_kps = last_entry.get("keypoints", [])
+                                if prev_kps:
+                                    logger.info(f"[Annotation] Batch {batch + 1}: Carry-forward using inline-tracked last-frame positions from batch {b + 1}")
+                                    break
+                # Fallback to first-frame annotation if no inline tracking available
+                if prev_kps is None:
+                    for b in range(batch - 1, -1, -1):
+                        if b < len(self.annotation_manager.pose_keypoints_collection):
+                            stored = self.annotation_manager.pose_keypoints_collection[b]
+                            if stored:
+                                prev_kps = stored
+                                break
 
             if prev_kps and len(prev_kps) == len(self.pose_keypoints):
                 # Attempt CoTracker-based carry-forward if configured

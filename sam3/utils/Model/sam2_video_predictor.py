@@ -42,6 +42,7 @@ class SAM2VideoProcessor(SAM2Model):
             logger.error("Missing the video file paths or video")
             sys.exit(1)
         self.is_prompted = False
+        self.per_batch_tracked_data = []  # Accumulated per-batch CoTracker results
         self.is_drawing = is_drawing
         self._predictor_lock = threading.Lock()
         extractor = FrameExtractor(
@@ -239,6 +240,62 @@ class SAM2VideoProcessor(SAM2Model):
             )
         return points_np
 
+    def _track_batch_inline(self, batch_number):
+        """Run CoTracker on a single batch's frames and store the tracked data."""
+        pose_cfg = self.config.pose_config
+        if not pose_cfg or not pose_cfg.get('enabled'):
+            return
+
+        # Determine keypoints for this batch
+        pose_kps_collection = self.annotation_manager.pose_keypoints_collection
+        batch_kps = None
+        if batch_number < len(pose_kps_collection) and pose_kps_collection[batch_number]:
+            batch_kps = pose_kps_collection[batch_number]
+        elif self.per_batch_tracked_data:
+            # Carry forward from the last frame of the previous batch
+            prev_tracked = self.per_batch_tracked_data[-1]
+            if prev_tracked:
+                last_entry = prev_tracked[-1]  # Last frame's tracking data
+                batch_kps = last_entry.get("keypoints", [])
+
+        if not batch_kps:
+            logger.info(f"[CoTracker] Batch {batch_number + 1}: No keypoints available, skipping inline tracking")
+            self.per_batch_tracked_data.append([])
+            return
+
+        # Get this batch's frame paths
+        batch_start = batch_number * self.config.batch_size
+        batch_end = min(batch_start + self.config.batch_size, len(self.frame_paths))
+        batch_frame_paths = self.frame_paths[batch_start:batch_end]
+
+        logger.info(
+            f"[CoTracker] Batch {batch_number + 1}: Tracking {len(batch_kps)} keypoints "
+            f"across {len(batch_frame_paths)} frames"
+        )
+
+        try:
+            from ..FileManagement.CoTrackerKeypointTracker import CoTrackerKeypointTracker
+            ct_cfg = pose_cfg.get('cotracker', {})
+            checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
+            import os as _os
+            base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
+            checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
+            window_len = ct_cfg.get('window_len', 60)
+
+            tracker = CoTrackerKeypointTracker(
+                keypoint_defs=pose_cfg.get('keypoints', []),
+                initial_coords=batch_kps,
+                frame_paths=batch_frame_paths,
+                checkpoint=checkpoint,
+                window_len=window_len,
+            )
+            tracked = tracker.get_all_tracked()
+            self.per_batch_tracked_data.append(tracked)
+            logger.info(f"[CoTracker] Batch {batch_number + 1}: Inline tracking complete ({len(tracked)} frames)")
+        except Exception as e:
+            logger.error(f"[CoTracker] Batch {batch_number + 1}: Inline tracking failed: {e}")
+            self.per_batch_tracked_data.append([])
+
     def _mask_generation_consumer(self, total_batches):
         """Background consumer: generates masks for batches as prompts become available."""
         for batch_num in range(total_batches):
@@ -323,14 +380,19 @@ class SAM2VideoProcessor(SAM2Model):
                     self.mask_processor
                 )
             self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
+            batch_number = batch_index // self.config.batch_size
             self.mask_processor.generate_mask(
-                batch_number=batch_index // self.config.batch_size,
+                batch_number=batch_number,
                 sam2_predictor=self.sam2_predictor,
                 temp_directory=self.config.temp_directory,
                 prompt_encoding=self.prompt_encoding,
                 auto_prompt_encoding=self.auto_prompt_encoding,
                 predictor_lock=self._predictor_lock
             )
+            # Inline CoTracker tracking for this batch (mirrors auto_prompt pattern)
+            if (self.config.pose_config and self.config.pose_config.get('enabled')
+                    and self.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):
+                self._track_batch_inline(batch_number)
             batch_index += self.config.batch_size
             logger.info(f"[Pipeline] ══ Batch {(batch_index // self.config.batch_size)}/{total_batches} completed ══")
         clear_directory(self.config.temp_directory)

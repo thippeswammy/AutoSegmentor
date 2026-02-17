@@ -83,8 +83,13 @@ class PoseExporter:
 
         return tracker.get_all_tracked()
 
-    def process_masks(self):
-        """Run per-batch keypoint tracking and export to JSON."""
+    def process_masks(self, precomputed_tracking=None):
+        """Run per-batch keypoint tracking and export to JSON.
+
+        Args:
+            precomputed_tracking: Optional list of per-batch tracked data from inline
+                CoTracker processing. If provided, skips re-tracking for those batches.
+        """
         if not self.config.pose_config or not self.config.pose_config.get('enabled'):
             logger.info("Pose estimation disabled. Skipping export.")
             return
@@ -157,8 +162,13 @@ class PoseExporter:
             # Build full paths for batch frames
             batch_frame_paths = [os.path.join(frames_dir, f) for f in batch_frames]
 
-            # Track using configured backend
-            if self.tracker_type == "cotracker":
+            # Track using configured backend (or use precomputed data)
+            if (precomputed_tracking is not None
+                    and batch_idx < len(precomputed_tracking)
+                    and precomputed_tracking[batch_idx]):
+                tracked_data = precomputed_tracking[batch_idx]
+                logger.info(f"  Batch {batch_idx + 1}: Using precomputed inline tracking data")
+            elif self.tracker_type == "cotracker":
                 tracked_data = self._track_batch_cotracker(batch_kps, batch_frame_paths)
             else:
                 tracked_data = self._track_batch_lk(batch_kps, batch_frame_paths)

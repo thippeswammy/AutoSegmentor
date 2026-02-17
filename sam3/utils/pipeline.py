@@ -63,7 +63,8 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     if run_mode != "mask_only" and pose_config and pose_config.get('enabled'):
         t0 = time.time()
         exporter = PoseExporter(processor.config, verified_mask_dir, processor.annotation_manager)
-        exporter.process_masks()
+        precomputed = getattr(processor, 'per_batch_tracked_data', None)
+        exporter.process_masks(precomputed_tracking=precomputed if precomputed else None)
         logger.info(f"[Pipeline] Pose export completed in {time.time() - t0:.1f}s")
 
         # Copy pose labels to final output directory

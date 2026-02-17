@@ -2,8 +2,8 @@
 import json
 import math
 
-CT_PATH = "outputs/pose_dataset_co_tracker/pose_labels.json"
-LK_PATH = "outputs/pose_dataset_opticalflow/pose_labels.json"
+CT_PATH = "J:\sam+co_images\pose_labels.json"
+LK_PATH = "J:\sam+lk_images\pose_labels.json"
 
 ct = json.load(open(CT_PATH))
 lk = json.load(open(LK_PATH))
