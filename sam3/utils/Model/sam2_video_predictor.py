@@ -241,7 +241,16 @@ class SAM2VideoProcessor(SAM2Model):
         return points_np
 
     def _track_batch_inline(self, batch_number):
-        """Run CoTracker on a single batch's frames and store the tracked data."""
+        """Run CoTracker on a single batch's frames and store the tracked data.
+        
+        This function processes a specified batch of frames by first checking if the
+        pose  configuration is enabled. It retrieves keypoints for the current batch or
+        carries  forward keypoints from the previous batch if necessary. The function
+        then logs the  tracking process and initializes the CoTrackerKeypointTracker
+        with the appropriate  parameters, including keypoints and frame paths. Finally,
+        it attempts to track the  keypoints and store the results, handling any
+        exceptions that may occur during the  tracking process.
+        """
         pose_cfg = self.config.pose_config
         if not pose_cfg or not pose_cfg.get('enabled'):
             return
@@ -297,7 +306,7 @@ class SAM2VideoProcessor(SAM2Model):
             self.per_batch_tracked_data.append([])
 
     def _mask_generation_consumer(self, total_batches):
-        """Background consumer: generates masks for batches as prompts become available."""
+        """Generates masks for batches as prompts become available."""
         for batch_num in range(total_batches):
             batch_index = batch_num * self.config.batch_size
 
@@ -328,7 +337,20 @@ class SAM2VideoProcessor(SAM2Model):
         logger.info("[MaskGen] All batches processed. Background mask generation finished.")
 
     def run(self):
-        """Run the SAM2 video predictor pipeline."""
+        """Run the SAM2 video predictor pipeline.
+        
+        This function orchestrates the processing of video frames in either parallel or
+        sequential mode based on the configuration. It manages batch processing, user
+        interaction for prompt collection, and mask generation. In parallel mode, it
+        spawns a consumer thread for mask generation while collecting user prompts as
+        needed. In sequential mode, it processes each batch, collects user points, and
+        generates masks accordingly, ensuring efficient handling of frames and
+        resources.
+        
+        Args:
+            self: The instance of the class containing the configuration and methods for
+                processing.
+        """
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         logger.info(f"[Pipeline] {len(self.frame_paths)} frames, {total_batches} batches (batch_size={self.config.batch_size})")
 
