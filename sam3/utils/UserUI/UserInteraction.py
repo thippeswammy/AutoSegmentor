@@ -125,7 +125,23 @@ class UserInteractionHandler:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def collect_user_points(self, batch, frame_paths, sam2_predictor, click_event_callback, mask_processor):
-        """Collect user points for annotation."""
+        """Collect user points for annotation in a video frame.
+        
+        This function manages the user interaction for annotating keypoints in a video
+        frame. It initializes the display, checks for existing annotations, and allows
+        the user to select points either by clicking or through keyboard inputs. The
+        function also handles the carry-forward of keypoints from previous batches,
+        integrates with a tracking system if available, and updates the annotation
+        manager with the selected points and labels.
+        
+        Args:
+            self: The instance of the class.
+            batch (int): The current batch index for processing frames.
+            frame_paths (list): A list of paths to the video frames.
+            sam2_predictor: An object responsible for making predictions on the frames.
+            click_event_callback: A callback function for handling mouse click events.
+            mask_processor: An object for processing masks related to the annotations.
+        """
         cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("Zoom View", self.config.window_size[0], self.config.window_size[1])
         start_batch_idx = self.annotation_manager.check_data_sufficiency()
