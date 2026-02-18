@@ -17,43 +17,46 @@ AutoSegmentor supports long videos and visually-rich content graphics, making it
 
 ---
 
-## Features
+## ✨ Features
 
-- **Automated Frame Extraction:** Extracts frames from short or long videos using a robust, configurable pipeline.
-- **Interactive Annotation:** Point-based, multi-class annotation with real-time OpenCV GUI.
-- **Batch & Real-time Processing:** Efficient batch segmentation with CUDA and multithreading.
-- **Mask Prediction & Overlay:** Predicts masks with SAM2 and overlays for easy verification.
-- **Output Video Compilation:** Produces original, mask, and overlay videos for review.
-- **YOLO Dataset Creation:** Converts masks/images into YOLO format with augmentations.
-- **Long Video Support:** Handles visually-rich videos and lengthy footage efficiently.
-- **Directory & File Management:** Automated temp/output dir handling and cleanup.
-- **Extensible Dataset Support:** (WIP) Future support for COCO, Pascal VOC, etc.
-- **Open Source:** MIT-licensed and community-friendly.
-
+- **Automated Frame Extraction**: Extracts frames from short or long videos using a robust, configurable pipeline.
+- **Interactive Annotation**: Point-based, multi-class annotation with real-time OpenCV GUI.
+- **Batch & Real-time Processing**: Efficient batch segmentation with CUDA and multithreading.
+- **Mask Prediction & Overlay**: Predicts masks with SAM2 and overlays for easy verification.
+- **Robust Pose Estimation**: Integrated CoTracker support for tracking keypoints across frames with high accuracy, offering a robust alternative to Optical Flow.
+- **Output Video Compilation**: Produces original, mask, and overlay videos for review.
+- **YOLO Dataset Creation**: Converts masks/images into YOLO format with augmentations.
+- **Long Video Support**: Handles visually-rich videos and lengthy footage efficiently.
+- **Automatic Directory Management**: Smart handling of temporary and output directories to keep your workspace clean.
 
 ---
 
-## Requirements
+## 🔧 Setup & Installation
 
+### Prerequisites
 - Python 3.8+
 - PyTorch (with CUDA for GPU acceleration)
-- OpenCV (`opencv-python`)
-- NumPy
-- GPUtil
-- tqdm
-- pygetwindow
-- Pillow (`PIL`)
-- **SAM2** library and checkpoint (`sam2_hiera_large.pt`)
-- Custom modules: `FileManager`, `FrameExtractor`, `FrameHandler`, `MaskProcessor`, `ImageCopier`, `ImageOverlayProcessor`, `VideoCreator`, `SAM2Config`, `SAM2Model`, `sam2_video_predictor`, `AnnotationManager`, `UserInteraction`, `pipeline`, `create_yolo_structure`
+- OpenCV (`opencv-python`), NumPy, GPUtil, tqdm, pygetwindow, Pillow
+- **SAM2** library and hierarchical checkpoint (`sam2_hiera_large.pt`)
 - Platform dependencies for GUI (e.g., X11 on Linux or compatible display server on Windows)
 
-Install dependencies:
-```bash
-pip install torch torchvision opencv-python numpy GPUtil tqdm pygetwindow pillow
-```
-_Ensure your GPU drivers & PyTorch are CUDA-ready if using GPU._
+### Installation Steps
 
-**SAM2 files:** Place `sam2_hiera_large.pt` in `checkpoints/`, and `sam2_hiera_l.yaml` in `sam2_configs/`.
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/thippeswammy/AutoSegmentor.git
+    cd AutoSegmentor
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    pip install torch torchvision opencv-python numpy GPUtil tqdm pygetwindow pillow
+    ```
+    *Ensure you install the correct PyTorch version for your CUDA version.*
+
+3.  **Download SAM 2 Checkpoint**
+    - Download `sam2_hiera_large.pt` from the [SAM 2 repository](https://github.com/facebookresearch/segment-anything).
+    - Place it in the `checkpoints/` directory.
 
 ---
 
@@ -97,8 +100,6 @@ video_path_template: "sam3/inputs/VideoInputs/Video{}.mp4"
 ...
 ```
 
----
-
 ### 3. Annotation
 
 The annotation and verification processes are orchestrated as part of the pipeline and are highly interactive:
@@ -121,171 +122,295 @@ A zoom window shows a magnified area around the cursor for precision annotation.
 
 ---
 
-### 4. Create YOLO Dataset
+## 🏎 Advanced: Pose Estimation with CoTracker
 
-- Converts processed images/masks into YOLO V8-compatible datasets, with augmentations (color jitter, blur, noise, etc.).
-- Multi-class support via color mapping.
+AutoSegmentor supports advanced keypoint tracking using **CoTracker**, which provides superior performance over traditional Optical Flow (Lucas-Kanade) for complex scenes.
 
-Run:
-```bash
-cd DatasetManager/YolovDatasetManager
-python DatasetCreator.py
+### 1. Setup CoTracker
+1.  Ensure the `co-tracker` submodule is present in the root directory.
+2.  Download the CoTracker checkpoint (`scaled_offline.pth`) and place it in `co-tracker/checkpoints/`.
+
+### 2. Configuration
+Edit `sam3/inputs/config/default_config.yaml` to enable and configure the tracker:
+
+```yaml
+pose_estimation:
+  enabled: true
+  tracker: "cotracker"   # Options: "cotracker" or "lk" (Lucas-Kanade)
+  cotracker:
+    checkpoint: "../co-tracker/checkpoints/scaled_offline.pth"
+    window_len: 60       # Frame window for tracking context
 ```
-
-**Example CONFIG in `DatasetCreator.py`:**
-```python
-CONFIG = {
-    "dataset_path": r"../sam3/working_dir",
-    "SOURCE_mask_folder_name": "render",
-    "SOURCE_original_folder_name": "images",
-    "SOURCE_mask_type_ext": ".png",
-    "SOURCE_img_type_ext": ".jpeg",
-    "augment_times": 10,
-    "test_split": 0.0,
-    "val_split": 0.1,
-    "train_split": 0.9,
-    "Keep_val_dataset_original": True,
-    "num_threads": os.cpu_count() - 2,
-    "class_to_id": {
-        "road": 0,
-        "cars": 1,
-        "trucks": 2
-    },
-    "color_to_label": {
-        (255, 255, 255): 0,   # road
-        (0, 0, 255): 1,       # cars
-        (255, 0, 0): 2        # trucks
-    },
-    "class_names": ["road", "cars", "trucks"],
-    "dataset_saving_working_dir": r".\DatasetManager",
-    "folder_name": "road_dataset",
-    "DESTINATION_img_type_ext": ".jpg",
-    "DESTINATION_label_type_ext": ".txt",
-    "FromDataType": "",
-    "ToDataTypeFormate": ""
-}
-```
-**Note:** `color_to_label` must match the mask colors output by `MaskProcessor` & set in `SAM2Config`.
-
-**Multiple Classes & Instance ID:**  
-Maps mask colors to class IDs in `color_to_label`, and uses keyboard shortcuts for instance ID management (labels are encoded as `class_id * 1000 + instance_id`).
-
-**YOLO Format:**  
-Converts masks to polygon annotations (e.g., `0 0.1 0.2 ...` for `road`).
-
-**Augmentations:**  
-Color jitter, Gaussian blur, average blur, Gaussian noise, salt-and-pepper noise.
-
-**Future formats:**  
-COCO and Pascal VOC support are planned.
 
 ---
 
-## Output Structure
+## 🏗️ System Architecture
 
-- **AutoSegmentor Pipeline Outputs:**
-  - Verified images and masks in `sam3/working_dir/verified/images` and `sam3/working_dir/verified/mask`.
-  - Videos in `sam3/outputs/`:
-    - `OrgVideo<video_number>.mp4`: Original frames.
-    - `MaskVideo<video_number>.mp4`: Predicted masks.
-    - `OverlappedVideo<video_number>.mp4`: Overlaid images.
-- **YOLO Dataset Outputs:**
-  - Dataset in `dataset_saving_working_dir/<folder_name>` (e.g., `DatasetManager/road_dataset`):
-    - `train/images/`, `train/labels/`
-    - `valid/images/`, `valid/labels/`
-    - `test/images/`, `test/labels/` (if `test_split` > 0).
+AutoSegmentor follows a modular pipeline architecture. The data flows seamlessly from raw input video to structured dataset outputs.
 
----
+### High-Level Data Flow
 
-## Component Scripts
+```mermaid
+flowchart TD
+    %% =========================================================
+    %% Swimlanes (vertical pipeline)
+    %% =========================================================
 
-- **FileManager.py**: Utilities for directory creation, clearing, and frame path retrieval.
-- **FrameExtractor.py**: Extracts video frames into images with configurable limits and progress tracking.
-- **FrameHandler.py**: Manages frame paths and batch copying to a temporary directory.
-- **MaskProcessor.py**: Converts masks to color images, generates bounding boxes, and processes batch masks with SAM2.
-- **ImageCopier.py**: Copies verified images/masks to output directories, filtering based on overlays.
-- **ImageOverlayProcessor.py**: Overlays masks on images for verification, supporting multi-threaded processing.
-- **VideoCreator.py**: Creates videos from image folders using multi-threading.
-- **SAM2Config.py**: Configures SAM2 model parameters (e.g., paths, label colors, batch size).
-- **SAM2Model.py**: Initializes the SAM2 model, manages device selection (CPU/GPU), and monitors GPU memory.
-- **sam2_video_predictor.py**: Core processing class for frame annotation, mask prediction, and user interaction.
-- **AnnotationManager.py**: Manages annotation data, saving/loading to/from JSON.
-- **UserInteraction.py**: Handles GUI for annotation, including mouse/keyboard controls and zoom view.
-- **pipeline.py**: Orchestrates the pipeline, integrating all stages.
-- **logger_config.py**: Configures logging for debugging and monitoring.
+    subgraph "User / HITL (Human-in-the-loop)"
+        U["User / Annotator"]:::external
+        UI["OpenCV Annotation GUI\n(UserInteraction)\npoint-clicks,keys,zoom"]:::ui
+        AM["AnnotationManager\nsave/load prompts,IDs/classes"]:::ui
+        LOG["Logging\n(logger_config)"]:::ui
+        JP[("User Prompts JSON\npoints_labels_*.json")]:::store
+    end
 
----
+    subgraph "Orchestration / Control Plane"
+        DRIVER["Main Driver\nsam3_video_predictor_demo.py"]:::orch
+        PIPE["Pipeline Orchestrator\n(pipeline.py)\nconnects stages end-to-end"]:::orch
+        CFG["Runtime Config\n(default_config.yaml)\nvideo_range,fps,batch,dirs,cleanup"]:::doc
+    end
 
-## Directory Structure
+    subgraph "Input / Output Artifacts (Data Plane)"
+        VIN[("Video Inputs\nVideo*.mp4")]:::store
+        WDIR[("working_dir/\nimages,temp,render,overlap,verified")]:::store
+        OUTVID[("outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4\nOverlappedVideo*.mp4")]:::store
+        CKPT[("SAM2 Checkpoint\nsam2_hiera_large.pt")]:::store
+        CKPTDL["Checkpoint Download Script\n(download_ckpts.sh)"]:::tool
+        MCFG[("SAM2 Model YAML\nsam2_hiera_*.yaml")]:::doc
+    end
 
+    subgraph "FileManagement (ETL stages)"
+        FM["FileManager\ndir lifecycle & paths"]:::fm
+        FE["FrameExtractor\nmp4->frames"]:::fm
+        FH["FrameHandler\nbatching,temp staging"]:::fm
+        MP["MaskProcessor\npost-process,colorize,bbox,batch"]:::fm
+        OVL["ImageOverlayProcessor\nmask-over-image\nmultithreaded"]:::fm
+        CP["ImageCopier\ncurate verified samples"]:::fm
+        VC["VideoCreator\nframes->mp4\nmultithreaded"]:::fm
+    end
+
+    subgraph "Pose Estimation & Tracking"
+        PTRACK["Pose Exporter\n(PoseExporter.py)"]:::fm
+        CT["CoTracker Wrapper\n(CoTrackerKeypointTracker)"]:::ml
+        LK["Optical Flow (LK)\n(KeypointTracker.py)"]:::ml
+        CT_LIB["CoTracker Library\n(co-tracker/)"]:::ml
+        CT_CKPT[("CoTracker Weights\nscaled_offline.pth")]:::store
+    end
+
+    subgraph "Model Runtime (SAM2 Inference)"
+        S2CFG["SAM2Config\nbatch size,colors,paths"]:::ml
+        S2M["SAM2Model\nload SAM2,device select,\nGPU mem checks (GPUtil)"]:::ml
+        PRED["sam2_video_predictor (sam3)\nprompts+frame/batch inference"]:::ml
+        S2LIB["SAM2 Library (vendored)\n(sam2/)"]:::ml
+        UPRED["Upstream sam2_video_predictor.py"]:::ml
+        GPU{{"PyTorch + CUDA GPU Runtime"}}:::gpu
+        CCU["CUDA Extension\nconnected_components.cu"]:::gpu
+    end
+
+    subgraph "Dataset Export (YOLOv8 compatible)"
+        YDC["YOLO Dataset Builder\n(DatasetCreatere)\npolygons,split,augment"]:::ds
+        YSTRUCT["YOLO Structure Creator\ncreate_yolo_structure.py"]:::ds
+        YDOC["Docs\nREADME.md"]:::doc
+        YOLO[("YOLO Dataset Folder\ntrain/valid/test\nlabels(polygons).txt")]:::store
+    end
+
+    subgraph "Evaluation / Benchmark (optional)"
+        VOS["VOS Inference Tool\nvos_inference.py"]:::tool
+        SAVE["SAV Evaluator\nsav_evaluator.py"]:::tool
+        SAVU["SAV Benchmark Utils\nsav_benchmark.py"]:::tool
+    end
+
+    %% =========================================================
+    %% Control-plane flows
+    %% =========================================================
+    U -->|"clicks/keys(control)"| UI
+    UI -->|"events(control)"| AM
+    AM -->|"save/load(json)"| JP
+    UI -->|"logs"| LOG
+
+    CFG -->|"run_params(control)"| PIPE
+    DRIVER -->|"invokes"| PIPE
+
+    CKPTDL -->|"downloads"| CKPT
+    MCFG -->|"model_config(control)"| S2CFG
+    CKPT -->|"weights(.pt)"| S2M
+    S2CFG -->|"paths/colors/batch(control)"| PRED
+    S2M -->|"model+device(control)"| PRED
+    JP -->|"prompts(json,per-video/control)"| PRED
+
+    %% =========================================================
+    %% Data-plane pipeline (ETL)
+    %% =========================================================
+    VIN -->|"mp4(per-video)"| FE
+    PIPE -->|"orchestrates"| FM
+    PIPE -->|"orchestrates"| FE
+    PIPE -->|"orchestrates"| FH
+    PIPE -->|"orchestrates"| PRED
+    PIPE -->|"orchestrates"| MP
+    PIPE -->|"orchestrates"| OVL
+    PIPE -->|"orchestrates"| CP
+    PIPE -->|"orchestrates"| VC
+    PIPE -->|"orchestrates"| YDC
+    PIPE -->|"orchestrates(optional)"| PTRACK
+
+    FE -->|"frames(jpg/png,per-frame)"| WDIR
+    FM -->|"create/cleanup dirs"| WDIR
+
+    WDIR -->|"images->batches"| FH
+    FH -->|"temp batches(per-batch)"| WDIR
+
+    WDIR -->|"temp frames(per-batch)"| PRED
+    PRED -->|"raw masks(per-frame)"| MP
+    MP -->|"render masks(color-encoded)"| WDIR
+
+    WDIR -->|"images+render"| OVL
+    OVL -->|"overlap images"| WDIR
+
+    WDIR -->|"images/masks/overlap"| CP
+    CP -->|"verified/images + verified/mask"| WDIR
+
+    WDIR -->|"images/render/overlap"| VC
+    VC -->|"mp4 outputs"| OUTVID
+
+    WDIR -->|"verified or images+render"| YDC
+    YDC -->|"creates structure"| YSTRUCT
+    YSTRUCT -->|"train/valid/test folders"| YOLO
+    YDOC -->|"usage/format"| YDC
+
+    %% =========================================================
+    %% Pose Estimation Flows
+    %% =========================================================
+    WDIR -->|"frames"| PTRACK
+    CFG -->|"pose settings"| PTRACK
+    PTRACK -->|"selects"| CT
+    PTRACK -->|"selects"| LK
+    CT -->|"imports"| CT_LIB
+    CT_CKPT -->|"loads"| CT
+    PTRACK -->|"exports pose data"| WDIR
+
+    %% =========================================================
+    %% Compute/resource dependencies
+    %% =========================================================
+    PRED -->|"calls"| S2LIB
+    S2LIB -->|"uses"| UPRED
+    PRED -->|"torch ops"| GPU
+    GPU -->|"accelerated op"| CCU
+    CCU -->|"connected components"| S2LIB
+
+    %% =========================================================
+    %% Optional evaluation flow
+    %% =========================================================
+    OUTVID -->|"evaluate(optional)"| VOS
+    YOLO -->|"benchmark(optional)"| SAVE
+    SAVE -->|"uses"| SAVU
+
+    %% =========================================================
+    %% Click Events (component mapping)
+    %% =========================================================
+    click DRIVER "sam3/sam3_video_predictor_demo.py" "Main Driver Script"
+    click PIPE "sam3/utils/pipeline.py" "Pipeline Logic"
+    click CFG "sam3/inputs/config/default_config.yaml" "Config File"
+
+    click JP "DataPoints/points_labels_*.json" "User Prompts"
+    click AM "sam3/utils/UserUI/AnnotationManager.py" "Annotation Manager"
+    click UI "sam3/utils/UserUI/UserInteraction.py" "UI Logic"
+    click LOG "sam3/utils/UserUI/logger_config.py" "Logger Config"
+
+    click FM "sam3/utils/FileManagement/FileManager.py" "File Manager"
+    click FE "sam3/utils/FileManagement/FrameExtractor.py" "Frame Extractor"
+    click FH "sam3/utils/FileManagement/FrameHandler.py" "Frame Handler"
+    click MP "sam3/utils/FileManagement/MaskProcessor.py" "Mask Processor"
+    click OVL "sam3/utils/FileManagement/ImageOverlayProcessor.py" "Overlay Processor"
+    click CP "sam3/utils/FileManagement/ImageCopier.py" "Image Copier"
+    click VC "sam3/utils/FileManagement/VideoCreator.py" "Video Creator"
+
+    click PTRACK "sam3/utils/FileManagement/PoseExporter.py" "Pose Exporter"
+    click CT "sam3/utils/FileManagement/CoTrackerKeypointTracker.py" "CoTracker Wrapper"
+    click LK "sam3/utils/FileManagement/KeypointTracker.py" "Lucas-Kanade Tracker"
+    click CT_LIB "co-tracker/" "CoTracker Source"
+    click CT_CKPT "co-tracker/checkpoints/scaled_offline.pth" "CoTracker Weights"
+
+    click S2CFG "sam3/utils/Model/SAM2Config.py" "SAM2 Config"
+    click S2M "sam3/utils/Model/SAM2Model.py" "SAM2 Model Wrapper"
+    click PRED "sam3/utils/Model/sam2_video_predictor.py" "Predictor Logic"
+
+    click S2LIB "sam2/" "SAM2 Library"
+    click UPRED "sam2/sam2_video_predictor.py" "Upstream Predictor"
+    click CCU "sam2/csrc/connected_components.cu" "CUDA Kernels"
+
+    click CKPTDL "checkpoints/download_ckpts.sh" "Download Script"
+    click MCFG "sam2_configs/sam2_hiera_l.yaml" "Model YAML"
+
+    click YDC "DatasetManager/YolovDatasetManager/DatasetCreatere.py" "Dataset Creator"
+    click YSTRUCT "DatasetManager/YolovDatasetManager/create_yolo_structure.py" "Structure Creator"
+    click YDOC "DatasetManager/YolovDatasetManager/README.md" "YOLO Docs"
+
+    click VOS "tools/vos_inference.py" "VOS Tool"
+    click SAVE "sav_dataset/sav_evaluator.py" "SAV Evaluator"
+    click SAVU "sav_dataset/utils/sav_benchmark.py" "SAV Benchmark"
+
+    %% =========================================================
+    %% Styles
+    %% =========================================================
+    classDef orch fill:#1e88e5,stroke:#0d47a1,color:#ffffff,stroke-width:1px
+    classDef ui fill:#43a047,stroke:#1b5e20,color:#ffffff,stroke-width:1px
+    classDef ml fill:#fb8c00,stroke:#e65100,color:#ffffff,stroke-width:1px
+    classDef fm fill:#26a69a,stroke:#004d40,color:#ffffff,stroke-width:1px
+    classDef ds fill:#8e24aa,stroke:#4a148c,color:#ffffff,stroke-width:1px
+    classDef store fill:#90a4ae,stroke:#37474f,color:#0b0f12,stroke-width:1px
+    classDef doc fill:#cfd8dc,stroke:#455a64,color:#0b0f12,stroke-width:1px
+    classDef gpu fill:#6d4c41,stroke:#3e2723,color:#ffffff,stroke-width:1px
+    classDef tool fill:#546e7a,stroke:#263238,color:#ffffff,stroke-width:1px
+    classDef external fill:#2b2b2b,stroke:#111111,color:#ffffff,stroke-width:1px
 ```
+
+### Module Responsibilities Detail
+
+| Component Category | Module | Responsibility |
+| :--- | :--- | :--- |
+| **Orchestration** | `sam3_video_predictor_demo.py` | The main driver script. Loads config, and iterates through pipeline stages. |
+| | `pipeline.py` | Connects the distinct processing stages (Extraction -> Inference -> Verification -> Output). |
+| **Model Runtime** | `sam2_video_predictor.py` | The "brain". Manages the SAM 2 state, propagates masks, and handles inference logic. |
+| | `MaskProcessor.py` | Post-processes binary masks into colorized formats and bounding boxes. |
+| **Interaction** | `UserInteraction.py` | Manages the OpenCV GUI options, capturing user clicks and key presses. |
+| | `AnnotationManager.py` | Persists user inputs to JSON so work can be resumed or replayed. |
+| **File ETL** | `FrameExtractor.py` | Decodes video streams into individual frames for processing. |
+| | `FrameHandler.py` | Manages batching logic to keep GPU memory usage efficient. |
+| | `CoTrackerKeypointTracker.py` | Wrapper for CoTracker model to track keypoints across batches (Robust alternative to Lucas-Kanade). |
+| **Export** | `DatasetManager` | Utilities to transform raw verified masks into structured YOLOv8 training data. |
+
+---
+
+## 📂 Directory Structure
+
+```text
 AutoSegmentor/
-├── DatasetManager/
-│   └── YolovDatasetManager/
-│       ├── create_yolo_structure.py
-│       └── DatasetCreator.py
-├── checkpoints/
-│   └── sam2_hiera_large.pt
-├── sam2_configs/
-│   └── sam2_hiera_l.yaml
-├── sam3/
-│   ├── __init__.py
-│   ├── sam3_video_predictor_demo.py
-│   ├── inputs/
-│   │   ├── config/
-│   │   │   └── default_config.yaml
-│   │   ├── UserPrompts/
-│   │   │   └── points_labels_*.json
-│   │   └── VideoInputs/
-│   │       └── Video*.mp4
-│   ├── outputs/
-│   │   ├── OrgVideo*.mp4
-│   │   ├── MaskVideo*.mp4
-│   │   └── OverlappedVideo*.mp4
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   ├── FileManagement/
-│   │   │   ├── __init__.py
-│   │   │   ├── FileManager.py
-│   │   │   ├── FrameExtractor.py
-│   │   │   ├── FrameHandler.py
-│   │   │   ├── ImageCopier.py
-│   │   │   ├── ImageOverlayProcessor.py
-│   │   │   ├── MaskProcessor.py
-│   │   │   └── VideoCreator.py
-│   │   ├── Model/
-│   │   │   ├── __init__.py
-│   │   │   ├── SAM2Config.py
-│   │   │   ├── SAM2Model.py
-│   │   │   └── sam2_video_predictor.py
-│   │   ├── UserUI/
-│   │   │   ├── __init__.py
-│   │   │   ├── AnnotationManager.py
-│   │   │   ├── logger_config.py
-│   │   │   └── UserInteraction.py
-│   │   └── pipeline.py
-│   ├── working_dir/
-│   │   ├── images/
-│   │   ├── temp/
-│   │   ├── render/
-│   │   ├── overlap/
-│   │   └── verified/
-│   │       ├── images/
-│   │       └── mask/
+├── sam3/                         # MAIN WORKING DIRECTORY
+│   ├── sam3_video_predictor_demo.py  <-- ENTRY POINT
+│   ├── inputs/                   # Configs, User Prompts, Input Videos
+│   │   ├── VideoInputs/          # Put your videos here (Video1.mp4, etc.)
+│   │   ├── UserPrompts/          # Generated JSON annotations (points_labels_*.json)
+│   │   └── config/               # default_config.yaml
+│   └── utils/                    # Core logic modules (Model, UI, FileManagement)
+├── DatasetManager/               # YOLO Dataset Conversion Tools
+├── checkpoints/                  # Model weights (sam2_hiera_large.pt)
+├── sam2_configs/                 # SAM 2 Model Configurations
+└── tools/                        # Additional inference tools
 ```
 
 ---
 
-## Troubleshooting
+## ❓ Troubleshooting
 
-- **Missing SAM2 Checkpoint:** Ensure `sam2_hiera_large.pt` is in `checkpoints/`, and YAML config in `sam2_configs/`.
-- **OpenCV Window Issues:** Verify system GUI support (e.g., X11 on Linux).
-- **Invalid Frame Filenames:** Ensure frames follow the expected naming pattern.
-- **GPU Errors:** Check GPU availability with `GPUtil.showUtilization()` and PyTorch CUDA support.
-- **Missing Modules:** Verify all custom modules are in `sam3/utils`.
-- **YOLO Dataset Issues:** Ensure `color_to_label` matches mask colors from `MaskProcessor`.
+| Issue | Solution |
+| :--- | :--- |
+| **`FileNotFoundError: sam2_hiera_large.pt`** | Download the checkpoint from Meta AI and place it in the `checkpoints/` folder. |
+| **CUDA Errors / Slow Performance** | Ensure you have installed the GPU version of PyTorch (`torch.cuda.is_available()` should be `True`). |
+| **`ImportError: No module named sam2`** | Install the SAM 2 library: `pip install sam2` (or from source). |
+| **GUI Not Appearing** | Verify your X11/Display server settings (Linux) or ensure Python has permission to create windows (Windows). |
 
 ---
+
 
 ## Acknowledgements
 

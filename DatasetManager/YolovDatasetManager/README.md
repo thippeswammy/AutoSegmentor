@@ -1,5 +1,7 @@
 # YOLO Dataset Manager
 
+[< Back to Root](../../README.md)
+
 ## Overview
 The **YOLO Dataset Manager** is a Python-based tool designed to create YOLO-compatible datasets for object detection tasks. It processes images and their corresponding segmentation masks, applies augmentations, and organizes them into a YOLO folder structure (`train`, `valid`, `test`) with images and labels. The tool supports multithreaded processing, various image augmentations (e.g., blur, noise, color jitter), and automatic generation of a `data.yaml` configuration file. It is ideal for preparing datasets for training YOLO models, particularly for applications like autonomous driving or road segmentation.
 

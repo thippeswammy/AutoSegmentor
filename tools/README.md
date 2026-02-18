@@ -1,5 +1,7 @@
 ## SAM 2 toolkits
 
+[< Back to Root](../README.md)
+
 This directory provides toolkits for additional SAM 2 use cases.
 
 ### Semi-supervised VOS inference
