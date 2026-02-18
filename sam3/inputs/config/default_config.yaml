@@ -1,7 +1,7 @@
 # config.yml
 run_mode: "all"    # "all" = full pipeline, "mask_only" = SAM2 masks only, "pose_only" = pose export only
 auto_prompt_encoding: true # If true, uses previous mask to auto-prompt next batch. If false, forces manual input.
-video_start: 2
+video_start: 3
 video_end: 1
 prefix: Img
 batch_size: 80
