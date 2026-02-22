@@ -49,7 +49,7 @@ class UserInteractionHandler:
         """Encode class and instance IDs into a single label."""
         return class_id * 1000 + instance_id
 
-    def change_class_label(self, label):
+    def change_class_label_pyqt(self, label):
         """Change the current class label and update instance ID."""
         if self.pose_mode:
             logger.warning("Class selection disabled in Pose Mode")
@@ -59,70 +59,11 @@ class UserInteractionHandler:
         for i in self.selected_labels:
             if abs(i // 1000) == label:
                 self.current_instance_id = max(abs(i) % 1000, self.current_instance_id)
-        self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
-        self.draw_text_with_background(self.current_frame)
-        cv2.imshow(self.window_name, self.current_frame)
 
-    def record_pose_click(self, x, y):
-        """Record a keypoint click coordinate in Pose Mode."""
-        if not self.pose_mode or self.current_keypoint_index >= len(self.pose_keypoints):
-            return
-        kp_name = self.pose_keypoints[self.current_keypoint_index]
-        self.pose_click_coords.append({
-            "name": kp_name,
-            "point_id": self.current_keypoint_index,
-            "x": int(x),
-            "y": int(y)
-        })
-        logger.debug(f"Pose keypoint recorded: {kp_name} at ({x}, {y})")
+    def user_prompt_adder_pyqt(self):
+        """Called by MainWindow to update drawing without showing cv2 window."""
+        self.sam2_video_predictor.user_prompt_adder(self.inference_state_temp, self.frame_path)
 
-    def next_keypoint(self):
-        """Advance to the next keypoint in Pose Mode (does NOT change class_label)."""
-        if not self.pose_mode or not self.pose_keypoints:
-            return
-
-        self.current_keypoint_index += 1
-        if self.current_keypoint_index < len(self.pose_keypoints):
-             self.display_text = f"[{self.current_keypoint_index+1}/{len(self.pose_keypoints)}] Click: {self.pose_keypoints[self.current_keypoint_index]}"
-             # class_label stays fixed — all keypoints share the same SAM2 obj_id
-        else:
-             self.display_text = f"[{len(self.pose_keypoints)}/{len(self.pose_keypoints)}] All Keypoints Set. Press Enter."
-
-        self.draw_text_with_background(self.current_frame)
-        cv2.imshow(self.window_name, self.current_frame)
-
-    @staticmethod
-    def show_zoom_view(frame, x, y, zoom_factor=4, zoom_size=200):
-        """Show a zoomed view of the frame at the cursor position."""
-        height, width = frame.shape[:2]
-        half_zoom = zoom_size // 2
-        x_start = max(x - half_zoom // zoom_factor, 0)
-        x_end = min(x + half_zoom // zoom_factor, width)
-        y_start = max(y - half_zoom // zoom_factor, 0)
-        y_end = min(y + half_zoom // zoom_factor, height)
-        zoomed_area = frame[y_start:y_end, x_start:x_end]
-        zoomed_area_resized = cv2.resize(zoomed_area, (zoom_size, zoom_size), interpolation=cv2.INTER_LINEAR)
-        zoom_view = np.zeros((zoom_size, zoom_size, 3), dtype=np.uint8)
-        zoom_view[:zoomed_area_resized.shape[0], :zoomed_area_resized.shape[1]] = zoomed_area_resized
-        scaled_x = zoom_size // 2
-        scaled_y = zoom_size // 2
-        cv2.circle(zoom_view, (scaled_x, scaled_y), 5, (0, 255, 0), -1)
-        return zoom_view
-
-    def draw_text_with_background(self, frame, position=(10, 30), font=cv2.FONT_HERSHEY_SIMPLEX,
-                                  font_scale=1, text_color=(255, 255, 255), bg_color=(0, 0, 0),
-                                  thickness=2, padding=5):
-        """Draw text with a background rectangle."""
-        if frame is None:
-            return
-        text = self.display_text
-        (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
-        x, y = position
-        top_left = (x - padding, y - text_height - padding)
-        bottom_right = (x + text_width + padding, y + padding)
-        cv2.rectangle(frame, top_left, bottom_right, bg_color, thickness=-1)
-        cv2.putText(frame, text, position, font, font_scale, text_color, thickness)
-        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def collect_user_points(self, batch, frame_paths, sam2_predictor, click_event_callback, mask_processor):
         """Collect user points for annotation in a video frame.
@@ -142,50 +83,41 @@ class UserInteractionHandler:
             click_event_callback: A callback function for handling mouse click events.
             mask_processor: An object for processing masks related to the annotations.
         """
-        cv2.namedWindow("Zoom View", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Zoom View", self.config.window_size[0], self.config.window_size[1])
         start_batch_idx = self.annotation_manager.check_data_sufficiency()
-        frame_path = frame_paths[batch * self.config.batch_size]
+        self.frame_path = frame_paths[batch * self.config.batch_size]
         batch_idx = (start_batch_idx // self.config.batch_size)
         frame_idx = batch_idx * self.config.batch_size
-        inference_state_temp = sam2_predictor.init_state(
+        self.inference_state_temp = sam2_predictor.init_state(
             video_path=None,
-            frame_paths=[os.path.abspath(frame_path)]
+            frame_paths=[os.path.abspath(self.frame_path)]
         )
         self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
-            frame_path)
-        
+            self.frame_path)
+            
         if self.pose_mode:
             self.current_keypoint_index = 0
-            # Reset selected points/labels for this fresh start
             self.selected_points = []
             self.selected_labels = []
             self.pose_click_coords = []
-            # Lock to the single pose object identity from config
             self.current_class_label = self.pose_class_id
             self.current_instance_id = self.pose_object_id
 
-            # --- Carry forward keypoints from previous batch or stored annotations ---
             prev_kps = None
-            # 1. Check if stored annotation exists for this batch
             if batch < len(self.annotation_manager.pose_keypoints_collection):
                 stored = self.annotation_manager.pose_keypoints_collection[batch]
                 if stored:
                     prev_kps = stored
-            # 2. If no stored annotation, carry forward from previous batch
             if prev_kps is None and batch > 0:
-                # Prefer last-frame tracked positions from inline CoTracker (accurate boundary coords)
                 if hasattr(self.sam2_video_predictor, 'per_batch_tracked_data'):
                     for b in range(batch - 1, -1, -1):
                         if b < len(self.sam2_video_predictor.per_batch_tracked_data):
                             prev_tracked = self.sam2_video_predictor.per_batch_tracked_data[b]
                             if prev_tracked:
-                                last_entry = prev_tracked[-1]  # Last frame's tracking data
+                                last_entry = prev_tracked[-1]
                                 prev_kps = last_entry.get("keypoints", [])
                                 if prev_kps:
                                     logger.info(f"[Annotation] Batch {batch + 1}: Carry-forward using inline-tracked last-frame positions from batch {b + 1}")
                                     break
-                # Fallback to first-frame annotation if no inline tracking available
                 if prev_kps is None:
                     for b in range(batch - 1, -1, -1):
                         if b < len(self.annotation_manager.pose_keypoints_collection):
@@ -195,8 +127,7 @@ class UserInteractionHandler:
                                 break
 
             if prev_kps and len(prev_kps) == len(self.pose_keypoints):
-                # Attempt CoTracker-based carry-forward if configured
-                tracked_kps = prev_kps  # Default: use as-is
+                tracked_kps = prev_kps
                 tracker_type = (
                     self.config.pose_config.get('tracker', 'lk').lower()
                     if self.config.pose_config else 'lk'
@@ -204,14 +135,12 @@ class UserInteractionHandler:
                 if tracker_type == 'cotracker' and batch > 0:
                     try:
                         from ..FileManagement.CoTrackerKeypointTracker import track_between_frames
-                        # Get paths: last frame of prev batch, first frame of current batch
                         prev_batch_end_idx = batch * self.config.batch_size - 1
                         if 0 <= prev_batch_end_idx < len(frame_paths):
                             prev_frame_path = frame_paths[prev_batch_end_idx]
-                            curr_frame_path = frame_path 
+                            curr_frame_path = self.frame_path 
                             ct_cfg = self.config.pose_config.get('cotracker', {})
                             checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
-                            # Resolve relative to sam3 directory
                             import os as _os
                             base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
                             checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
@@ -226,7 +155,6 @@ class UserInteractionHandler:
                     except Exception as e:
                         logger.warning(f"CoTracker carry-forward failed, using static copy: {e}")
 
-                # Pre-populate with tracked/previous keypoints
                 full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
                 for kp in sorted(tracked_kps, key=lambda k: k["point_id"]):
                     x, y = kp["x"], kp["y"]
@@ -236,136 +164,40 @@ class UserInteractionHandler:
                         "name": kp["name"],
                         "point_id": kp["point_id"],
                         "x": x,
-                        "y": y
+                        "y": y,
+                        "visible": kp.get("visible", True)
                     })
-                    # Draw the pre-populated point
-                    cv2.circle(self.current_frame, (x, y), 2,
-                               self.config.label_colors[self.pose_class_id], -1)
-                    cv2.circle(self.current_frame_only_with_points, (x, y), 2,
-                               self.config.label_colors[self.pose_class_id], -1)
                 self.current_keypoint_index = len(self.pose_keypoints)
-                self.display_text = "Prev keypoints loaded. Enter=Accept, R=Re-click"
-                logger.info(f"[Annotation] Batch {batch + 1}: Reviewing carry-forwarded points. Press Enter to confirm.")
-            else:
-                if self.pose_keypoints:
-                    self.display_text = f"[1/{len(self.pose_keypoints)}] Click: {self.pose_keypoints[0]}"
-                else:
-                    self.display_text = "Pose Mode Error: No Keypoints"
+                logger.info(f"[Annotation] Batch {batch + 1}: Reviewing carry-forwarded points. Press Accept to confirm.")
         else:
             self.current_class_label = self.current_instance_id = 1
-            self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
-        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
-        param = [inference_state_temp, frame_path]
-        cv2.setMouseCallback(self.window_name, click_event_callback, param)
-        self.sam2_video_predictor.user_prompt_adder(inference_state_temp, frame_path)
-        while True:
-            if not self.pose_mode:
-                 self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
-            
-            # Update display text for Pose Mode during loop (e.g. if undo happens)
-            if self.pose_mode and self.pose_keypoints:
-                 if self.current_keypoint_index < len(self.pose_keypoints):
-                     self.display_text = f"Click: {self.pose_keypoints[self.current_keypoint_index]}"
-                 else:
-                     self.display_text = "All Keypoints Set. Press Enter."
 
-            self.draw_text_with_background(self.current_frame)
-            cv2.imshow(self.window_name, self.current_frame)
-            
-            key = cv2.waitKey(30) & 0xFF
-            if key == 255:  # No key pressed
-                continue
-            
-            if key == 13:  # Enter key
-                self.annotation_manager.points_collection.append(self.selected_points[:])
-                self.annotation_manager.labels_collection.append(self.selected_labels[:])
-                self.annotation_manager.frame_indices.append(frame_idx)
-                if self.pose_mode and self.pose_click_coords:
-                    self.annotation_manager.pose_keypoints_collection.append(self.pose_click_coords[:])
-                else:
-                    self.annotation_manager.pose_keypoints_collection.append([])
-                self.annotation_manager.save_points_and_labels()
-                
-                self.selected_points.clear()
-                self.selected_labels.clear()
-                self.pose_click_coords.clear()
-                cv2.destroyAllWindows()
-                break
-            elif key == ord('q'):
-                cv2.destroyAllWindows()
-                return
-            elif key == 9:  # Tab
-                self.current_instance_id += 1
-                self.draw_text_with_background(self.current_frame)
-                cv2.imshow(self.window_name, self.current_frame)
-            elif key == 353:  # Shift + Tab
-                if self.current_instance_id > 0:
-                    self.current_instance_id -= 1
-                    self.draw_text_with_background(self.current_frame)
-                    cv2.imshow(self.window_name, self.current_frame)
-            elif key == ord('u'):
-                if self.selected_points:
-                    self.selected_points.pop()
-                    self.selected_labels.pop()
-                    self.current_frame = cv2.imread(frame_path)
-                    self.draw_text_with_background(self.current_frame)
-                    for pt, lbl in zip(self.selected_points, self.selected_labels):
-                        cv2.circle(
-                            self.current_frame,
-                            (int(pt[0]), int(pt[1])), 2,
-                            self.config.label_colors[abs(lbl // 1000)], -1
-                        )
-                        cv2.circle(
-                            self.current_frame_only_with_points,
-                            (int(pt[0]), int(pt[1])), 2,
-                            self.config.label_colors[abs(lbl // 1000)], -1
-                        )
-                        self.sam2_video_predictor.user_prompt_adder(inference_state_temp, frame_path)
-                    
-                    if self.pose_mode:
-                        self.current_keypoint_index = max(0, self.current_keypoint_index - 1)
-                        if self.pose_click_coords:
-                            self.pose_click_coords.pop()
-                        # class_label stays fixed — no re-calculation needed
+        # --- Launch PyQt MainWindow ---
+        from .MainWindow import AnnotationWindow
+        window = AnnotationWindow(self, self.config)
+        total_batches = (len(frame_paths) + self.config.batch_size - 1) // self.config.batch_size
+        window.set_batch_info(batch, total_batches, frame_idx, len(frame_paths))
+        
+        # Populate initial mask if pre-populated keypoints exist
+        if self.selected_points:
+            self.user_prompt_adder_pyqt()
+            window.refresh_display()
+            window._update_sidebar()
 
-                    cv2.imshow(self.window_name, self.current_frame)
-            elif key in [ord(str(i)) for i in range(1, 10)]:
-                self.change_class_label(int(chr(key)))
-            elif key == ord('r'):
-                self.selected_points = []
-                self.selected_labels = []
-                self.pose_click_coords = []
-                if self.pose_mode:
-                    self.current_keypoint_index = 0
-                    self.current_class_label = self.pose_class_id
-                    self.current_instance_id = self.pose_object_id
-                self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
-                    frame_path)
-            elif key == ord('f'):
-                frame_idx_input = input("Enter frame index to annotate: ")
-                try:
-                    new_frame_idx = int(frame_idx_input)
-                    if 0 <= new_frame_idx < len(frame_paths):
-                        frame_path = frame_paths[new_frame_idx]
-                        inference_state_temp = sam2_predictor.init_state(
-                            video_path=None,
-                            frame_paths=[os.path.abspath(frame_path)]
-                        )
-                        self.current_frame = self.current_frame_only_text = (
-                            self).current_frame_only_with_points = cv2.imread(frame_path)
-                        self.current_class_label = self.current_instance_id = 1
-                        param = [inference_state_temp, frame_path]
-                        cv2.setMouseCallback(self.window_name, click_event_callback, param)
-                        if self.selected_points:
-                            self.annotation_manager.points_collection.append(self.selected_points[:])
-                            self.annotation_manager.labels_collection.append(self.selected_labels[:])
-                            self.annotation_manager.frame_indices.append(new_frame_idx)
-                            self.annotation_manager.save_points_and_labels()
-                        self.selected_points.clear()
-                        self.selected_labels.clear()
-                    else:
-                        logger.warning(f"Invalid frame index: {new_frame_idx}")
-                except ValueError:
-                    logger.warning("Invalid input for frame index")
+        # Block the pipeline until user hits Accept (which closes the dialog)
+        window.exec_()
+        
+        # Save points back
+        self.annotation_manager.points_collection.append(self.selected_points[:])
+        self.annotation_manager.labels_collection.append(self.selected_labels[:])
+        self.annotation_manager.frame_indices.append(frame_idx)
+        if self.pose_mode and self.pose_click_coords:
+            self.annotation_manager.pose_keypoints_collection.append(self.pose_click_coords[:])
+        else:
+            self.annotation_manager.pose_keypoints_collection.append([])
+            
         self.annotation_manager.save_points_and_labels()
-        cv2.destroyAllWindows()
+        
+        self.selected_points.clear()
+        self.selected_labels.clear()
+        self.pose_click_coords.clear()

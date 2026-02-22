@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import yaml
+from PyQt5.QtWidgets import QApplication
 
 from utils.UserUI.logger_config import logger
 from utils.pipeline import run_pipeline
@@ -93,6 +94,9 @@ def _handle_working_dir(working_dir_name, delete, prompt_msg):
 
 
 def main():
+    # Initialize the Qt Application exactly once
+    app = QApplication(sys.argv)
+
     # Load configuration from YAML file
     config = load_config()
 

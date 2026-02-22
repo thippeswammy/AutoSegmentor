@@ -166,8 +166,6 @@ class SAM2VideoProcessor(SAM2Model):
             else:
                 self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
 
-            self.user_interaction.draw_text_with_background(self.user_interaction.current_frame)
-            cv2.imshow(self.user_interaction.window_name, self.user_interaction.current_frame)
 
     @staticmethod
     def show_box(boxes, img):
