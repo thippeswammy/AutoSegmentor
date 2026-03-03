@@ -1,6 +1,6 @@
 """
 SidePanel.py — Right-side dockable panel with annotation info, keypoint progress,
-and batch/frame status for the CVAT-like annotation UI.
+and batch/frame status for the AutoSegmenter annotation UI.
 """
 
 from PyQt5.QtCore import Qt, pyqtSignal

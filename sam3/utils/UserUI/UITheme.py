@@ -1,5 +1,5 @@
 """
-UITheme.py — Centralized dark theme and color scheme for the CVAT-like annotation UI.
+UITheme.py — Centralized dark theme and color scheme for the AutoSegmenter annotation UI.
 
 Provides QSS stylesheets, annotation class colors, and font/spacing constants.
 """
@@ -10,7 +10,7 @@ from PyQt5.QtGui import QColor, QFont
 # ─── Color Palette ──────────────────────────────────────────────────────────────
 
 class Colors:
-    """CVAT-inspired dark color palette."""
+    """AutoSegmenter dark color palette."""
 
     # Backgrounds
     BG_DARKEST = "#1a1a2e"

@@ -1,5 +1,5 @@
 """
-MainWindow.py - Main PyQt dialog window for the CVAT-like annotation UI.
+MainWindow.py - Main PyQt dialog window for the AutoSegmenter annotation UI.
 """
 
 import cv2
@@ -19,7 +19,7 @@ from .NavigationManager import AddPointCommand, ResetPointsCommand, DeletePointC
 
 
 class AnnotationWindow(QDialog):
-    """Main CVAT-like annotation window. Runs modally to block pipeline."""
+    """Main AutoSegmenter annotation window. Runs modally to block pipeline."""
 
     def __init__(self, handler, config, parent=None):
         super().__init__(parent)
@@ -43,7 +43,7 @@ class AnnotationWindow(QDialog):
 
     def _init_ui(self):
         """Initialize main layout and widgets."""
-        self.setWindowTitle("AutoSegmentor CVAT-Like Annotation Tool")
+        self.setWindowTitle("AutoSegmenter Annotation Tool")
         self.setMinimumSize(1024, 768)
         # Apply dark theme
         self.setStyleSheet(DARK_STYLESHEET)
@@ -206,7 +206,7 @@ class AnnotationWindow(QDialog):
         self.status_bar.addWidget(self.coord_label)
         
         # Spacer
-        self.status_bar.addPermanentWidget(QLabel(" | Ctrl+LClick: Add (+) | Ctrl+RClick: Add (-) | RClick (on Pt): Del | LClick: Pan | Shift+LClick: Move | Space: Skip Pt | +/-: Zoom | M: Mask"))
+        self.status_bar.addPermanentWidget(QLabel(" | Ctrl+LClick: Add (+) | Ctrl+RClick: Add (-) | RClick (on Pt): Del | LClick: Pan | Shift+LClick: Move | Space: Skip Pt | Enter: Accept | +/-: Zoom | M: Mask"))
 
     def _setup_shortcuts(self):
         # Class switching 1-9
@@ -230,6 +230,10 @@ class AnnotationWindow(QDialog):
 
         # Undo fallback (U) to match old behavior
         QShortcut(QKeySequence("U"), self, self.undo_stack.undo)
+        
+        # Accept Shortcuts
+        QShortcut(QKeySequence("Return"), self, self.btn_accept.animateClick)
+        QShortcut(QKeySequence("Enter"), self, self.btn_accept.animateClick)
 
     def _connect_signals(self):
         self.canvas.point_clicked.connect(self.handle_canvas_click)
