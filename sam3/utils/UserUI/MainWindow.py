@@ -21,10 +21,11 @@ from .logger_config import logger
 class BatchProcessorThread(QThread):
     finished_batch = pyqtSignal(int)
     
-    def __init__(self, handler, batch):
+    def __init__(self, handler, batch, query_frame_idx=None):
         super().__init__()
         self.handler = handler
         self.batch = batch
+        self.query_frame_idx = query_frame_idx
         
     def run(self):
         processor = self.handler.pipeline_processor
@@ -33,6 +34,7 @@ class BatchProcessorThread(QThread):
         processor.frame_handler.move_and_copy_frames(batch_index, processor.frame_paths, processor.config.batch_size)
         
         if processor.config.sam_enabled:
+            # SAM2 with multi-frame prompts
             processor.mask_processor.generate_mask(
                 batch_number=self.batch,
                 sam2_predictor=processor.sam2_predictor,
@@ -44,7 +46,8 @@ class BatchProcessorThread(QThread):
             
         if (processor.config.pose_config and processor.config.pose_config.get('enabled')
                 and processor.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):
-            processor._track_batch_inline(self.batch)
+            # CoTracker with optional specific query frame and backward tracking (enabled in wrapper)
+            processor._track_batch_inline(self.batch, query_frame_idx=self.query_frame_idx)
             
         self.finished_batch.emit(self.batch)
 
@@ -220,11 +223,25 @@ class AnnotationWindow(QDialog):
         self.inst_lbl.setFixedWidth(20)
         self.tool_bar.addWidget(self.inst_lbl)
         
+        from PyQt5.QtWidgets import QLineEdit
+        self.tool_bar.addWidget(QLabel("  Jump: "))
+        self.frame_jump_input = QLineEdit()
+        self.frame_jump_input.setPlaceholderText("Frame #")
+        self.frame_jump_input.setFixedWidth(60)
+        self.frame_jump_input.returnPressed.connect(self.jump_to_frame)
+        self.tool_bar.addWidget(self.frame_jump_input)
+
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.tool_bar.addWidget(spacer)
         
-        self.btn_accept = QPushButton("Accept & Process Batch")
+        self.btn_reprocess = QPushButton("Reprocess Batch")
+        self.btn_reprocess.setObjectName("reprocessButton")
+        self.btn_reprocess.clicked.connect(self.reprocess_annotation)
+        self.btn_reprocess.setStyleSheet("background-color: #f57c00; color: white;")
+        self.tool_bar.addWidget(self.btn_reprocess)
+
+        self.btn_accept = QPushButton("Accept & Process Next")
         self.btn_accept.setObjectName("acceptButton")
         self.btn_accept.clicked.connect(self.accept_annotation)
         self.btn_accept.setStyleSheet("background-color: #2e7d32; color: white;")
@@ -441,8 +458,32 @@ class AnnotationWindow(QDialog):
     def toggle_corner_zoom(self):
         self.canvas.zoom_view.setVisible(self.zoom_view_action.isChecked())
 
+    def jump_to_frame(self):
+        text = self.frame_jump_input.text()
+        try:
+            val = int(text)
+            if 0 <= val < len(self.handler.frame_paths):
+                self.handler.load_frame_for_ui(val)
+                self.frame_jump_input.clear()
+            else:
+                logger.warning(f"Invalid frame index: {val}")
+        except ValueError:
+            pass
+
+    def reprocess_annotation(self):
+        """Re-process current batch using current frame as a new prompt point."""
+        if self.is_processing:
+            return
+            
+        self.handler.save_current_annotation()
+        batch = self.handler.current_frame_idx // self.config.batch_size
+        current_frame = self.handler.current_frame_idx
+        
+        logger.info(f"Reprocessing batch {batch} from frame {current_frame}...")
+        self.start_processing_thread(batch, query_frame_idx=current_frame)
+
     def accept_annotation(self):
-        """Process current batch annotations."""
+        """Process current batch annotations (usually the start of a batch)."""
         if self.is_processing:
             return
             
@@ -451,24 +492,26 @@ class AnnotationWindow(QDialog):
         
         self.start_processing_thread(batch)
         
-    def start_processing_thread(self, batch):
+    def start_processing_thread(self, batch, query_frame_idx=None):
         self.is_processing = True
         self.processing_batch = batch
         self.btn_accept.setEnabled(False)
+        self.btn_reprocess.setEnabled(False)
         self.btn_accept.setText("Processing...")
         
         # Show loader only if we are still viewing this batch
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.show()
             
-        self.processor_thread = BatchProcessorThread(self.handler, batch)
+        self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx)
         self.processor_thread.finished_batch.connect(self.on_processing_finished)
         self.processor_thread.start()
         
     def on_processing_finished(self, batch):
         self.is_processing = False
         self.btn_accept.setEnabled(True)
-        self.btn_accept.setText("Accept & Process Batch")
+        self.btn_reprocess.setEnabled(True)
+        self.btn_accept.setText("Accept & Process Next")
         
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.hide()

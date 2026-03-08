@@ -86,7 +86,7 @@ class MaskProcessor:
             return color_mask_image
         return present_count + 1
 
-    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None):
+    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None, starting_frame_idx=None):
         """Generate masks for a batch of frames."""
         frame_file_names = sorted(
             [p for p in os.listdir(temp_directory) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
@@ -120,7 +120,7 @@ class MaskProcessor:
                         for i, out_obj_id in enumerate(out_obj_ids)
                     }
             
-            present_count = self.image_counter
+            present_count = starting_frame_idx if starting_frame_idx is not None else self.image_counter
             with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
                 futures = [
                     executor.submit(self.binary_mask_2_color_mask, out_frame_idx, frame_file_names,

@@ -66,7 +66,7 @@ class CoTrackerKeypointTracker:
         tracked_frames: List of per-frame keypoint dicts (same format as KeypointTracker).
     """
 
-    def __init__(self, keypoint_defs, initial_coords, frame_paths, checkpoint, window_len=60):
+    def __init__(self, keypoint_defs, initial_coords, frame_paths, checkpoint, window_len=60, query_frame_idx=0):
         """Initialize and run CoTracker tracking on the batch.
 
         Args:
@@ -75,6 +75,7 @@ class CoTrackerKeypointTracker:
             frame_paths: List of absolute paths to all frames in this batch.
             checkpoint: Path to the CoTracker model checkpoint (.pth).
             window_len: Window length for the offline model (default: 60).
+            query_frame_idx: Frame index within this batch to use as the query (default: 0).
         """
         self.keypoint_defs = keypoint_defs
         self.tracked_frames = []
@@ -85,7 +86,7 @@ class CoTrackerKeypointTracker:
 
         logger.info(
             f"CoTrackerKeypointTracker: {num_keypoints} keypoints, "
-            f"{len(frame_paths)} frames"
+            f"{len(frame_paths)} frames, query_frame={query_frame_idx}"
         )
 
         # Load the model (singleton, only loaded once)
@@ -99,7 +100,7 @@ class CoTrackerKeypointTracker:
                 logger.warning(f"Failed to read frame: {fp}")
                 # Use previous frame or a black frame
                 if frames:
-                    frames.append(frames[-1])
+                    frames.append(frames[-1].copy())
                 else:
                     frames.append(np.zeros((480, 640, 3), dtype=np.uint8))
                 continue
@@ -112,20 +113,19 @@ class CoTrackerKeypointTracker:
         video = video.to(DEFAULT_DEVICE)
 
         # Build queries: (1, N, 3) in format (t, x, y)
-        # All keypoints start from frame 0
         queries = torch.zeros((1, num_keypoints, 3), dtype=torch.float32, device=DEFAULT_DEVICE)
         for i, coord in enumerate(sorted_coords):
-            queries[0, i, 0] = 0  # time = frame 0
+            queries[0, i, 0] = float(query_frame_idx)  # time = query_frame_idx
             queries[0, i, 1] = float(coord["x"])
             queries[0, i, 2] = float(coord["y"])
 
         # Run CoTracker inference
-        logger.info("Running CoTracker inference...")
+        logger.info(f"Running CoTracker inference (backward_tracking=True)...")
         with torch.no_grad():
             pred_tracks, pred_visibility = model(
                 video,
                 queries=queries,
-                backward_tracking=False,
+                backward_tracking=True,
             )
         # pred_tracks: (1, T, N, 2) — (x, y) pixel coordinates
         # pred_visibility: (1, T, N) — boolean visibility

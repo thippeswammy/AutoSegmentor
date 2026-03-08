@@ -84,24 +84,13 @@ class UserInteractionHandler:
         self.window.exec_()
         
     def save_current_annotation(self):
-        batch = self.current_frame_idx // self.config.batch_size
-        frame_idx = batch * self.config.batch_size
-        
-        # Replace or append
-        while len(self.annotation_manager.points_collection) <= batch:
-            self.annotation_manager.points_collection.append([])
-            self.annotation_manager.labels_collection.append([])
-            self.annotation_manager.frame_indices.append(0)
-            self.annotation_manager.pose_keypoints_collection.append([])
-            
-        self.annotation_manager.points_collection[batch] = self.selected_points[:]
-        self.annotation_manager.labels_collection[batch] = self.selected_labels[:]
-        self.annotation_manager.frame_indices[batch] = frame_idx
-        
-        if self.pose_mode and self.pose_click_coords:
-            self.annotation_manager.pose_keypoints_collection[batch] = self.pose_click_coords[:]
-            
-        self.annotation_manager.save_points_and_labels()
+        # Save at current frame index, supporting multiple corrections per batch
+        self.annotation_manager.save_points_and_labels(
+            frame_idx=self.current_frame_idx,
+            points=self.selected_points,
+            labels=self.selected_labels,
+            pose_keypoints=self.pose_click_coords if self.pose_mode else None
+        )
 
     def load_frame_for_ui(self, frame_idx):
         if frame_idx >= len(self.frame_paths) or frame_idx < 0:
@@ -130,42 +119,64 @@ class UserInteractionHandler:
         self.pose_click_coords = []
         self.current_keypoint_index = 0
         
-        # If it's a key frame (batch start)
-        if frame_idx % self.config.batch_size == 0:
-            if batch < len(self.annotation_manager.points_collection) and len(self.annotation_manager.points_collection[batch]) > 0:
-                self.selected_points = [list(p) for p in self.annotation_manager.points_collection[batch]]
-                self.selected_labels = [int(l) for l in self.annotation_manager.labels_collection[batch]]
-                if self.pose_mode:
-                    if batch < len(self.annotation_manager.pose_keypoints_collection):
-                        self.pose_click_coords = self.annotation_manager.pose_keypoints_collection[batch]
-                        self.current_keypoint_index = len(self.pose_keypoints)
+        # PRIORITIZED LOADING LOGIC
+        # 1. Try to load manual prompt for this specific frame (highest priority)
+        manual_prompt = self.annotation_manager.get_prompt_for_frame(frame_idx)
+        
+        if manual_prompt:
+            self.selected_points = [list(p) for p in manual_prompt["points"]]
+            self.selected_labels = [int(l) for l in manual_prompt["labels"]]
+            if self.pose_mode:
+                self.pose_click_coords = manual_prompt["pose_keypoints"]
+                self.current_keypoint_index = len(self.pose_keypoints)
+            
+            # init state for single frame preview
+            with self.pipeline_processor._predictor_lock:
+                if self.sam2_video_predictor.sam2_predictor is not None:
+                    self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
+                else:
+                    self.inference_state_temp = None
+            self.user_prompt_adder_pyqt()
+            
+        else:
+            # 2. Try to load existing tracking results (Current Batch or Prev Batch Preview)
+            tracked_entry = None
+            if self.pose_mode and hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
+                # Check current batch
+                if batch < len(self.pipeline_processor.per_batch_tracked_data):
+                    tracked_batch = self.pipeline_processor.per_batch_tracked_data[batch]
+                    local_idx = frame_idx % self.config.batch_size
+                    if tracked_batch and local_idx < len(tracked_batch):
+                        tracked_entry = tracked_batch[local_idx]
                 
-                # init state
+                # Check previous batch's overflow (Plus-One Preview)
+                if not tracked_entry and batch > 0 and batch - 1 < len(self.pipeline_processor.per_batch_tracked_data):
+                    prev_batch_tracked = self.pipeline_processor.per_batch_tracked_data[batch-1]
+                    if prev_batch_tracked and len(prev_batch_tracked) > self.config.batch_size:
+                        tracked_entry = prev_batch_tracked[self.config.batch_size]
+
+            if tracked_entry:
+                kps = tracked_entry["keypoints"]
+                full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
+                for kp in kps:
+                    if kp.get("visible", 2) > 0:
+                        self.selected_points.append([kp["x"], kp["y"]])
+                        self.selected_labels.append(full_label)
+                    self.pose_click_coords.append(kp)
+                self.current_keypoint_index = len(self.pose_keypoints)
+                # For tracked data, we still want a SAM2 preview if possible
                 with self.pipeline_processor._predictor_lock:
                     if self.sam2_video_predictor.sam2_predictor is not None:
                         self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
                     else:
                         self.inference_state_temp = None
                 self.user_prompt_adder_pyqt()
-            else:
+                
+            elif frame_idx % self.config.batch_size == 0:
+                # 3. If no data exists yet, do a real-time carry-forward at batch start
                 self.prepare_batch_for_annotation(batch)
-        else:
-            # Maybe load inline tracking result to display
-            if self.pose_mode and hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
-                if batch < len(self.pipeline_processor.per_batch_tracked_data):
-                    tracked_batch = self.pipeline_processor.per_batch_tracked_data[batch]
-                    local_idx = frame_idx % self.config.batch_size
-                    if tracked_batch and local_idx < len(tracked_batch):
-                        entry = tracked_batch[local_idx]
-                        kps = entry["keypoints"]
-                        full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
-                        for kp in kps:
-                            if kp.get("visible", 2) > 0:
-                                self.selected_points.append([kp["x"], kp["y"]])
-                                self.selected_labels.append(full_label)
-                            self.pose_click_coords.append(kp)
-                        self.current_keypoint_index = len(self.pose_keypoints)
-            self.inference_state_temp = None
+            
+        self.inference_state_temp = None
 
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         if self.window:
@@ -190,26 +201,25 @@ class UserInteractionHandler:
             
             prev_kps = None
             prev_frame_idx = None
+            prev_kps = None
+            prev_frame_idx = None
+            
+            # 1. Try to get from tracked data of PREVIOUS batch
             if batch > 0:
-                # carry forward logic
                 if hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
-                    for b in range(batch - 1, -1, -1):
-                        if b < len(self.pipeline_processor.per_batch_tracked_data):
-                            prev_tracked = self.pipeline_processor.per_batch_tracked_data[b]
-                            if prev_tracked:
-                                last_entry = prev_tracked[-1]
-                                prev_kps = last_entry.get("keypoints", [])
-                                if prev_kps: 
-                                    prev_frame_idx = (b + 1) * self.config.batch_size - 1
-                                    break
-                if prev_kps is None:
-                    for b in range(batch - 1, -1, -1):
-                        if b < len(self.annotation_manager.pose_keypoints_collection):
-                            stored = self.annotation_manager.pose_keypoints_collection[b]
-                            if len(stored) > 0:
-                                prev_kps = stored
-                                prev_frame_idx = b * self.config.batch_size
-                                break
+                    if batch - 1 < len(self.pipeline_processor.per_batch_tracked_data):
+                        prev_batch_tracked = self.pipeline_processor.per_batch_tracked_data[batch-1]
+                        if prev_batch_tracked:
+                            last_entry = prev_batch_tracked[-1]
+                            prev_kps = last_entry.get("keypoints", [])
+                            prev_frame_idx = batch * self.config.batch_size - 1
+            
+            # 2. If no tracked data, try to find the LATEST manual prompt before this frame
+            if not prev_kps:
+                latest_manual = self.annotation_manager.get_latest_prompt_before(frame_idx)
+                if latest_manual:
+                    prev_kps = latest_manual["pose_keypoints"]
+                    prev_frame_idx = latest_manual["frame_idx"]
                                 
             if prev_kps and len(prev_kps) == len(self.pose_keypoints):
                 tracked_kps = prev_kps

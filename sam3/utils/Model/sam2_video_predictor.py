@@ -183,42 +183,46 @@ class SAM2VideoProcessor(SAM2Model):
         return img
 
     def prompt_encoding(self, inference_state, batch_number=-1):
-        """Encode prompts for SAM2 model."""
+        """Encode prompts for SAM2 model. Handles multiple prompt frames per batch."""
         if batch_number == -1:
+            # Single frame UI preview mode
             points_list = self.user_interaction.selected_points
             label_list = self.user_interaction.selected_labels
             frame_idx = 0
+            prompts = [{"frame_idx": 0, "points": points_list, "labels": label_list}]
         else:
             if not self.sam2_predictor:
                 return None
-            if len(self.annotation_manager.points_collection) > batch_number:
-                points_list = self.annotation_manager.points_collection[batch_number]
-                label_list = self.annotation_manager.labels_collection[batch_number]
-                frame_idx = self.annotation_manager.frame_indices[batch_number]
-            else:
-                points_list = []
-                label_list = []
-                frame_idx = 0
-        points_np = np.array(points_list, dtype=np.float32)
-        labels_np = np.array(label_list, dtype=np.int32)
-        unique_labels = np.unique(np.abs(labels_np))
-        if len(unique_labels) == 0:
+            prompts = self.annotation_manager.get_batch_prompts(batch_number, self.config.batch_size)
+
+        if not prompts:
             return None
-        for label in unique_labels:
-            self.is_prompted = True
-            obj_mask = np.abs(labels_np) == label
-            points_np1 = points_np[obj_mask]
-            raw_labels_np1 = labels_np[obj_mask]
-            labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
-            self.sam2_predictor.add_new_points_or_box(
-                inference_state=inference_state,
-                frame_idx=(frame_idx % self.config.batch_size),
-                clear_old_points=False,
-                obj_id=int(label),
-                points=points_np1,
-                labels=labels_np1
-            )
-        return not None
+
+        for p_data in prompts:
+            f_idx = p_data["frame_idx"]
+            points_np = np.array(p_data["points"], dtype=np.float32)
+            labels_np = np.array(p_data["labels"], dtype=np.int32)
+            
+            unique_labels = np.unique(np.abs(labels_np))
+            if len(unique_labels) == 0:
+                continue
+
+            for label in unique_labels:
+                self.is_prompted = True
+                obj_mask = np.abs(labels_np) == label
+                points_np1 = points_np[obj_mask]
+                raw_labels_np1 = labels_np[obj_mask]
+                labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
+                
+                self.sam2_predictor.add_new_points_or_box(
+                    inference_state=inference_state,
+                    frame_idx=(f_idx % self.config.batch_size),
+                    clear_old_points=False,
+                    obj_id=int(label),
+                    points=points_np1,
+                    labels=labels_np1
+                )
+        return True
 
     def auto_prompt_encoding(self, inference_state):
         """Encode automatic prompts from previous masks."""
@@ -244,48 +248,79 @@ class SAM2VideoProcessor(SAM2Model):
             )
         return points_np
 
-    def _track_batch_inline(self, batch_number):
-        """Run CoTracker on a single batch's frames and store the tracked data.
-        
-        This function processes a specified batch of frames by first checking if the
-        pose  configuration is enabled. It retrieves keypoints for the current batch or
-        carries  forward keypoints from the previous batch if necessary. The function
-        then logs the  tracking process and initializes the CoTrackerKeypointTracker
-        with the appropriate  parameters, including keypoints and frame paths. Finally,
-        it attempts to track the  keypoints and store the results, handling any
-        exceptions that may occur during the  tracking process.
-        """
+    def _track_batch_inline(self, batch_number, query_frame_idx=None):
+        """Run CoTracker on a single batch from a specific query frame."""
         pose_cfg = self.config.pose_config
         if not pose_cfg or not pose_cfg.get('enabled'):
             return
 
-        # Determine keypoints for this batch
-        pose_kps_collection = self.annotation_manager.pose_keypoints_collection
+        # Get all available prompts for this batch
+        batch_prompts = self.annotation_manager.get_batch_prompts(batch_number, self.config.batch_size)
+        
         batch_kps = None
-        if batch_number < len(pose_kps_collection) and len(pose_kps_collection[batch_number]) > 0:
-            batch_kps = pose_kps_collection[batch_number]
-        elif hasattr(self, 'per_batch_tracked_data'):
-            # Carry forward from the last frame of the previous batch
-            for b in range(batch_number - 1, -1, -1):
-                if b < len(self.per_batch_tracked_data) and self.per_batch_tracked_data[b]:
-                    last_entry = self.per_batch_tracked_data[b][-1]
-                    batch_kps = last_entry.get("keypoints", [])
+        chosen_query_rel_idx = 0
+
+        if query_frame_idx is not None:
+            # Force specific query frame (user requested reprocess from here)
+            for p in batch_prompts:
+                if p["frame_idx"] == query_frame_idx:
+                    batch_kps = p["pose_keypoints"]
+                    chosen_query_rel_idx = query_frame_idx % self.config.batch_size
                     break
+        
+        if not batch_kps:
+            # Fallback: use the latest prompt in the batch, or carry forward
+            if batch_prompts:
+                latest_p = batch_prompts[-1]
+                batch_kps = latest_p["pose_keypoints"]
+                chosen_query_rel_idx = latest_p["frame_idx"] % self.config.batch_size
+            elif hasattr(self, 'per_batch_tracked_data'):
+                # Carry forward from the last frame of the previous batch
+                for b in range(batch_number - 1, -1, -1):
+                    if b < len(self.per_batch_tracked_data) and self.per_batch_tracked_data[b]:
+                        last_entry = self.per_batch_tracked_data[b][-1]
+                        kps_prev = last_entry.get("keypoints", [])
+                        if kps_prev:
+                            # We need to track from (b+1)*batch_size - 1 to batch_number*batch_size
+                            prev_idx = (b + 1) * self.config.batch_size - 1
+                            curr_idx = batch_number * self.config.batch_size
+                            
+                            try:
+                                from ..FileManagement.CoTrackerKeypointTracker import track_between_frames
+                                ct_cfg = pose_cfg.get('cotracker', {})
+                                checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
+                                import os as _os
+                                base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
+                                checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
+                                window_len = ct_cfg.get('window_len', 60)
+                                
+                                tracked_gap = track_between_frames(
+                                    kps_prev, self.frame_paths[prev_idx], self.frame_paths[curr_idx],
+                                    checkpoint, window_len
+                                )
+                                if tracked_gap:
+                                    batch_kps = tracked_gap
+                                    chosen_query_rel_idx = 0
+                                    break
+                            except Exception as e:
+                                logger.warning(f"Failed to track inter-batch gap: {e}")
+                                batch_kps = kps_prev
+                                chosen_query_rel_idx = 0
+                                break
 
         if not batch_kps:
-            logger.info(f"[CoTracker] Batch {batch_number + 1}: No keypoints available, skipping inline tracking")
+            logger.info(f"[CoTracker] Batch {batch_number + 1}: No keypoints available, skipping")
             if batch_number < len(self.per_batch_tracked_data):
                 self.per_batch_tracked_data[batch_number] = []
             return
 
-        # Get this batch's frame paths
         batch_start = batch_number * self.config.batch_size
-        batch_end = min(batch_start + self.config.batch_size, len(self.frame_paths))
+        batch_end = min(batch_start + self.config.batch_size + 1, len(self.frame_paths))
         batch_frame_paths = self.frame_paths[batch_start:batch_end]
 
         logger.info(
-            f"[CoTracker] Batch {batch_number + 1}: Tracking {len(batch_kps)} keypoints "
-            f"across {len(batch_frame_paths)} frames"
+            f"[CoTracker] Batch {batch_number + 1}: Tracking up to {len(batch_frame_paths)} frames "
+            f"from {batch_start + chosen_query_rel_idx} ({len(batch_kps)} keypoints)"
         )
 
         try:
@@ -303,13 +338,14 @@ class SAM2VideoProcessor(SAM2Model):
                 frame_paths=batch_frame_paths,
                 checkpoint=checkpoint,
                 window_len=window_len,
+                query_frame_idx=chosen_query_rel_idx
             )
             tracked = tracker.get_all_tracked()
             if batch_number < len(self.per_batch_tracked_data):
                 self.per_batch_tracked_data[batch_number] = tracked
-            logger.info(f"[CoTracker] Batch {batch_number + 1}: Inline tracking complete ({len(tracked)} frames)")
+            logger.info(f"[CoTracker] Batch {batch_number + 1}: Tracking complete")
         except Exception as e:
-            logger.error(f"[CoTracker] Batch {batch_number + 1}: Inline tracking failed: {e}")
+            logger.error(f"[CoTracker] Batch {batch_number + 1}: Failed: {e}")
             if batch_number < len(self.per_batch_tracked_data):
                 self.per_batch_tracked_data[batch_number] = []
 
@@ -342,7 +378,8 @@ class SAM2VideoProcessor(SAM2Model):
                 temp_directory=self.config.temp_directory,
                 prompt_encoding=self.prompt_encoding,
                 auto_prompt_encoding=self.auto_prompt_encoding,
-                predictor_lock=self._predictor_lock
+                predictor_lock=self._predictor_lock,
+                starting_frame_idx=batch_index
             )
             logger.info(f"[MaskGen] ══ Batch {batch_num + 1}/{total_batches} mask generation completed ══")
 
