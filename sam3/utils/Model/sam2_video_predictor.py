@@ -262,18 +262,20 @@ class SAM2VideoProcessor(SAM2Model):
         # Determine keypoints for this batch
         pose_kps_collection = self.annotation_manager.pose_keypoints_collection
         batch_kps = None
-        if batch_number < len(pose_kps_collection) and pose_kps_collection[batch_number]:
+        if batch_number < len(pose_kps_collection) and len(pose_kps_collection[batch_number]) > 0:
             batch_kps = pose_kps_collection[batch_number]
-        elif self.per_batch_tracked_data:
+        elif hasattr(self, 'per_batch_tracked_data'):
             # Carry forward from the last frame of the previous batch
-            prev_tracked = self.per_batch_tracked_data[-1]
-            if prev_tracked:
-                last_entry = prev_tracked[-1]  # Last frame's tracking data
-                batch_kps = last_entry.get("keypoints", [])
+            for b in range(batch_number - 1, -1, -1):
+                if b < len(self.per_batch_tracked_data) and self.per_batch_tracked_data[b]:
+                    last_entry = self.per_batch_tracked_data[b][-1]
+                    batch_kps = last_entry.get("keypoints", [])
+                    break
 
         if not batch_kps:
             logger.info(f"[CoTracker] Batch {batch_number + 1}: No keypoints available, skipping inline tracking")
-            self.per_batch_tracked_data.append([])
+            if batch_number < len(self.per_batch_tracked_data):
+                self.per_batch_tracked_data[batch_number] = []
             return
 
         # Get this batch's frame paths
@@ -303,11 +305,13 @@ class SAM2VideoProcessor(SAM2Model):
                 window_len=window_len,
             )
             tracked = tracker.get_all_tracked()
-            self.per_batch_tracked_data.append(tracked)
+            if batch_number < len(self.per_batch_tracked_data):
+                self.per_batch_tracked_data[batch_number] = tracked
             logger.info(f"[CoTracker] Batch {batch_number + 1}: Inline tracking complete ({len(tracked)} frames)")
         except Exception as e:
             logger.error(f"[CoTracker] Batch {batch_number + 1}: Inline tracking failed: {e}")
-            self.per_batch_tracked_data.append([])
+            if batch_number < len(self.per_batch_tracked_data):
+                self.per_batch_tracked_data[batch_number] = []
 
     def _mask_generation_consumer(self, total_batches):
         """Generates masks for batches as prompts become available."""
@@ -347,87 +351,28 @@ class SAM2VideoProcessor(SAM2Model):
     def run(self):
         """Run the SAM2 video predictor pipeline.
         
-        This function orchestrates the processing of video frames in either parallel or
-        sequential mode based on the configuration. It manages batch processing, user
-        interaction for prompt collection, and mask generation. In parallel mode, it
-        spawns a consumer thread for mask generation while collecting user prompts as
-        needed. In sequential mode, it processes each batch, collects user points, and
-        generates masks accordingly, ensuring efficient handling of frames and
-        resources.
-        
-        Args:
-            self: The instance of the class containing the configuration and methods for
-                processing.
+        This delegates the flow control to the UI. The UI will call processing
+        methods in a background thread when the user accepts annotations.
         """
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         logger.info(f"[Pipeline] {len(self.frame_paths)} frames, {total_batches} batches (batch_size={self.config.batch_size})")
 
-        if not self.config.auto_prompt_encoding:
-            # --- Parallel mode: producer (main thread) + consumer (background) ---
-            consumer = threading.Thread(
-                target=self._mask_generation_consumer,
-                args=(total_batches,),
-                daemon=True
-            )
-            consumer.start()
-
-            # Check if all prompts are already available (pre-loaded from JSON)
-            start_batch_idx = self.annotation_manager.check_data_sufficiency()
-            if start_batch_idx >= len(self.frame_paths):
-                logger.info(f"[Annotation] All {total_batches} batches already have prompts — skipping interactive collection")
-            else:
-                # Collect user prompts only for batches that need them
-                for batch_num in range(total_batches):
-                    if batch_num * self.config.batch_size >= start_batch_idx:
-                        logger.info(f"[Annotation] Collecting prompts for batch {batch_num + 1}/{total_batches}")
-                        self.user_interaction.collect_user_points(
-                            batch_num,
-                            self.frame_paths,
-                            self.sam2_predictor,
-                            self.click_event,
-                            self.mask_processor
-                        )
-
-            # Wait for background mask generation to complete
-            consumer.join()
-            clear_directory(self.config.temp_directory)
-            return
-
-        # --- Sequential mode (auto_prompt_encoding=True): existing behavior ---
-        batch_index = 0
-        while batch_index < len(self.frame_paths):
-            logger.info(
-                f"Processing batch {(batch_index // self.config.batch_size) + 1}/"
-                f"{total_batches}")
-            self.is_prompted = False
-            start_batch_idx = self.annotation_manager.check_data_sufficiency()
-            if batch_index >= start_batch_idx:
-                self.user_interaction.collect_user_points(
-                    batch_index // self.config.batch_size,
-                    self.frame_paths,
-                    self.sam2_predictor,
-                    self.click_event,
-                    self.mask_processor
-                )
-            self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
-            batch_number = batch_index // self.config.batch_size
+        # Ensure per_batch_tracked_data is initialized
+        self.per_batch_tracked_data = [[] for _ in range(total_batches)]
+        
+        # Determine if all prompts are theoretically already available
+        start_frame_idx = self.annotation_manager.check_data_sufficiency()
+        initial_batch = start_frame_idx // self.config.batch_size
+        
+        if initial_batch > 0:
+            logger.info(f"[Annotation] Pre-tracking {initial_batch} existing batches...")
+            for b in range(initial_batch):
+                self._track_batch_inline(b)
             
-            if self.config.sam_enabled:
-                self.mask_processor.generate_mask(
-                    batch_number=batch_number,
-                    sam2_predictor=self.sam2_predictor,
-                    temp_directory=self.config.temp_directory,
-                    prompt_encoding=self.prompt_encoding,
-                    auto_prompt_encoding=self.auto_prompt_encoding,
-                    predictor_lock=self._predictor_lock
-                )
-            else:
-                logger.info(f"[Pipeline] Batch {batch_number + 1}: SAM disabled, skipping mask generation")
-
-            # Inline CoTracker tracking for this batch (mirrors auto_prompt pattern)
-            if (self.config.pose_config and self.config.pose_config.get('enabled')
-                    and self.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):
-                self._track_batch_inline(batch_number)
-            batch_index += self.config.batch_size
-            logger.info(f"[Pipeline] ══ Batch {(batch_index // self.config.batch_size)}/{total_batches} completed ══")
+        if start_frame_idx >= len(self.frame_paths):
+            logger.info(f"[Annotation] All {total_batches} batches already have prompts, but starting UI for review.")
+            
+        # UI controls the flow
+        self.user_interaction.start_ui_loop(self.frame_paths)
+        
         clear_directory(self.config.temp_directory)

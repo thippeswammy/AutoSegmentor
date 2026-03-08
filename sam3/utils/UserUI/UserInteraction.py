@@ -8,29 +8,34 @@ from .logger_config import logger
 
 
 class UserInteractionHandler:
-    """Handles user interface and interaction logic."""
+    """Handles user interface, state, and interaction logic."""
 
     def __init__(self, config, annotation_manager, sam2_video_predictor):
         self.config = config
         self.annotation_manager = annotation_manager
         self.sam2_video_predictor = sam2_video_predictor
+        self.pipeline_processor = sam2_video_predictor
         self.window_name = "SAM2 Annotation Tool"
+        
         self.current_class_label = 1
         self.current_instance_id = 1
         self.display_text = f"In class ID {self.current_class_label}, instance ID: {self.current_instance_id}"
         self.is_drawing = False
+        
         self.selected_points = []
         self.selected_labels = []
         self.current_frame = None
         self.current_frame_only_text = None
         self.current_frame_only_with_points = None
-        self.current_frame_only_with_points = None
-        self.class_instance_counter = defaultdict(int)
+        self.frame_paths = []
+        self.current_frame_idx = 0
+        self.inference_state_temp = None
+        self.window = None
 
         # Pose Estimation State
         self.pose_mode = False
         self.pose_keypoints = []
-        self.pose_click_coords = []  # Stores [{"name": str, "point_id": int, "x": int, "y": int}]
+        self.pose_click_coords = []
         self.current_keypoint_index = 0
         self.pose_class_id = 1
         self.pose_object_id = 1
@@ -39,18 +44,15 @@ class UserInteractionHandler:
             self.pose_keypoints = self.config.pose_config.get('keypoints', [])
             self.pose_class_id = self.config.pose_config.get('class_id', 1)
             self.pose_object_id = self.config.pose_config.get('object_id', 1)
-            # Lock class_label and instance_id to the single pose object identity
             self.current_class_label = self.pose_class_id
             self.current_instance_id = self.pose_object_id
             self.display_text = f"Click: {self.pose_keypoints[0]}" if self.pose_keypoints else "Pose Mode: No keypoints defined"
 
     @staticmethod
     def encode_label(class_id, instance_id):
-        """Encode class and instance IDs into a single label."""
         return class_id * 1000 + instance_id
 
     def change_class_label_pyqt(self, label):
-        """Change the current class label and update instance ID."""
         if self.pose_mode:
             logger.warning("Class selection disabled in Pose Mode")
             return
@@ -61,145 +63,182 @@ class UserInteractionHandler:
                 self.current_instance_id = max(abs(i) % 1000, self.current_instance_id)
 
     def user_prompt_adder_pyqt(self):
-        """Called by MainWindow to update drawing without showing cv2 window."""
-        self.sam2_video_predictor.user_prompt_adder(self.inference_state_temp, self.frame_path)
+        # We need the predictor lock if it's running
+        with self.pipeline_processor._predictor_lock:
+            if self.inference_state_temp is not None:
+                self.sam2_video_predictor.user_prompt_adder(self.inference_state_temp, self.frame_paths[self.current_frame_idx])
 
-
-    def collect_user_points(self, batch, frame_paths, sam2_predictor, click_event_callback, mask_processor):
-        """Collect user points for annotation in a video frame.
+    def start_ui_loop(self, frame_paths):
+        self.frame_paths = frame_paths
         
-        This function manages the user interaction for annotating keypoints in a video
-        frame. It initializes the display, checks for existing annotations, and allows
-        the user to select points either by clicking or through keyboard inputs. The
-        function also handles the carry-forward of keypoints from previous batches,
-        integrates with a tracking system if available, and updates the annotation
-        manager with the selected points and labels.
-        
-        Args:
-            self: The instance of the class.
-            batch (int): The current batch index for processing frames.
-            frame_paths (list): A list of paths to the video frames.
-            sam2_predictor: An object responsible for making predictions on the frames.
-            click_event_callback: A callback function for handling mouse click events.
-            mask_processor: An object for processing masks related to the annotations.
-        """
         start_batch_idx = self.annotation_manager.check_data_sufficiency()
-        self.frame_path = frame_paths[batch * self.config.batch_size]
-        batch_idx = (start_batch_idx // self.config.batch_size)
-        frame_idx = batch_idx * self.config.batch_size
-        self.inference_state_temp = None
-        if sam2_predictor:
-            self.inference_state_temp = sam2_predictor.init_state(
-                video_path=None,
-                frame_paths=[os.path.abspath(self.frame_path)]
-            )
-        self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
-            self.frame_path)
+        initial_batch = start_batch_idx // self.config.batch_size
+        if initial_batch * self.config.batch_size >= len(frame_paths):
+            initial_batch = max(0, (len(frame_paths) - 1) // self.config.batch_size)
+            
+        from .MainWindow import AnnotationWindow
+        self.window = AnnotationWindow(self, self.config)
+        
+        self.load_frame_for_ui(initial_batch * self.config.batch_size)
+        logger.info("Opening UI window. Proceed with annotations.")
+        self.window.exec_()
+        
+    def save_current_annotation(self):
+        batch = self.current_frame_idx // self.config.batch_size
+        frame_idx = batch * self.config.batch_size
+        
+        # Replace or append
+        while len(self.annotation_manager.points_collection) <= batch:
+            self.annotation_manager.points_collection.append([])
+            self.annotation_manager.labels_collection.append([])
+            self.annotation_manager.frame_indices.append(0)
+            self.annotation_manager.pose_keypoints_collection.append([])
+            
+        self.annotation_manager.points_collection[batch] = self.selected_points[:]
+        self.annotation_manager.labels_collection[batch] = self.selected_labels[:]
+        self.annotation_manager.frame_indices[batch] = frame_idx
+        
+        if self.pose_mode and self.pose_click_coords:
+            self.annotation_manager.pose_keypoints_collection[batch] = self.pose_click_coords[:]
+            
+        self.annotation_manager.save_points_and_labels()
+
+    def load_frame_for_ui(self, frame_idx):
+        if frame_idx >= len(self.frame_paths) or frame_idx < 0:
+            return
+            
+        self.current_frame_idx = frame_idx
+        frame_path = self.frame_paths[frame_idx]
+        batch = frame_idx // self.config.batch_size
+        
+        self.current_frame_only_with_points = cv2.imread(frame_path)
+        
+        # Mix mask if exists
+        mask_filename = f"{self.config.prefix}{self.config.video_number}_{frame_idx:05d}.png"
+        mask_path = os.path.join(self.config.rendered_frames_dir, mask_filename)
+        if os.path.exists(mask_path):
+            mask = cv2.imread(mask_path)
+            non_zero_mask = np.any(mask > 0, axis=-1)
+            non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)
+            blended = cv2.addWeighted(self.current_frame_only_with_points, 0.5, mask, 0.5, 0)
+            np.copyto(self.current_frame_only_with_points, blended, where=non_zero_mask_3d)
+            
+        self.current_frame = self.current_frame_only_with_points.copy()
+        
+        self.selected_points = []
+        self.selected_labels = []
+        self.pose_click_coords = []
+        self.current_keypoint_index = 0
+        
+        # If it's a key frame (batch start)
+        if frame_idx % self.config.batch_size == 0:
+            if batch < len(self.annotation_manager.points_collection) and len(self.annotation_manager.points_collection[batch]) > 0:
+                self.selected_points = [list(p) for p in self.annotation_manager.points_collection[batch]]
+                self.selected_labels = [int(l) for l in self.annotation_manager.labels_collection[batch]]
+                if self.pose_mode:
+                    if batch < len(self.annotation_manager.pose_keypoints_collection):
+                        self.pose_click_coords = self.annotation_manager.pose_keypoints_collection[batch]
+                        self.current_keypoint_index = len(self.pose_keypoints)
+                
+                # init state
+                with self.pipeline_processor._predictor_lock:
+                    if self.sam2_video_predictor.sam2_predictor is not None:
+                        self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
+                    else:
+                        self.inference_state_temp = None
+                self.user_prompt_adder_pyqt()
+            else:
+                self.prepare_batch_for_annotation(batch)
+        else:
+            # Maybe load inline tracking result to display
+            if self.pose_mode and hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
+                if batch < len(self.pipeline_processor.per_batch_tracked_data):
+                    tracked_batch = self.pipeline_processor.per_batch_tracked_data[batch]
+                    local_idx = frame_idx % self.config.batch_size
+                    if tracked_batch and local_idx < len(tracked_batch):
+                        entry = tracked_batch[local_idx]
+                        kps = entry["keypoints"]
+                        full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
+                        for kp in kps:
+                            if kp.get("visible", 2) > 0:
+                                self.selected_points.append([kp["x"], kp["y"]])
+                                self.selected_labels.append(full_label)
+                            self.pose_click_coords.append(kp)
+                        self.current_keypoint_index = len(self.pose_keypoints)
+            self.inference_state_temp = None
+
+        total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
+        if self.window:
+            self.window.set_batch_info(batch, total_batches, frame_idx, len(self.frame_paths))
+            self.window.refresh_display()
+            self.window._update_sidebar()
+        
+    def prepare_batch_for_annotation(self, batch):
+        frame_idx = batch * self.config.batch_size
+        frame_path = self.frame_paths[frame_idx]
+        
+        with self.pipeline_processor._predictor_lock:
+            if self.sam2_video_predictor.sam2_predictor is not None:
+                self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
+            else:
+                self.inference_state_temp = None
             
         if self.pose_mode:
             self.current_keypoint_index = 0
-            self.selected_points = []
-            self.selected_labels = []
-            self.pose_click_coords = []
             self.current_class_label = self.pose_class_id
             self.current_instance_id = self.pose_object_id
-
+            
             prev_kps = None
-            if batch < len(self.annotation_manager.pose_keypoints_collection):
-                stored = self.annotation_manager.pose_keypoints_collection[batch]
-                if stored:
-                    prev_kps = stored
-            if prev_kps is None and batch > 0:
-                if hasattr(self.sam2_video_predictor, 'per_batch_tracked_data'):
+            prev_frame_idx = None
+            if batch > 0:
+                # carry forward logic
+                if hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
                     for b in range(batch - 1, -1, -1):
-                        if b < len(self.sam2_video_predictor.per_batch_tracked_data):
-                            prev_tracked = self.sam2_video_predictor.per_batch_tracked_data[b]
+                        if b < len(self.pipeline_processor.per_batch_tracked_data):
+                            prev_tracked = self.pipeline_processor.per_batch_tracked_data[b]
                             if prev_tracked:
                                 last_entry = prev_tracked[-1]
                                 prev_kps = last_entry.get("keypoints", [])
-                                if prev_kps:
-                                    logger.info(f"[Annotation] Batch {batch + 1}: Carry-forward using inline-tracked last-frame positions from batch {b + 1}")
+                                if prev_kps: 
+                                    prev_frame_idx = (b + 1) * self.config.batch_size - 1
                                     break
                 if prev_kps is None:
                     for b in range(batch - 1, -1, -1):
                         if b < len(self.annotation_manager.pose_keypoints_collection):
                             stored = self.annotation_manager.pose_keypoints_collection[b]
-                            if stored:
+                            if len(stored) > 0:
                                 prev_kps = stored
+                                prev_frame_idx = b * self.config.batch_size
                                 break
-
+                                
             if prev_kps and len(prev_kps) == len(self.pose_keypoints):
                 tracked_kps = prev_kps
-                tracker_type = (
-                    self.config.pose_config.get('tracker', 'lk').lower()
-                    if self.config.pose_config else 'lk'
-                )
-                if tracker_type == 'cotracker' and batch > 0:
+                tracker_type = self.config.pose_config.get('tracker', 'lk').lower() if self.config.pose_config else 'lk'
+                if tracker_type == 'cotracker' and batch > 0 and prev_frame_idx is not None:
                     try:
                         from ..FileManagement.CoTrackerKeypointTracker import track_between_frames
-                        prev_batch_end_idx = batch * self.config.batch_size - 1
-                        if 0 <= prev_batch_end_idx < len(frame_paths):
-                            prev_frame_path = frame_paths[prev_batch_end_idx]
-                            curr_frame_path = self.frame_path 
+                        if 0 <= prev_frame_idx < len(self.frame_paths):
+                            prev_frame_path = self.frame_paths[prev_frame_idx]
                             ct_cfg = self.config.pose_config.get('cotracker', {})
                             checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
                             import os as _os
                             base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
                             checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
                             window_len = ct_cfg.get('window_len', 60)
-                            result = track_between_frames(
-                                prev_kps, prev_frame_path, curr_frame_path,
-                                checkpoint=checkpoint, window_len=window_len
-                            )
-                            if result:
-                                tracked_kps = result
-                                logger.info(f"[Annotation] Batch {batch + 1}: CoTracker carry-forward tracking applied")
+                            result = track_between_frames(prev_kps, prev_frame_path, frame_path, checkpoint, window_len)
+                            if result: tracked_kps = result
                     except Exception as e:
-                        logger.warning(f"CoTracker carry-forward failed, using static copy: {e}")
-
+                        logger.warning(f"CoTracker carry-forward failed: {e}")
+                        
                 full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
                 for kp in sorted(tracked_kps, key=lambda k: k["point_id"]):
                     x, y = kp["x"], kp["y"]
-                    self.selected_points.append([x, y])
-                    self.selected_labels.append(full_label)
+                    if kp.get("visible", 2) > 0:
+                        self.selected_points.append([x, y])
+                        self.selected_labels.append(full_label)
                     self.pose_click_coords.append({
-                        "name": kp["name"],
-                        "point_id": kp["point_id"],
-                        "x": x,
-                        "y": y,
-                        "visible": kp.get("visible", True)
+                        "name": kp["name"], "point_id": kp["point_id"],
+                        "x": x, "y": y, "visible": kp.get("visible", True)
                     })
                 self.current_keypoint_index = len(self.pose_keypoints)
-                logger.info(f"[Annotation] Batch {batch + 1}: Reviewing carry-forwarded points. Press Accept to confirm.")
-        else:
-            self.current_class_label = self.current_instance_id = 1
-
-        # --- Launch PyQt MainWindow ---
-        from .MainWindow import AnnotationWindow
-        window = AnnotationWindow(self, self.config)
-        total_batches = (len(frame_paths) + self.config.batch_size - 1) // self.config.batch_size
-        window.set_batch_info(batch, total_batches, frame_idx, len(frame_paths))
-        
-        # Populate initial mask if pre-populated keypoints exist
-        if self.selected_points:
-            self.user_prompt_adder_pyqt()
-            window.refresh_display()
-            window._update_sidebar()
-
-        # Block the pipeline until user hits Accept (which closes the dialog)
-        window.exec_()
-        
-        # Save points back
-        self.annotation_manager.points_collection.append(self.selected_points[:])
-        self.annotation_manager.labels_collection.append(self.selected_labels[:])
-        self.annotation_manager.frame_indices.append(frame_idx)
-        if self.pose_mode and self.pose_click_coords:
-            self.annotation_manager.pose_keypoints_collection.append(self.pose_click_coords[:])
-        else:
-            self.annotation_manager.pose_keypoints_collection.append([])
-            
-        self.annotation_manager.save_points_and_labels()
-        
-        self.selected_points.clear()
-        self.selected_labels.clear()
-        self.pose_click_coords.clear()
+                self.user_prompt_adder_pyqt()

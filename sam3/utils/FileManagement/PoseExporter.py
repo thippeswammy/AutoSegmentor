@@ -48,6 +48,25 @@ class PoseExporter:
         window_len = ct_cfg.get('window_len', 60)
         return checkpoint, window_len
 
+    def _get_bbox_from_mask(self, global_idx):
+        mask_filename = f"{self.config.prefix}{self.config.video_number}_{global_idx:05d}.png"
+        mask_path = os.path.join(self.config.rendered_frames_dir, mask_filename)
+        if not os.path.exists(mask_path):
+            return [0, 0, 0, 0]
+        
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        if mask is None:
+            return [0, 0, 0, 0]
+            
+        _, thresh = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            return [0, 0, 0, 0]
+            
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        return [int(x), int(y), int(w), int(h)]
+
     def _track_batch_cotracker(self, batch_kps, batch_frame_paths):
         """Track keypoints through a batch using CoTracker."""
         from .CoTrackerKeypointTracker import CoTrackerKeypointTracker
@@ -154,11 +173,18 @@ class PoseExporter:
                         fid = int(os.path.splitext(fname)[0].split('_')[-1])
                     except ValueError:
                         fid = frame_idx
+                    
+                    bbox = self._get_bbox_from_mask(frame_idx)
+                    
                     pose_data.append({
                         "image_id": fname,
                         "frame_index": fid,
-                        "keypoints": [{"name": kp, "point_id": j, "x": -1, "y": -1, "visible": 0}
-                                       for j, kp in enumerate(self.keypoints_def)]
+                        "instances": [{
+                            "instance_id": self.config.pose_config.get("object_id", 1),
+                            "bbox": bbox,
+                            "keypoints": [{"name": kp, "point_id": j, "x": -1, "y": -1, "visible": 0}
+                                           for j, kp in enumerate(self.keypoints_def)]
+                        }]
                     })
                 continue
 
@@ -190,10 +216,16 @@ class PoseExporter:
                 except ValueError:
                     fid = global_idx
 
+                bbox = self._get_bbox_from_mask(global_idx)
+
                 pose_data.append({
                     "image_id": fname,
                     "frame_index": fid,
-                    "keypoints": entry["keypoints"]
+                    "instances": [{
+                        "instance_id": self.config.pose_config.get("object_id", 1),
+                        "bbox": bbox,
+                        "keypoints": entry["keypoints"]
+                    }]
                 })
 
         # Save to JSON
