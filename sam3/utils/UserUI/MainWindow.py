@@ -242,7 +242,7 @@ class AnnotationWindow(QDialog):
         self.canvas.point_dragging.connect(self.handle_point_dragging)
         self.canvas.point_deleted.connect(self.handle_point_deleted)
         self.sidebar.keypoint_progress.visibility_toggled.connect(self.handle_visibility_toggled)
-        self.undo_stack.indexChanged.connect(lambda idx: self._trigger_prompt_update())
+        self.undo_stack.indexChanged.connect(self._on_undo_stack_changed)
 
     # ─── Event Handlers ──────────────────────────────────────────────────────
     
@@ -328,6 +328,10 @@ class AnnotationWindow(QDialog):
         else:
             self.canvas.set_image(self.handler.current_frame)
         self._redraw_annotations()
+
+    def _on_undo_stack_changed(self, idx):
+        """Handle undo stack updates."""
+        self._trigger_prompt_update()
 
     def _trigger_prompt_update(self):
         """Invoke SAM2 to update the mask based on current points."""
