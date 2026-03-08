@@ -284,11 +284,17 @@ class AnnotationWindow(QDialog):
     # ─── Navigation Handlers ─────────────────────────────────────────────────
     def prev_image(self):
         idx = max(0, self.handler.current_frame_idx - 1)
-        self.handler.load_frame_for_ui(idx)
+        if self.handler.has_data_for_frame(idx) or idx == 0:
+            self.handler.load_frame_for_ui(idx)
+        else:
+            logger.info(f"Navigation blocked: Frame {idx} has no points/results yet.")
         
     def next_image(self):
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + 1)
-        self.handler.load_frame_for_ui(idx)
+        if self.handler.has_data_for_frame(idx):
+            self.handler.load_frame_for_ui(idx)
+        else:
+            logger.info(f"Navigation blocked: Frame {idx} has no points/results yet.")
         
     def prev_batch(self):
         idx = max(0, self.handler.current_frame_idx - self.config.batch_size)
@@ -518,10 +524,5 @@ class AnnotationWindow(QDialog):
             
         logger.info(f"Finished processing batch {batch}")
         
-        # If the user is on the processed batch, navigate to next automatically
-        if self.handler.current_frame_idx // self.config.batch_size == batch:
-            next_batch_start = (batch + 1) * self.config.batch_size
-            if next_batch_start < len(self.handler.frame_paths):
-                self.handler.load_frame_for_ui(next_batch_start)
-            else:
-                self.handler.load_frame_for_ui(self.handler.current_frame_idx) # Refresh view
+        # Stay on current frame after processing to allow manual inspection
+        self.handler.load_frame_for_ui(self.handler.current_frame_idx)

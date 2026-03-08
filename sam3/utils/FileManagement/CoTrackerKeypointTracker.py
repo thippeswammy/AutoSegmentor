@@ -66,7 +66,7 @@ class CoTrackerKeypointTracker:
         tracked_frames: List of per-frame keypoint dicts (same format as KeypointTracker).
     """
 
-    def __init__(self, keypoint_defs, initial_coords, frame_paths, checkpoint, window_len=60, query_frame_idx=0):
+    def __init__(self, keypoint_defs, initial_coords, frame_paths, checkpoint, window_len=60, query_frame_idx=0, backward_tracking=False):
         """Initialize and run CoTracker tracking on the batch.
 
         Args:
@@ -120,12 +120,12 @@ class CoTrackerKeypointTracker:
             queries[0, i, 2] = float(coord["y"])
 
         # Run CoTracker inference
-        logger.info(f"Running CoTracker inference (backward_tracking=True)...")
+        logger.info(f"Running CoTracker inference (backward_tracking={backward_tracking})...")
         with torch.no_grad():
             pred_tracks, pred_visibility = model(
                 video,
                 queries=queries,
-                backward_tracking=True,
+                backward_tracking=backward_tracking,
             )
         # pred_tracks: (1, T, N, 2) — (x, y) pixel coordinates
         # pred_visibility: (1, T, N) — boolean visibility

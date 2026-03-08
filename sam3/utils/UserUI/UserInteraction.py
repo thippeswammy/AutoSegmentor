@@ -184,6 +184,31 @@ class UserInteractionHandler:
             self.window.refresh_display()
             self.window._update_sidebar()
         
+    def has_data_for_frame(self, frame_idx):
+        """Check if a frame has manual prompts or tracking results."""
+        # 1. Manual prompt check
+        if self.annotation_manager.get_prompt_for_frame(frame_idx):
+            return True
+            
+        # 2. Tracking data check
+        batch = frame_idx // self.config.batch_size
+        if hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
+            # Current batch data
+            if batch < len(self.pipeline_processor.per_batch_tracked_data):
+                tracked_batch = self.pipeline_processor.per_batch_tracked_data[batch]
+                local_idx = frame_idx % self.config.batch_size
+                if tracked_batch and local_idx < len(tracked_batch):
+                    return True
+            
+            # Previous batch overflow (Plus-One Preview)
+            if batch > 0 and batch - 1 < len(self.pipeline_processor.per_batch_tracked_data):
+                prev_batch_tracked = self.pipeline_processor.per_batch_tracked_data[batch-1]
+                if prev_batch_tracked and len(prev_batch_tracked) > self.config.batch_size:
+                    # The overflow frame is the first frame of 'batch'
+                    if frame_idx == batch * self.config.batch_size:
+                        return True
+        return False
+        
     def prepare_batch_for_annotation(self, batch):
         frame_idx = batch * self.config.batch_size
         frame_path = self.frame_paths[frame_idx]

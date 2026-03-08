@@ -42,7 +42,6 @@ class SAM2VideoProcessor(SAM2Model):
             logger.error("Missing the video file paths or video")
             sys.exit(1)
         self.is_prompted = False
-        self.per_batch_tracked_data = []  # Accumulated per-batch CoTracker results
         self.is_drawing = is_drawing
         self._predictor_lock = threading.Lock()
         extractor = FrameExtractor(
@@ -52,6 +51,8 @@ class SAM2VideoProcessor(SAM2Model):
         extractor.run()
         self.frame_handler = FrameHandler(sam2Config.frames_directory, sam2Config.temp_directory)
         self.frame_paths = self.frame_handler.get_frame_files()
+        total_batches = (len(self.frame_paths) + sam2Config.batch_size - 1) // sam2Config.batch_size
+        self.per_batch_tracked_data = [[] for _ in range(total_batches)]
         self.annotation_manager = AnnotationManager(sam2Config, self.frame_paths)
         self.user_interaction = UserInteractionHandler(sam2Config, self.annotation_manager, self)
         self.mask_processor = MaskProcessor(sam2Config)
@@ -338,7 +339,8 @@ class SAM2VideoProcessor(SAM2Model):
                 frame_paths=batch_frame_paths,
                 checkpoint=checkpoint,
                 window_len=window_len,
-                query_frame_idx=chosen_query_rel_idx
+                query_frame_idx=chosen_query_rel_idx,
+                backward_tracking=False
             )
             tracked = tracker.get_all_tracked()
             if batch_number < len(self.per_batch_tracked_data):
