@@ -9,7 +9,7 @@ class SAM2Model:
         self.config = config
         self.device = self.get_device()
         self.gpus = GPUtil.getGPUs()
-        self.sam2_predictor = self.build_predictor()
+        self.sam2_predictor = self.build_predictor() if getattr(self.config, 'sam_enabled', True) else None
 
     def get_device(self):
         """Determine available device (CUDA or CPU)."""

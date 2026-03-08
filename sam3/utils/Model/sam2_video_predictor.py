@@ -27,7 +27,7 @@ class SAM2VideoProcessor(SAM2Model):
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
                  window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5, pose_config=None,
-                 auto_prompt_encoding=True):
+                 auto_prompt_encoding=True, sam_enabled=True):
         self.inference_state = None
         sam2Config = SAM2Config(
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
@@ -35,7 +35,7 @@ class SAM2VideoProcessor(SAM2Model):
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
             temp_processing_dir=temp_processing_dir, window_size=window_size,
             label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size,
-            pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding
+            pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding, sam_enabled=sam_enabled
         )
         super().__init__(sam2Config)
         if video_path_template is None:
@@ -138,6 +138,10 @@ class SAM2VideoProcessor(SAM2Model):
 
     def user_prompt_adder(self, inference_state, frame_path):
         """Add user prompts and update the displayed frame."""
+        if not self.sam2_predictor:
+            self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
+            return
+
         with self._predictor_lock:
             self.sam2_predictor.reset_state(inference_state)
             self.is_prompted = False
@@ -185,6 +189,8 @@ class SAM2VideoProcessor(SAM2Model):
             label_list = self.user_interaction.selected_labels
             frame_idx = 0
         else:
+            if not self.sam2_predictor:
+                return None
             if len(self.annotation_manager.points_collection) > batch_number:
                 points_list = self.annotation_manager.points_collection[batch_number]
                 label_list = self.annotation_manager.labels_collection[batch_number]
@@ -305,6 +311,10 @@ class SAM2VideoProcessor(SAM2Model):
 
     def _mask_generation_consumer(self, total_batches):
         """Generates masks for batches as prompts become available."""
+        if not self.config.sam_enabled:
+            logger.info("[MaskGen] SAM is disabled, skipping mask generation consumer.")
+            return
+
         for batch_num in range(total_batches):
             batch_index = batch_num * self.config.batch_size
 
@@ -401,14 +411,19 @@ class SAM2VideoProcessor(SAM2Model):
                 )
             self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
             batch_number = batch_index // self.config.batch_size
-            self.mask_processor.generate_mask(
-                batch_number=batch_number,
-                sam2_predictor=self.sam2_predictor,
-                temp_directory=self.config.temp_directory,
-                prompt_encoding=self.prompt_encoding,
-                auto_prompt_encoding=self.auto_prompt_encoding,
-                predictor_lock=self._predictor_lock
-            )
+            
+            if self.config.sam_enabled:
+                self.mask_processor.generate_mask(
+                    batch_number=batch_number,
+                    sam2_predictor=self.sam2_predictor,
+                    temp_directory=self.config.temp_directory,
+                    prompt_encoding=self.prompt_encoding,
+                    auto_prompt_encoding=self.auto_prompt_encoding,
+                    predictor_lock=self._predictor_lock
+                )
+            else:
+                logger.info(f"[Pipeline] Batch {batch_number + 1}: SAM disabled, skipping mask generation")
+
             # Inline CoTracker tracking for this batch (mirrors auto_prompt pattern)
             if (self.config.pose_config and self.config.pose_config.get('enabled')
                     and self.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):

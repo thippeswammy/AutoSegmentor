@@ -87,10 +87,12 @@ class UserInteractionHandler:
         self.frame_path = frame_paths[batch * self.config.batch_size]
         batch_idx = (start_batch_idx // self.config.batch_size)
         frame_idx = batch_idx * self.config.batch_size
-        self.inference_state_temp = sam2_predictor.init_state(
-            video_path=None,
-            frame_paths=[os.path.abspath(self.frame_path)]
-        )
+        self.inference_state_temp = None
+        if sam2_predictor:
+            self.inference_state_temp = sam2_predictor.init_state(
+                video_path=None,
+                frame_paths=[os.path.abspath(self.frame_path)]
+            )
         self.current_frame = self.current_frame_only_text = self.current_frame_only_with_points = cv2.imread(
             self.frame_path)
             

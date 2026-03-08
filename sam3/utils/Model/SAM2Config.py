@@ -8,7 +8,7 @@ class SAM2Config:
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, window_size=None,
-                 label_colors=None, memory_bank_size=5, prompt_memory_size=5, **kwargs):
+                 label_colors=None, memory_bank_size=5, prompt_memory_size=5, sam_enabled=True, **kwargs):
         self.video_number = video_number
         self.batch_size = batch_size
         self.images_starting_count = images_starting_count
@@ -33,6 +33,7 @@ class SAM2Config:
         self.auto_prompt_encoding = kwargs.get('auto_prompt_encoding', True)
         self.ui_show_crosshair = kwargs.get('ui_show_crosshair', True)
         self.ui_show_grid = kwargs.get('ui_show_grid', False)
+        self.sam_enabled = sam_enabled
         
         # Calculate base path up to project root (AutoSegmentor)
         # __file__ is sam3/utils/Model/SAM2Config.py

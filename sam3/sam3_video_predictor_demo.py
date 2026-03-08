@@ -120,6 +120,8 @@ def main():
     pose_config = config.get('pose_estimation', None)
     run_mode = config.get('run_mode', 'all').lower()
     auto_prompt_encoding = config.get('auto_prompt_encoding', True)
+    sam_config = config.get('sam', {})
+    sam_enabled = sam_config.get('enabled', True)
 
     total_videos = video_end
     overall_start = time.time()
@@ -152,7 +154,8 @@ def main():
             images_ending_count=images_ending_count,
             pose_config=pose_config,
             run_mode=run_mode,
-            auto_prompt_encoding=auto_prompt_encoding
+            auto_prompt_encoding=auto_prompt_encoding,
+            sam_enabled=sam_enabled
         )
 
         _handle_working_dir(
