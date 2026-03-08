@@ -38,15 +38,21 @@ class ImageCopier:
         overlap_filenames = self._get_overlap_filenames()
         return [img for img in images if os.path.splitext(os.path.basename(img))[0].lower() in overlap_filenames]
 
-    def copy_images(self):
+    def copy_images(self, filter_by_overlap=True):
         ensure_directory(self.output_original_folder)
         ensure_directory(self.output_mask_folder)
         original_images = [os.path.join(self.original_folder, filename) for filename in os.listdir(self.original_folder)
                            if filename.endswith(self.valid_extensions)]
         mask_images = [os.path.join(self.mask_folder, filename) for filename in os.listdir(self.mask_folder)
                        if filename.endswith(self.valid_extensions)]
-        original_images_to_copy = self._filter_images_to_copy(original_images)
-        mask_images_to_copy = self._filter_images_to_copy(mask_images)
+        
+        if filter_by_overlap:
+            original_images_to_copy = self._filter_images_to_copy(original_images)
+            mask_images_to_copy = self._filter_images_to_copy(mask_images)
+        else:
+            original_images_to_copy = original_images
+            mask_images_to_copy = mask_images
+
         with tqdm(total=len(original_images_to_copy), desc='Copying Original Images') as pbar:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = {executor.submit(self.copy_image, img,

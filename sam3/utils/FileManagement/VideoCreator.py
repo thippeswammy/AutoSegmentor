@@ -20,10 +20,13 @@ class VideoCreator:
     def create_video(self, image_folder, video_name, progress_bar):
         images = sorted([img for img in os.listdir(image_folder) if img.endswith(self.valid_extensions)])
         if not images:
-            logger.warning(f"No images found in {image_folder}.")
+            logger.warning(f"No images found in {image_folder}. Skipping video creation for {video_name}.")
             return
         first_image = os.path.join(image_folder, images[0])
         frame = cv2.imread(first_image)
+        if frame is None:
+            logger.error(f"Failed to read first image: {first_image}. Skipping {video_name}.")
+            return
         height, width, layers = frame.shape
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         video = cv2.VideoWriter(video_name, fourcc, self.fps, (width, height))

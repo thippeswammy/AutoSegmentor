@@ -100,16 +100,19 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         except Exception as e:
             logger.error(f"[Pipeline] Failed to copy pose labels: {e}")
 
-    t0 = time.time()
-    overlay_processor = ImageOverlayProcessor(
-        original_folder=images_extract_dir,
-        mask_folder=rendered_dirs,
-        output_folder=overlap_dir,
-        all_consider=prefix,
-        image_count=0
-    )
-    overlay_processor.process_all_images()
-    logger.info(f"[Pipeline] Overlay generation completed in {time.time() - t0:.1f}s")
+    if sam_enabled:
+        t0 = time.time()
+        overlay_processor = ImageOverlayProcessor(
+            original_folder=images_extract_dir,
+            mask_folder=rendered_dirs,
+            output_folder=overlap_dir,
+            all_consider=prefix,
+            image_count=0
+        )
+        overlay_processor.process_all_images()
+        logger.info(f"[Pipeline] Overlay generation completed in {time.time() - t0:.1f}s")
+    else:
+        logger.info("[Pipeline] SAM disabled: skipping overlay generation")
 
     logger.info('═' * 60)
     if delete != 'yes':
@@ -131,19 +134,24 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         output_original_folder=verified_img_dir,
         output_mask_folder=verified_mask_dir
     )
-    copier.copy_images()
+    copier.copy_images(filter_by_overlap=sam_enabled)
     logger.info(f"[Pipeline] Image copy completed in {time.time() - t0:.1f}s")
 
     logger.info('═' * 60)
     t0 = time.time()
     ensure_directory(final_video_path)
-    video_names = [
-        f"{final_video_path}/OrgVideo{video_number}.mp4",
-        f"{final_video_path}/MaskVideo{video_number}.mp4",
-        f"{final_video_path}/OverlappedVideo{video_number}.mp4"
-    ]
+    image_folders = [verified_img_dir]
+    video_names = [f"{final_video_path}/OrgVideo{video_number}.mp4"]
+    
+    if sam_enabled:
+        image_folders.extend([verified_mask_dir, overlap_dir])
+        video_names.extend([
+            f"{final_video_path}/MaskVideo{video_number}.mp4",
+            f"{final_video_path}/OverlappedVideo{video_number}.mp4"
+        ])
+        
     video_creator = VideoCreator(
-        image_folders=[verified_img_dir, verified_mask_dir, overlap_dir],
+        image_folders=image_folders,
         video_names=video_names,
         fps=fps
     )
