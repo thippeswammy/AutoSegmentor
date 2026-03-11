@@ -235,17 +235,11 @@ class AnnotationWindow(QDialog):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.tool_bar.addWidget(spacer)
         
-        self.btn_reprocess = QPushButton("Reprocess Batch")
-        self.btn_reprocess.setObjectName("reprocessButton")
-        self.btn_reprocess.clicked.connect(self.reprocess_annotation)
-        self.btn_reprocess.setStyleSheet("background-color: #f57c00; color: white;")
-        self.tool_bar.addWidget(self.btn_reprocess)
-
-        self.btn_accept = QPushButton("Accept & Process Next")
-        self.btn_accept.setObjectName("acceptButton")
-        self.btn_accept.clicked.connect(self.accept_annotation)
-        self.btn_accept.setStyleSheet("background-color: #2e7d32; color: white;")
-        self.tool_bar.addWidget(self.btn_accept)
+        self.btn_process_batch = QPushButton("Process Batch")
+        self.btn_process_batch.setObjectName("processBatchButton")
+        self.btn_process_batch.clicked.connect(self.process_current_batch)
+        self.btn_process_batch.setStyleSheet("background-color: #2e7d32; color: white; font-weight: bold;")
+        self.tool_bar.addWidget(self.btn_process_batch)
         
     def _build_statusbar(self):
         self.coord_label = QLabel(" 📍 (0, 0)")
@@ -265,8 +259,8 @@ class AnnotationWindow(QDialog):
         QShortcut(QKeySequence("-"), self, self.canvas.zoom_out)
         QShortcut(QKeySequence("M"), self, self.btn_toggle_mask.animateClick)
         QShortcut(QKeySequence("U"), self, self.undo_stack.undo)
-        QShortcut(QKeySequence("Return"), self, self.btn_accept.animateClick)
-        QShortcut(QKeySequence("Enter"), self, self.btn_accept.animateClick)
+        QShortcut(QKeySequence("Return"), self, self.btn_process_batch.animateClick)
+        QShortcut(QKeySequence("Enter"), self, self.btn_process_batch.animateClick)
         
         # Additional nav shortcuts
         QShortcut(QKeySequence("Left"), self, self.btn_prev_img.animateClick)
@@ -476,8 +470,8 @@ class AnnotationWindow(QDialog):
         except ValueError:
             pass
 
-    def reprocess_annotation(self):
-        """Re-process current batch using current frame as a new prompt point."""
+    def process_current_batch(self):
+        """Intelligently process or reprocess the current batch."""
         if self.is_processing:
             return
             
@@ -485,25 +479,19 @@ class AnnotationWindow(QDialog):
         batch = self.handler.current_frame_idx // self.config.batch_size
         current_frame = self.handler.current_frame_idx
         
-        logger.info(f"Reprocessing batch {batch} from frame {current_frame}...")
-        self.start_processing_thread(batch, query_frame_idx=current_frame)
+        # If we are NOT on the first frame of the batch, it's a refinement (reprocess)
+        if current_frame % self.config.batch_size != 0:
+            logger.info(f"Refining batch {batch} from anchor frame {current_frame}...")
+            self.start_processing_thread(batch, query_frame_idx=current_frame)
+        else:
+            logger.info(f"Processing full batch {batch}...")
+            self.start_processing_thread(batch)
 
-    def accept_annotation(self):
-        """Process current batch annotations (usually the start of a batch)."""
-        if self.is_processing:
-            return
-            
-        self.handler.save_current_annotation()
-        batch = self.handler.current_frame_idx // self.config.batch_size
-        
-        self.start_processing_thread(batch)
-        
     def start_processing_thread(self, batch, query_frame_idx=None):
         self.is_processing = True
         self.processing_batch = batch
-        self.btn_accept.setEnabled(False)
-        self.btn_reprocess.setEnabled(False)
-        self.btn_accept.setText("Processing...")
+        self.btn_process_batch.setEnabled(False)
+        self.btn_process_batch.setText("Processing...")
         
         # Show loader only if we are still viewing this batch
         if self.handler.current_frame_idx // self.config.batch_size == batch:
@@ -515,9 +503,8 @@ class AnnotationWindow(QDialog):
         
     def on_processing_finished(self, batch):
         self.is_processing = False
-        self.btn_accept.setEnabled(True)
-        self.btn_reprocess.setEnabled(True)
-        self.btn_accept.setText("Accept & Process Next")
+        self.btn_process_batch.setEnabled(True)
+        self.btn_process_batch.setText("Process Batch")
         
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.hide()
