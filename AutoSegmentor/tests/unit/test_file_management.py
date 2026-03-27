@@ -40,7 +40,7 @@ class TestAnnotationManagerIO:
     def test_save_and_load_points(self, tmp_path):
         """Test that saved annotation data can be reloaded correctly."""
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-        from utils.Models.AppConfig import AppConfig
+        from utils.Models.SAM.AppConfig import AppConfig
         from utils.UserUI.AnnotationManager import AnnotationManager
 
         # Minimal config pointing at tmp directories
@@ -76,7 +76,7 @@ class TestAnnotationManagerIO:
 
     def test_get_prompt_for_frame(self, tmp_path):
         """Test retrieval of saved prompts by frame index."""
-        from utils.Models.AppConfig import AppConfig
+        from utils.Models.SAM.AppConfig import AppConfig
         from utils.UserUI.AnnotationManager import AnnotationManager
 
         config = AppConfig(
@@ -103,5 +103,9 @@ class TestAnnotationManagerIO:
 
         prompt = manager.get_prompt_for_frame(0)
         assert prompt is not None
-        assert prompt["points"] == [[50, 75]]
-        assert prompt["labels"] == [1001]
+        # AnnotationManager may return numpy arrays; convert before comparing
+        import numpy as np
+        points_result = np.array(prompt["points"]).tolist() if isinstance(prompt["points"], np.ndarray) else prompt["points"]
+        labels_result = np.array(prompt["labels"]).tolist() if isinstance(prompt["labels"], np.ndarray) else prompt["labels"]
+        assert points_result == [[50, 75]]
+        assert labels_result == [1001]

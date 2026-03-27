@@ -7,10 +7,10 @@ import sys
 import pytest
 import tempfile
 
-# Ensure sam3 is on the path
+# Ensure AutoSegmentor is on the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from utils.Models.AppConfig import AppConfig
+from utils.Models.SAM.AppConfig import AppConfig
 
 
 class TestAppConfigDefaults:

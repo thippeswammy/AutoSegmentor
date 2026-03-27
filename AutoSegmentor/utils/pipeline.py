@@ -170,7 +170,7 @@ def _run_pose_only(video_number, prefix, batch_size, verified_mask_dir,
         logger.error("Pose estimation is not enabled in config. Cannot run pose_only mode.")
         return
 
-    from .Models.AppConfig import AppConfig
+    from .Models.SAM.AppConfig import AppConfig
     from .UserUI.AnnotationManager import AnnotationManager
 
     # Build a lightweight config (no SAM2 model needed)

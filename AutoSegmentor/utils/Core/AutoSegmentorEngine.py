@@ -11,7 +11,7 @@ from ..FileManagement.FileManager import clear_directory
 from ..FileManagement.FrameExtractor import FrameExtractor
 from ..FileManagement.FrameHandler import FrameHandler
 from ..FileManagement.MaskProcessor import MaskProcessor
-from ..Models.AppConfig import AppConfig
+from ..Models.SAM.AppConfig import AppConfig
 from ..Models.SAM.SAM2Model import SAM2Model
 from ..UserUI.AnnotationManager import AnnotationManager
 from ..UserUI.UserInteraction import UserInteractionHandler

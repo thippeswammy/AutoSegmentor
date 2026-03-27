@@ -14,7 +14,7 @@ class TestPipelineImports:
     """Verify new imports paths work correctly after refactoring."""
 
     def test_app_config_importable(self):
-        from utils.Models.AppConfig import AppConfig
+        from utils.Models.SAM.AppConfig import AppConfig
         assert AppConfig is not None
 
     def test_lk_tracker_importable(self):
@@ -51,7 +51,7 @@ class TestPoseExporterIntegration:
         """End-to-end LK tracking and YOLO-JSON export on synthetic frames."""
         import cv2
         import numpy as np
-        from utils.Models.AppConfig import AppConfig
+        from utils.Models.SAM.AppConfig import AppConfig
         from utils.Models.Tracking.LKKeypointTracker import LKKeypointTracker
 
         # Create tiny synthetic frames
@@ -91,7 +91,7 @@ class TestPoseExporterIntegration:
         import cv2
         import numpy as np
         from unittest.mock import MagicMock
-        from utils.Models.AppConfig import AppConfig
+        from utils.Models.SAM.AppConfig import AppConfig
         from utils.FileManagement.PoseExporter import PoseExporter
 
         # Create minimal directories

@@ -1,5 +1,5 @@
 import os
-from ..FileManagement.FileManager import get_resource_path, ensure_directory
+from ...FileManagement.FileManager import get_resource_path, ensure_directory
 
 
 class AppConfig:
@@ -40,9 +40,9 @@ class AppConfig:
         self.sam_enabled = sam_enabled
 
         # Calculate base path up to project root (AutoSegmentor)
-        # __file__ is sam3/utils/Models/AppConfig.py
-        # root is 3 levels up: sam3/utils/Models -> sam3/utils -> sam3 -> AutoSegmentor
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+        # __file__ is AutoSegmentor/utils/Models/SAM/AppConfig.py
+        # root is 4 levels up: SAM -> Models -> utils -> AutoSegmentor -> project root
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
 
         self.model_config_path = os.path.join(base_path, "sam2_configs/sam2_hiera_l.yaml")
         if not os.path.exists(self.model_config_path):

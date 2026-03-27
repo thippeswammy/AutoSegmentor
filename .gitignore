@@ -1,24 +1,45 @@
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
 .vscode/
-/.idea
+.idea/
+.DS_Store
+
+# ─── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
 .venv
 *.egg*
 .DS_Store
 *-checkpoint.ipynb
-build/*
-_C.*
 
+# ─── Model Checkpoints ───────────────────────────────────────────────────────
+checkpoints/*.pt
+checkpoints/*.pth
+
+# ─── AutoSegmentor runtime / working dirs (formerly sam3/) ───────────────────
+/AutoSegmentor/working_dir/
+/AutoSegmentor/outputs/
+/AutoSegmentor/inputs/VideoInputs/
+/AutoSegmentor/temp/
+
+# ─── Tests / pytest ──────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+/AutoSegmentor/.pytest_cache/
+
+# ─── Brain / local AI artifacts ──────────────────────────────────────────────
+brain/
+
+# ─── CoTracker submodule ─────────────────────────────────────────────────────
+co-tracker/
+
+# ─── Dataset & example assets ────────────────────────────────────────────────
 /sav_dataset/example/sav_000001.mp4
 /notebooks/videos/bedroom.zip
-checkpoints/*.pt
-sam3/dist
-sam3/temp
-/sam3/working_dir
-/sam3/sam2_video_predictor.spec
-sam3/inputs/VideoInputs
-sam3/outputs
 
+# ─── DatasetManager ──────────────────────────────────────────────────────────
 /DatasetManager/DatasetHandler/OriginalDataset/idd20kII/
-/DatasetManager/DatasetHandler/code/OLD
+/DatasetManager/DatasetHandler/code/OLD/
 
-co-tracker/
+# ─── Misc ────────────────────────────────────────────────────────────────────
+_C.*
+*.logtem.md
