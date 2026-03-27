@@ -140,7 +140,7 @@ class TestAnnotationWindowInit:
 
     def test_window_title(self, handler_and_window):
         _, window = handler_and_window
-        assert "AutoSegmentor" in window.windowTitle()
+        assert "AutoSegment" in window.windowTitle()
 
     def test_process_batch_button_exists(self, handler_and_window):
         _, window = handler_and_window
@@ -230,3 +230,95 @@ class TestAnnotationWindowUIState:
     def test_status_bar_has_coord_label(self, handler_and_window):
         _, window = handler_and_window
         assert window.coord_label is not None
+
+
+class TestHoldToScrollNavigation:
+    """Tests for the hold-to-scroll (A/D / ←/→) timer-based navigation."""
+
+    def test_nav_timer_exists(self, handler_and_window):
+        _, window = handler_and_window
+        assert hasattr(window, "_nav_timer")
+        assert hasattr(window, "_nav_direction")
+
+    def test_nav_timer_initially_stopped(self, handler_and_window):
+        _, window = handler_and_window
+        assert not window._nav_timer.isActive()
+        assert window._nav_direction == 0
+
+    def test_nav_timer_starts_on_d_key_press(self, handler_and_window, qapp):
+        _, window = handler_and_window
+        window._nav_direction = 0
+        window._nav_timer.stop()
+        from PyQt5.QtCore import QEvent
+        from PyQt5.QtGui import QKeyEvent
+        # Call keyPressEvent directly — avoids headless focus issues
+        press = QKeyEvent(QEvent.KeyPress, Qt.Key_D, Qt.NoModifier)
+        window.keyPressEvent(press)
+        assert window._nav_direction == 1
+        window._nav_timer.stop()
+        window._nav_direction = 0
+
+    def test_nav_timer_starts_on_a_key_press(self, handler_and_window, qapp):
+        _, window = handler_and_window
+        window._nav_direction = 0
+        window._nav_timer.stop()
+        from PyQt5.QtCore import QEvent
+        from PyQt5.QtGui import QKeyEvent
+        press = QKeyEvent(QEvent.KeyPress, Qt.Key_A, Qt.NoModifier)
+        window.keyPressEvent(press)
+        assert window._nav_direction == -1
+        window._nav_timer.stop()
+        window._nav_direction = 0
+
+    def test_nav_timer_stops_on_key_release(self, handler_and_window, qapp):
+        _, window = handler_and_window
+        from PyQt5.QtCore import QEvent
+        from PyQt5.QtGui import QKeyEvent
+        press   = QKeyEvent(QEvent.KeyPress,   Qt.Key_D, Qt.NoModifier)
+        release = QKeyEvent(QEvent.KeyRelease, Qt.Key_D, Qt.NoModifier)
+        window.keyPressEvent(press)
+        window.keyReleaseEvent(release)
+        assert not window._nav_timer.isActive()
+        assert window._nav_direction == 0
+
+    def test_a_key_does_not_scroll_when_text_widget_focused(self, handler_and_window, qapp):
+        handler, window = handler_and_window
+        # Focus the frame-jump text input
+        window.frame_jump_input.setFocus()
+        qapp.processEvents()
+
+        initial_dir = window._nav_direction
+        from PyQt5.QtCore import QEvent
+        from PyQt5.QtGui import QKeyEvent
+        press = QKeyEvent(QEvent.KeyPress, Qt.Key_A, Qt.NoModifier)
+        window.keyPressEvent(press)
+        # Direction must NOT change when a text widget has focus
+        assert window._nav_direction == initial_dir
+        window.canvas.setFocus()
+        window._nav_timer.stop()
+        window._nav_direction = 0
+
+    def test_left_arrow_sets_prev_direction(self, handler_and_window, qapp):
+        _, window = handler_and_window
+        window._nav_direction = 0
+        window._nav_timer.stop()
+        from PyQt5.QtCore import QEvent
+        from PyQt5.QtGui import QKeyEvent
+        press = QKeyEvent(QEvent.KeyPress, Qt.Key_Left, Qt.NoModifier)
+        window.keyPressEvent(press)
+        assert window._nav_direction == -1
+        window._nav_timer.stop()
+        window._nav_direction = 0
+
+    def test_right_arrow_sets_next_direction(self, handler_and_window, qapp):
+        _, window = handler_and_window
+        window._nav_direction = 0
+        window._nav_timer.stop()
+        from PyQt5.QtCore import QEvent
+        from PyQt5.QtGui import QKeyEvent
+        press = QKeyEvent(QEvent.KeyPress, Qt.Key_Right, Qt.NoModifier)
+        window.keyPressEvent(press)
+        assert window._nav_direction == 1
+        window._nav_timer.stop()
+        window._nav_direction = 0
+

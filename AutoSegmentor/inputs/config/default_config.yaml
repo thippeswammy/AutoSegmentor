@@ -1,46 +1,30 @@
-# config.yml
-run_mode: "all"    # "all" = full pipeline, "mask_only" = SAM2 masks only, "pose_only" = pose export only
-
-sam:
-  enabled: false     # If false, skips SAM2 model loading and mask generation
-auto_prompt_encoding: true # If true, uses previous mask to auto-prompt next batch. If false, forces manual input.
-video_start: 6
-video_end: 1
-prefix: Img
-batch_size: 30
+auto_prompt_encoding: true
+batch_size: 10
+delete: 'yes'
+final_video_path: ./outputs
 fps: 30
-delete: False
-working_dir_name: working_dir
-video_path_template: ./inputs/VideoInputs/Video{}.mp4
+images_ending_count: 5000
 images_extract_dir: ./working_dir/images
-temp_processing_dir: ./working_dir/temp
-rendered_dir: ./working_dir/render
 overlap_dir: ./working_dir/overlap
+pose_estimation:
+  class_id: 1
+  cotracker:
+    checkpoint: ''
+    window_len: 60
+  enabled: false
+  keypoints: []
+  object_id: 1
+  radius: 5
+  tracker: cotracker
+prefix: Img
+rendered_dir: ./working_dir/render
+run_mode: all
+sam:
+  enabled: true
+temp_processing_dir: ./working_dir/temp
 verified_img_dir: ./working_dir/verified/images
 verified_mask_dir: ./working_dir/verified/mask
-final_video_path: ./outputs
-images_ending_count: 5000
-
-# Pose Estimation Configuration
-pose_estimation:
-  enabled: true
-  tracker: "cotracker"   # "cotracker" or "lk" (Lucas-Kanade optical flow)
-  cotracker:
-    checkpoint: "../co-tracker/checkpoints/scaled_offline.pth"
-    window_len: 60       
-  class_id: 1            # All keypoints belong to this class Pallet
-  object_id: 1           # Instance ID for the pose object
-  keypoints:
-    - "p1"
-    - "p2"
-    - "p3"
-    - "p4"
-    - "p5"
-    - "p6"
-    - "p7"
-    - "p8"
-    - "p9"
-    - "p10"
-    - "p11"
-    - "p12"
-  radius: 5
+video_end: 1
+video_path_template: ./inputs/VideoInputs/Video{}.mp4
+video_start: 6
+working_dir_name: working_dir

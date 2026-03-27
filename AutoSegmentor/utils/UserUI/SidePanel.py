@@ -279,11 +279,68 @@ class ToolInfoPanel(QGroupBox):
         self.class_color_dot.setPixmap(pixmap)
 
 
+class LiveConfigPanel(QGroupBox):
+    """Live configuration controls for mask alpha and point size."""
+
+    mask_alpha_changed = pyqtSignal(int)   # 0-100
+    point_size_changed = pyqtSignal(int)   # px
+
+    def __init__(self, parent=None):
+        super().__init__("Live Config", parent)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(6)
+        layout.setContentsMargins(8, 16, 8, 8)
+
+        # Mask Alpha
+        alpha_row = QWidget()
+        alpha_hl = QHBoxLayout(alpha_row)
+        alpha_hl.setContentsMargins(0, 0, 0, 0)
+        alpha_lbl = QLabel("Mask α:")
+        alpha_lbl.setFont(Fonts.body())
+        alpha_lbl.setFixedWidth(52)
+        from PyQt5.QtWidgets import QSlider, QSpinBox as _QSpinBox
+        self.alpha_slider = QSlider(Qt.Horizontal)
+        self.alpha_slider.setRange(0, 100)
+        self.alpha_slider.setValue(50)
+        self.alpha_value_lbl = QLabel("50%")
+        self.alpha_value_lbl.setFont(Fonts.small())
+        self.alpha_value_lbl.setFixedWidth(30)
+        self.alpha_slider.valueChanged.connect(self._on_alpha_changed)
+        alpha_hl.addWidget(alpha_lbl)
+        alpha_hl.addWidget(self.alpha_slider, 1)
+        alpha_hl.addWidget(self.alpha_value_lbl)
+        layout.addWidget(alpha_row)
+
+        # Point Size
+        pt_row = QWidget()
+        pt_hl = QHBoxLayout(pt_row)
+        pt_hl.setContentsMargins(0, 0, 0, 0)
+        pt_lbl = QLabel("Pt Size:")
+        pt_lbl.setFont(Fonts.body())
+        pt_lbl.setFixedWidth(52)
+        self.pt_spinbox = _QSpinBox()
+        self.pt_spinbox.setRange(2, 20)
+        self.pt_spinbox.setValue(5)
+        self.pt_spinbox.setFixedWidth(55)
+        self.pt_spinbox.valueChanged.connect(self._on_pt_size_changed)
+        pt_hl.addWidget(pt_lbl)
+        pt_hl.addWidget(self.pt_spinbox)
+        pt_hl.addStretch()
+        layout.addWidget(pt_row)
+
+    def _on_alpha_changed(self, val: int):
+        self.alpha_value_lbl.setText(f"{val}%")
+        self.mask_alpha_changed.emit(val)
+
+    def _on_pt_size_changed(self, val: int):
+        self.point_size_changed.emit(val)
+
+
 class SidePanel(QScrollArea):
     """Right-side panel containing all info panels.
 
     Combines BatchInfoPanel, ToolInfoPanel, AnnotationListPanel,
-    and KeypointProgressPanel into a scrollable sidebar.
+    KeypointProgressPanel, and LiveConfigPanel into a scrollable sidebar.
     """
 
     def __init__(self, parent=None):
@@ -307,11 +364,13 @@ class SidePanel(QScrollArea):
         self.tool_info = ToolInfoPanel()
         self.annotation_list = AnnotationListPanel()
         self.keypoint_progress = KeypointProgressPanel()
+        self.live_config = LiveConfigPanel()
 
         layout.addWidget(self.batch_info)
         layout.addWidget(self.tool_info)
         layout.addWidget(self.annotation_list)
         layout.addWidget(self.keypoint_progress)
+        layout.addWidget(self.live_config)
         layout.addStretch()
 
         self.setWidget(container)
@@ -324,3 +383,4 @@ class SidePanel(QScrollArea):
             self.tool_info.update_info("Pose", 1, 1)
         elif not enabled:
             self.tool_info.update_info("Segment", 1, 1)
+
