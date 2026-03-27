@@ -7,7 +7,7 @@ auto_prompt_encoding: true # If true, uses previous mask to auto-prompt next bat
 video_start: 6
 video_end: 1
 prefix: Img
-batch_size: 10
+batch_size: 30
 fps: 30
 delete: False
 working_dir_name: working_dir

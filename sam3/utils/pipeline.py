@@ -64,11 +64,11 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         logger.info(f"[Pipeline] Total elapsed: {time.time() - pipeline_start:.1f}s")
         return
 
-    # Full SAM2 pipeline (mode: "all" or "mask_only")
-    from .Model.sam2_video_predictor import SAM2VideoProcessor
+    # Full pipeline (mode: "all" or "mask_only")
+    from .Core.AutoSegmentorEngine import AutoSegmentorEngine
 
     t0 = time.time()
-    processor = SAM2VideoProcessor(
+    processor = AutoSegmentorEngine(
         video_number=video_number,
         prefix=prefix,
         batch_size=batch_size,
@@ -82,7 +82,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         sam_enabled=sam_enabled
     )
     processor.run()
-    logger.info(f"[Pipeline] SAM2 processing completed in {time.time() - t0:.1f}s")
+    logger.info(f"[Pipeline] Engine processing completed in {time.time() - t0:.1f}s")
 
     if run_mode != "mask_only" and pose_config and pose_config.get('enabled'):
         t0 = time.time()
@@ -170,11 +170,11 @@ def _run_pose_only(video_number, prefix, batch_size, verified_mask_dir,
         logger.error("Pose estimation is not enabled in config. Cannot run pose_only mode.")
         return
 
-    from .Model.SAM2Config import SAM2Config
+    from .Models.AppConfig import AppConfig
     from .UserUI.AnnotationManager import AnnotationManager
 
     # Build a lightweight config (no SAM2 model needed)
-    config = SAM2Config(
+    config = AppConfig(
         video_number=video_number,
         batch_size=batch_size,
         prefix=prefix,

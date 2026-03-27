@@ -3,7 +3,7 @@ import os
 import cv2
 from ..UserUI.logger_config import logger
 from ..FileManagement.FileManager import ensure_directory
-from .KeypointTracker import KeypointTracker
+from ..Models.Tracking.LKKeypointTracker import LKKeypointTracker
 
 
 class PoseExporter:
@@ -69,9 +69,9 @@ class PoseExporter:
 
     def _track_batch_cotracker(self, batch_kps, batch_frame_paths):
         """Track keypoints through a batch using CoTracker."""
-        from .CoTrackerKeypointTracker import CoTrackerKeypointTracker
+        from ..Models.Tracking.CoTrackerPredictor import CoTrackerPredictor
         checkpoint, window_len = self._get_cotracker_config()
-        tracker = CoTrackerKeypointTracker(
+        tracker = CoTrackerPredictor(
             keypoint_defs=self.keypoints_def,
             initial_coords=batch_kps,
             frame_paths=batch_frame_paths,
@@ -87,7 +87,7 @@ class PoseExporter:
             logger.error(f"  Failed to read: {batch_frame_paths[0]}")
             return []
 
-        tracker = KeypointTracker(
+        tracker = LKKeypointTracker(
             keypoint_defs=self.keypoints_def,
             initial_coords=batch_kps,
             initial_frame=first_frame

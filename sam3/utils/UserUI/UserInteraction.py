@@ -10,12 +10,12 @@ from .logger_config import logger
 class UserInteractionHandler:
     """Handles user interface, state, and interaction logic."""
 
-    def __init__(self, config, annotation_manager, sam2_video_predictor):
+    def __init__(self, config, annotation_manager, pipeline_engine):
         self.config = config
         self.annotation_manager = annotation_manager
-        self.sam2_video_predictor = sam2_video_predictor
-        self.pipeline_processor = sam2_video_predictor
-        self.window_name = "SAM2 Annotation Tool"
+        self.pipeline_engine = pipeline_engine
+        self.pipeline_processor = pipeline_engine
+        self.window_name = "AutoSegmentor Annotation Tool"
         
         self.current_class_label = 1
         self.current_instance_id = 1
@@ -66,7 +66,7 @@ class UserInteractionHandler:
         # We need the predictor lock if it's running
         with self.pipeline_processor._predictor_lock:
             if self.inference_state_temp is not None:
-                self.sam2_video_predictor.user_prompt_adder(self.inference_state_temp, self.frame_paths[self.current_frame_idx])
+                self.pipeline_engine.user_prompt_adder(self.inference_state_temp, self.frame_paths[self.current_frame_idx])
 
     def start_ui_loop(self, frame_paths):
         self.frame_paths = frame_paths
@@ -132,8 +132,8 @@ class UserInteractionHandler:
             
             # init state for single frame preview
             with self.pipeline_processor._predictor_lock:
-                if self.sam2_video_predictor.sam2_predictor is not None:
-                    self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
+                if self.pipeline_engine.sam2_predictor is not None:
+                    self.inference_state_temp = self.pipeline_engine.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
                 else:
                     self.inference_state_temp = None
             self.user_prompt_adder_pyqt()
@@ -164,10 +164,10 @@ class UserInteractionHandler:
                         self.selected_labels.append(full_label)
                     self.pose_click_coords.append(kp)
                 self.current_keypoint_index = len(self.pose_keypoints)
-                # For tracked data, we still want a SAM2 preview if possible
+                # For tracked data, we still want SAM2 preview if possible
                 with self.pipeline_processor._predictor_lock:
-                    if self.sam2_video_predictor.sam2_predictor is not None:
-                        self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
+                    if self.pipeline_engine.sam2_predictor is not None:
+                        self.inference_state_temp = self.pipeline_engine.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
                     else:
                         self.inference_state_temp = None
                 self.user_prompt_adder_pyqt()
@@ -214,8 +214,8 @@ class UserInteractionHandler:
         frame_path = self.frame_paths[frame_idx]
         
         with self.pipeline_processor._predictor_lock:
-            if self.sam2_video_predictor.sam2_predictor is not None:
-                self.inference_state_temp = self.sam2_video_predictor.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
+            if self.pipeline_engine.sam2_predictor is not None:
+                self.inference_state_temp = self.pipeline_engine.sam2_predictor.init_state(video_path=None, frame_paths=[os.path.abspath(frame_path)])
             else:
                 self.inference_state_temp = None
             
@@ -251,7 +251,7 @@ class UserInteractionHandler:
                 tracker_type = self.config.pose_config.get('tracker', 'lk').lower() if self.config.pose_config else 'lk'
                 if tracker_type == 'cotracker' and batch > 0 and prev_frame_idx is not None:
                     try:
-                        from ..FileManagement.CoTrackerKeypointTracker import track_between_frames
+                        from ..Models.Tracking.CoTrackerPredictor import track_between_frames
                         if 0 <= prev_frame_idx < len(self.frame_paths):
                             prev_frame_path = self.frame_paths[prev_frame_idx]
                             ct_cfg = self.config.pose_config.get('cotracker', {})
