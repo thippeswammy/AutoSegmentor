@@ -1,7 +1,6 @@
 import sys
 import threading
 import time
-import traceback
 
 import cv2
 import numpy as np
@@ -12,8 +11,8 @@ from ..FileManagement.FileManager import clear_directory
 from ..FileManagement.FrameExtractor import FrameExtractor
 from ..FileManagement.FrameHandler import FrameHandler
 from ..FileManagement.MaskProcessor import MaskProcessor
-from ..Models.SAM.AppConfig import AppConfig
-from ..Models.SAM.SAM2Model import SAM2Model
+from ..Model.SAM2Config import SAM2Config
+from ..Model.SAM2Model import SAM2Model
 from ..UserUI.AnnotationManager import AnnotationManager
 from ..UserUI.UserInteraction import UserInteractionHandler
 from ..UserUI.logger_config import logger
@@ -21,20 +20,16 @@ from ..UserUI.logger_config import logger
 print(torch.cuda.get_device_name(0))
 
 
-class AutoSegmentorEngine(SAM2Model):
-    """Main engine for AutoSegmentor video processing.
-
-    Orchestrates SAM2 (mask generation) and CoTracker (pose/keypoint tracking)
-    across batches of video frames via an interactive annotation UI.
-    """
+class SAM2VideoProcessor(SAM2Model):
+    """Main class for SAM2 video processing."""
 
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
-                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5,
-                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True):
+                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5, pose_config=None,
+                 auto_prompt_encoding=True, sam_enabled=True):
         self.inference_state = None
-        config = AppConfig(
+        sam2Config = SAM2Config(
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
             images_ending_count=images_ending_count, prefix=prefix, video_path_template=video_path_template,
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
@@ -42,27 +37,25 @@ class AutoSegmentorEngine(SAM2Model):
             label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size,
             pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding, sam_enabled=sam_enabled
         )
-        super().__init__(config)
+        super().__init__(sam2Config)
         if video_path_template is None:
             logger.error("Missing the video file paths or video")
             sys.exit(1)
         self.is_prompted = False
         self.is_drawing = is_drawing
-        # Use RLock so the same thread can re-enter the lock
-        # (e.g. user_prompt_adder_pyqt -> user_prompt_adder both acquire it)
-        self._predictor_lock = threading.RLock()
+        self._predictor_lock = threading.Lock()
         extractor = FrameExtractor(
             video_number, prefixFileName=prefix, limitedImages=images_ending_count,
             video_path_template=video_path_template, output_dir=images_extract_dir
         )
         extractor.run()
-        self.frame_handler = FrameHandler(config.frames_directory, config.temp_directory)
+        self.frame_handler = FrameHandler(sam2Config.frames_directory, sam2Config.temp_directory)
         self.frame_paths = self.frame_handler.get_frame_files()
-        total_batches = (len(self.frame_paths) + config.batch_size - 1) // config.batch_size
+        total_batches = (len(self.frame_paths) + sam2Config.batch_size - 1) // sam2Config.batch_size
         self.per_batch_tracked_data = [[] for _ in range(total_batches)]
-        self.annotation_manager = AnnotationManager(config, self.frame_paths)
-        self.user_interaction = UserInteractionHandler(config, self.annotation_manager, self)
-        self.mask_processor = MaskProcessor(config)
+        self.annotation_manager = AnnotationManager(sam2Config, self.frame_paths)
+        self.user_interaction = UserInteractionHandler(sam2Config, self.annotation_manager, self)
+        self.mask_processor = MaskProcessor(sam2Config)
 
     def click_event(self, event, x, y, flags, param):
         """Handle mouse events for point selection."""
@@ -145,60 +138,43 @@ class AutoSegmentorEngine(SAM2Model):
             logger.debug(f"Click: ({x}, {y}), Labels: {self.user_interaction.selected_labels}")
 
     def user_prompt_adder(self, inference_state, frame_path):
-        """Add user prompts for a single frame and update the displayed frame.
-
-        This is the core single-frame SAM2 preview. It must be called while
-        holding (or able to acquire) _predictor_lock. Since _predictor_lock is
-        now an RLock, re-entrant calls from the same thread are safe.
-        """
+        """Add user prompts and update the displayed frame."""
         if not self.sam2_predictor:
             self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
             return
 
-        try:
-            with self._predictor_lock:
-                self.sam2_predictor.reset_state(inference_state)
-                self.is_prompted = False
-                box_points = None
-                if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
-                        tuple, list)) and self.mask_processor.last_mask in [(None,), [None]]):
-                    box_points = self.auto_prompt_encoding(inference_state)
-                self.prompt_encoding(inference_state)  # batch_number=-1 → single-frame mode
-                if self.is_prompted:
-                    video_segments = {}
-                    for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(
-                            inference_state, isSingle=True):
-                        video_segments[out_frame_idx] = {
-                            out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
-                            for i, out_obj_id in enumerate(out_obj_ids)
-                        }
-                    mask = self.mask_processor.binary_mask_2_color_mask(
-                        out_frame_idx, frame_path, video_segments, 0, self.config.temp_directory, False)
-                    if mask is None:
-                        logger.warning("[Prompt] binary_mask_2_color_mask returned None — skipping overlay")
-                        self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
-                        return
-                    # Use the clean raw frame (no disk mask) as the base.
-                    # current_frame_only_with_points has the disk mask baked in,
-                    # which would cause a double-red-mask when the new SAM mask
-                    # is overlaid on top. _raw_frame is always clean.
-                    raw = getattr(self.user_interaction, '_raw_frame', None)
-                    current_frame_org = (raw if raw is not None
-                                         else self.user_interaction.current_frame_only_with_points).copy()
-                    non_zero_mask = np.any(mask > 0, axis=-1)
-                    non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)
-                    blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
-                    current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
-                    self.user_interaction.current_frame = self.show_box(box_points, current_frame_org)
-                else:
-                    self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
-        except Exception:
-            logger.error(f"[Prompt] user_prompt_adder failed:\n{traceback.format_exc()}")
-            self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
+        with self._predictor_lock:
+            self.sam2_predictor.reset_state(inference_state)
+            self.is_prompted = False
+            box_points = None
+            if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
+                    tuple, list)) and self.mask_processor.last_mask in [(None,),
+                                                                        [None]]):
+                box_points = self.auto_prompt_encoding(inference_state)
+            self.prompt_encoding(inference_state)
+            if self.is_prompted:
+                video_segments = {}
+                for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(
+                        inference_state, isSingle=True):
+                    video_segments[out_frame_idx] = {
+                        out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
+                        for i, out_obj_id in enumerate(out_obj_ids)
+                    }
+                mask = self.mask_processor.binary_mask_2_color_mask(
+                    out_frame_idx, frame_path, video_segments, 0, self.config.temp_directory, False)
+                current_frame_org = self.user_interaction.current_frame_only_with_points.copy()
+                non_zero_mask = np.any(mask > 0, axis=-1)
+                non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)
+                blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
+                current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
+                self.user_interaction.current_frame = self.show_box(box_points, current_frame_org)
+            else:
+                self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
+
 
     @staticmethod
     def show_box(boxes, img):
-        """Draw bounding boxes on image."""
+        """Draw boxes on image."""
         if boxes is None:
             return img
         for box in boxes:
@@ -210,6 +186,7 @@ class AutoSegmentorEngine(SAM2Model):
     def prompt_encoding(self, inference_state, batch_number=-1):
         """Encode prompts for SAM2 model. Handles multiple prompt frames per batch."""
         if batch_number == -1:
+            # Single frame UI preview mode
             points_list = self.user_interaction.selected_points
             label_list = self.user_interaction.selected_labels
             frame_idx = 0
@@ -226,7 +203,7 @@ class AutoSegmentorEngine(SAM2Model):
             f_idx = p_data["frame_idx"]
             points_np = np.array(p_data["points"], dtype=np.float32)
             labels_np = np.array(p_data["labels"], dtype=np.int32)
-
+            
             unique_labels = np.unique(np.abs(labels_np))
             if len(unique_labels) == 0:
                 continue
@@ -237,7 +214,7 @@ class AutoSegmentorEngine(SAM2Model):
                 points_np1 = points_np[obj_mask]
                 raw_labels_np1 = labels_np[obj_mask]
                 labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
-
+                
                 self.sam2_predictor.add_new_points_or_box(
                     inference_state=inference_state,
                     frame_idx=(f_idx % self.config.batch_size),
@@ -272,47 +249,52 @@ class AutoSegmentorEngine(SAM2Model):
             )
         return points_np
 
-    def _track_batch_cotracker(self, batch_number, query_frame_idx=None):
+    def _track_batch_inline(self, batch_number, query_frame_idx=None):
         """Run CoTracker on a single batch from a specific query frame."""
         pose_cfg = self.config.pose_config
         if not pose_cfg or not pose_cfg.get('enabled'):
             return
 
+        # Get all available prompts for this batch
         batch_prompts = self.annotation_manager.get_batch_prompts(batch_number, self.config.batch_size)
-
+        
         batch_kps = None
         chosen_query_rel_idx = 0
 
         if query_frame_idx is not None:
+            # Force specific query frame (user requested reprocess from here)
             for p in batch_prompts:
                 if p["frame_idx"] == query_frame_idx:
                     batch_kps = p["pose_keypoints"]
                     chosen_query_rel_idx = query_frame_idx % self.config.batch_size
                     break
-
+        
         if not batch_kps:
+            # Fallback: use the latest prompt in the batch, or carry forward
             if batch_prompts:
                 latest_p = batch_prompts[-1]
                 batch_kps = latest_p["pose_keypoints"]
                 chosen_query_rel_idx = latest_p["frame_idx"] % self.config.batch_size
             elif hasattr(self, 'per_batch_tracked_data'):
+                # Carry forward from the last frame of the previous batch
                 for b in range(batch_number - 1, -1, -1):
                     if b < len(self.per_batch_tracked_data) and self.per_batch_tracked_data[b]:
                         last_entry = self.per_batch_tracked_data[b][-1]
                         kps_prev = last_entry.get("keypoints", [])
                         if kps_prev:
+                            # We need to track from (b+1)*batch_size - 1 to batch_number*batch_size
                             prev_idx = (b + 1) * self.config.batch_size - 1
                             curr_idx = batch_number * self.config.batch_size
-
+                            
                             try:
-                                from ..Models.Tracking.CoTrackerPredictor import track_between_frames
+                                from ..FileManagement.CoTrackerKeypointTracker import track_between_frames
                                 ct_cfg = pose_cfg.get('cotracker', {})
                                 checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
                                 import os as _os
                                 base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
                                 checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
                                 window_len = ct_cfg.get('window_len', 60)
-
+                                
                                 tracked_gap = track_between_frames(
                                     kps_prev, self.frame_paths[prev_idx], self.frame_paths[curr_idx],
                                     checkpoint, window_len
@@ -343,7 +325,7 @@ class AutoSegmentorEngine(SAM2Model):
         )
 
         try:
-            from ..Models.Tracking.CoTrackerPredictor import CoTrackerPredictor
+            from ..FileManagement.CoTrackerKeypointTracker import CoTrackerKeypointTracker
             ct_cfg = pose_cfg.get('cotracker', {})
             checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
             import os as _os
@@ -351,7 +333,7 @@ class AutoSegmentorEngine(SAM2Model):
             checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
             window_len = ct_cfg.get('window_len', 60)
 
-            tracker = CoTrackerPredictor(
+            tracker = CoTrackerKeypointTracker(
                 keypoint_defs=pose_cfg.get('keypoints', []),
                 initial_coords=batch_kps,
                 frame_paths=batch_frame_paths,
@@ -369,11 +351,6 @@ class AutoSegmentorEngine(SAM2Model):
             if batch_number < len(self.per_batch_tracked_data):
                 self.per_batch_tracked_data[batch_number] = []
 
-    # Keep the old name as an alias for backward compatibility with MainWindow.py
-    def _track_batch_inline(self, batch_number, query_frame_idx=None):
-        """Alias for _track_batch_cotracker for backward compatibility."""
-        return self._track_batch_cotracker(batch_number, query_frame_idx=query_frame_idx)
-
     def _mask_generation_consumer(self, total_batches):
         """Generates masks for batches as prompts become available."""
         if not self.config.sam_enabled:
@@ -383,6 +360,7 @@ class AutoSegmentorEngine(SAM2Model):
         for batch_num in range(total_batches):
             batch_index = batch_num * self.config.batch_size
 
+            # Poll until prompt data is available for this batch
             while len(self.annotation_manager.points_collection) <= batch_num:
                 target_file = f"./inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
                 logger.info(f"[MaskGen] Waiting for prompts for batch {batch_num + 1}/{total_batches} in {target_file}... (retrying in 5s)")
@@ -392,8 +370,10 @@ class AutoSegmentorEngine(SAM2Model):
             logger.info(
                 f"[MaskGen] Starting mask generation for batch {batch_num + 1}/{total_batches}")
 
+            # Copy frames to the shared temp directory
             self.frame_handler.move_and_copy_frames(batch_index, self.frame_paths, self.config.batch_size)
 
+            # Generate mask (MaskProcessor now handles granular locking internally)
             self.mask_processor.generate_mask(
                 batch_number=batch_num,
                 sam2_predictor=self.sam2_predictor,
@@ -408,27 +388,30 @@ class AutoSegmentorEngine(SAM2Model):
         logger.info("[MaskGen] All batches processed. Background mask generation finished.")
 
     def run(self):
-        """Run the AutoSegmentor video processing pipeline.
-
-        Delegates flow control to the UI. The UI calls processing methods
-        in a background thread when the user accepts annotations.
+        """Run the SAM2 video predictor pipeline.
+        
+        This delegates the flow control to the UI. The UI will call processing
+        methods in a background thread when the user accepts annotations.
         """
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
-        logger.info(f"[Engine] {len(self.frame_paths)} frames, {total_batches} batches (batch_size={self.config.batch_size})")
+        logger.info(f"[Pipeline] {len(self.frame_paths)} frames, {total_batches} batches (batch_size={self.config.batch_size})")
 
+        # Ensure per_batch_tracked_data is initialized
         self.per_batch_tracked_data = [[] for _ in range(total_batches)]
-
+        
+        # Determine if all prompts are theoretically already available
         start_frame_idx = self.annotation_manager.check_data_sufficiency()
         initial_batch = start_frame_idx // self.config.batch_size
-
+        
         if initial_batch > 0:
             logger.info(f"[Annotation] Pre-tracking {initial_batch} existing batches...")
             for b in range(initial_batch):
-                self._track_batch_cotracker(b)
-
+                self._track_batch_inline(b)
+            
         if start_frame_idx >= len(self.frame_paths):
             logger.info(f"[Annotation] All {total_batches} batches already have prompts, but starting UI for review.")
-
+            
+        # UI controls the flow
         self.user_interaction.start_ui_loop(self.frame_paths)
-
+        
         clear_directory(self.config.temp_directory)

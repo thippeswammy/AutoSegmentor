@@ -292,8 +292,9 @@ class AnnotationCanvas(QGraphicsView):
                 self._scene.addItem(item)
                 self._overlay_items.append(item)
 
-            # Draw skeleton lines for pose keypoints
-            if pose_keypoints and pose_config and len(points) > 1:
+            # Draw skeleton connecting lines between consecutive annotation points.
+            # Always shown when 2+ points exist so the user can see the structure.
+            if len(points) > 1:
                 self._draw_skeleton(points, labels, pose_coords)
         finally:
             self._is_redrawing = False
@@ -303,28 +304,34 @@ class AnnotationCanvas(QGraphicsView):
         self._draw_skeleton(points, labels, pose_coords)
 
     def _draw_skeleton(self, points, labels, pose_coords=None):
-        """Draw connecting lines between consecutive pose keypoints."""
+        """Draw connecting lines between consecutive annotation points.
+
+        In pose mode these are keypoint skeleton lines (dashed cyan).
+        In segment mode these are simple connector lines to show the order
+        points were placed, matching the legacy stable behaviour.
+        """
         self._clear_skeleton()
         if len(points) < 2:
             return
         pen = QPen(QColor(Colors.ACCENT_CYAN), 1.5, Qt.DashLine)
         pen.setCosmetic(True)
-        
+
         pen_invisible = QPen(QColor(Colors.ACCENT_CYAN), 1.5, Qt.DotLine)
         pen_invisible.setCosmetic(True)
         c = QColor(Colors.ACCENT_CYAN)
-        c.setAlpha(100)
+        c.setAlpha(60)
         pen_invisible.setColor(c)
 
         for i in range(len(points) - 1):
             x1, y1 = points[i]
             x2, y2 = points[i + 1]
-            
+
+            # If pose_coords provided, use visibility; otherwise always visible
             vis1 = pose_coords[i].get('visible', True) if pose_coords and i < len(pose_coords) else True
             vis2 = pose_coords[i+1].get('visible', True) if pose_coords and (i + 1) < len(pose_coords) else True
-            
+
             p = pen if (vis1 and vis2) else pen_invisible
-            
+
             line = self._scene.addLine(x1, y1, x2, y2, p)
             self._skeleton_items.append(line)
 

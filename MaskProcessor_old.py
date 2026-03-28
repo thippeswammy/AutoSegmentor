@@ -4,8 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 import cv2
 import numpy as np
 
-from ..UserUI.logger_config import logger
-
 
 class MaskProcessor:
     """Processes masks and bounding boxes."""
@@ -28,17 +26,10 @@ class MaskProcessor:
         return colors[mask]
 
     def mask_to_boxes(self, mask):
-        """Convert mask to bounding boxes. Handles numpy arrays and CUDA tensors."""
+        """Convert mask to bounding boxes."""
         if mask is None or isinstance(mask, (tuple, list)) and mask in [(None,), [None]]:
             self.mask_box_points = None
             return None
-        # Guard: if mask is a CUDA tensor, move to CPU before numpy conversion
-        try:
-            import torch
-            if isinstance(mask, torch.Tensor):
-                mask = mask.cpu().numpy()
-        except ImportError:
-            pass
         boxes = {}
         object_ids = np.unique(mask)
         object_ids = object_ids[object_ids != 0]

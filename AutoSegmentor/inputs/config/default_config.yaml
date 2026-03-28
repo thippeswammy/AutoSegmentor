@@ -3,16 +3,28 @@ batch_size: 10
 delete: 'yes'
 final_video_path: ./outputs
 fps: 30
-images_ending_count: 5000
+images_ending_count: 200
 images_extract_dir: ./working_dir/images
 overlap_dir: ./working_dir/overlap
 pose_estimation:
   class_id: 1
   cotracker:
-    checkpoint: ''
+    checkpoint: F:/RunningProjects/AutoSegmentor/co-tracker/checkpoints/scaled_offline.pth
     window_len: 60
-  enabled: false
-  keypoints: []
+  enabled: true
+  keypoints:
+  - p1
+  - p2
+  - p3
+  - p4
+  - p5
+  - p6
+  - p7
+  - p8
+  - p9
+  - p10
+  - p11
+  - p12
   object_id: 1
   radius: 5
   tracker: cotracker

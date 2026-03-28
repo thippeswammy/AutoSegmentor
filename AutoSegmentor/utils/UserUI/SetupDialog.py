@@ -409,6 +409,7 @@ class SettingsTab(QScrollArea):
     # ── populate / collect ────────────────────────────────────────────────────
 
     def _populate(self, s: dict):
+        """Populate fields from session dict (handles both flat and nested YAML formats)."""
         self.prefix.setText(str(s.get("prefix", "Img")))
         self.batch_size.setValue(int(s.get("batch_size", 30)))
         self.fps.setValue(int(s.get("fps", 30)))
@@ -417,35 +418,52 @@ class SettingsTab(QScrollArea):
         idx = self.run_mode.findText(run_mode)
         self.run_mode.setCurrentIndex(max(0, idx))
 
+        # SAM — flat key 'sam_enabled' (session) OR nested 'sam.enabled' (YAML)
         sam = s.get("sam", {})
-        if isinstance(sam, dict):
+        if "sam_enabled" in s:
+            self.sam_enabled.setChecked(bool(s["sam_enabled"]))
+        elif isinstance(sam, dict):
             self.sam_enabled.setChecked(bool(sam.get("enabled", True)))
         else:
             self.sam_enabled.setChecked(bool(sam))
 
         self.auto_prompt.setChecked(bool(s.get("auto_prompt_encoding", True)))
 
-        pose = s.get("pose_estimation", {})
-        if not isinstance(pose, dict):
-            pose = {}
-        self.pose_enabled.setChecked(bool(pose.get("enabled", False)))
-
-        tracker = str(pose.get("tracker", "cotracker")).lower()
-        self.rb_cotracker.setChecked(tracker == "cotracker")
-        self.rb_lk.setChecked(tracker == "lk")
-        self._ct_widget.setVisible(tracker == "cotracker")
-
-        ct = pose.get("cotracker", {})
-        if isinstance(ct, dict):
-            self.ct_checkpoint.setText(str(ct.get("checkpoint", "")))
-            self.ct_window_len.setValue(int(ct.get("window_len", 60)))
-
-        self.pose_class_id.setValue(int(pose.get("class_id", 1)))
-        self.pose_object_id.setValue(int(pose.get("object_id", 1)))
-        self.kp_radius.setValue(int(pose.get("radius", 5)))
+        # Pose — flat keys (session) take priority over nested YAML
+        if "pose_enabled" in s:
+            # Flat session format
+            self.pose_enabled.setChecked(bool(s["pose_enabled"]))
+            tracker = str(s.get("tracker", "cotracker")).lower()
+            self.rb_cotracker.setChecked(tracker == "cotracker")
+            self.rb_lk.setChecked(tracker == "lk")
+            self._ct_widget.setVisible(tracker == "cotracker")
+            self.ct_checkpoint.setText(str(s.get("cotracker_checkpoint", "")))
+            self.ct_window_len.setValue(int(s.get("cotracker_window_len", 60)))
+            self.pose_class_id.setValue(int(s.get("pose_class_id", 1)))
+            self.pose_object_id.setValue(int(s.get("pose_object_id", 1)))
+            self.kp_radius.setValue(int(s.get("keypoint_radius", 5)))
+            keypoints = s.get("keypoints", [])
+        else:
+            # Nested YAML format (default_config.yaml on first run)
+            pose = s.get("pose_estimation", {})
+            if not isinstance(pose, dict):
+                pose = {}
+            self.pose_enabled.setChecked(bool(pose.get("enabled", False)))
+            tracker = str(pose.get("tracker", "cotracker")).lower()
+            self.rb_cotracker.setChecked(tracker == "cotracker")
+            self.rb_lk.setChecked(tracker == "lk")
+            self._ct_widget.setVisible(tracker == "cotracker")
+            ct = pose.get("cotracker", {})
+            if isinstance(ct, dict):
+                self.ct_checkpoint.setText(str(ct.get("checkpoint", "")))
+                self.ct_window_len.setValue(int(ct.get("window_len", 60)))
+            self.pose_class_id.setValue(int(pose.get("class_id", 1)))
+            self.pose_object_id.setValue(int(pose.get("object_id", 1)))
+            self.kp_radius.setValue(int(pose.get("radius", 5)))
+            keypoints = pose.get("keypoints", [])
 
         self.kp_list.clear()
-        for kp in pose.get("keypoints", []):
+        for kp in keypoints:
             item = QListWidgetItem(str(kp))
             item.setFlags(item.flags() | Qt.ItemIsEditable)
             self.kp_list.addItem(item)
