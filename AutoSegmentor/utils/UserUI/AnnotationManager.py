@@ -151,6 +151,48 @@ class AnnotationManager:
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
+    def save_tracked_batch(self, tracked_dataset):
+        """Batch update tracked data into internal collections and save to JSON.
+        
+        Args:
+            tracked_dataset: List of dicts from CoTracker containing frames and their keypoints.
+                             [{"frame_idx": int, "keypoints": [...]}, ...]
+        """
+        if not tracked_dataset:
+            return
+
+        for entry in tracked_dataset:
+            f_idx = entry["frame_idx"]
+            kps = entry["keypoints"]
+            
+            # Extract points and labels from the keypoints list
+            pts = []
+            lbls = []
+            for kp in kps:
+                # Use visible=2 or visible=True to determine if it's a point to show
+                if kp.get("visible", 2) > 0:
+                    pts.append([kp["x"], kp["y"]])
+                    lbls.append(kp.get("label", 1001)) # Default to class 1 inst 1
+            
+            # Update/Overwrite existing or append new
+            found = False
+            for i in range(len(self.frame_indices)):
+                if self.frame_indices[i] == f_idx:
+                    self.points_collection[i] = np.array(pts, dtype=np.float32)
+                    self.labels_collection[i] = np.array(lbls, dtype=np.int32)
+                    self.pose_keypoints_collection[i] = kps
+                    found = True
+                    break
+            
+            if not found:
+                self.frame_indices.append(f_idx)
+                self.points_collection.append(np.array(pts, dtype=np.float32))
+                self.labels_collection.append(np.array(lbls, dtype=np.int32))
+                self.pose_keypoints_collection.append(kps)
+
+        # Sort and Save to disk
+        self.save_points_and_labels()
+
     def check_data_sufficiency(self):
         """Check if enough points and labels are available (at least one per batch)."""
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size

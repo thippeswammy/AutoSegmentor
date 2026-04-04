@@ -46,7 +46,8 @@ class BatchProcessorThread(QThread):
                     temp_directory=processor.config.temp_directory,
                     prompt_encoding=processor.prompt_encoding,
                     auto_prompt_encoding=processor.auto_prompt_encoding,
-                    predictor_lock=processor._predictor_lock
+                    predictor_lock=processor._predictor_lock,
+                    starting_frame_idx=batch_index
                 )
                 logger.debug(f"[BatchThread] Batch {self.batch}: SAM2 done.")
 
@@ -55,6 +56,11 @@ class BatchProcessorThread(QThread):
                 logger.debug(f"[BatchThread] Batch {self.batch}: Running CoTracker...")
                 processor._track_batch_inline(self.batch, query_frame_idx=self.query_frame_idx)
                 logger.debug(f"[BatchThread] Batch {self.batch}: CoTracker done.")
+                
+                # Persistence: Save tracked keypoints to JSON continuously
+                tracked_data = processor.per_batch_tracked_data[self.batch]
+                if tracked_data:
+                    self.handler.annotation_manager.save_tracked_batch(tracked_data)
 
             self.finished_batch.emit(self.batch)
         except Exception:
@@ -411,17 +417,30 @@ class AnnotationWindow(QDialog):
     # ─── Navigation Handlers ─────────────────────────────────────────────────
     def prev_image(self):
         idx = max(0, self.handler.current_frame_idx - 1)
-        if self.handler.has_data_for_frame(idx) or idx == 0:
-            self.handler.load_frame_for_ui(idx)
-        else:
-            logger.info(f"Navigation blocked: Frame {idx} has no points/results yet.")
+        # Always allow backward navigation — reviewed/processed frames are safe
+        self.handler.load_frame_for_ui(idx)
         
     def next_image(self):
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + 1)
-        if self.handler.has_data_for_frame(idx):
+        current_batch = self.handler.current_frame_idx // self.config.batch_size
+        target_batch = idx // self.config.batch_size
+
+        # Allow free movement within the same batch
+        if target_batch == current_batch:
+            self.handler.load_frame_for_ui(idx)
+            return
+
+        # Crossing into a NEW batch: allow if the target batch has any data
+        # (prompt, rendered mask, or tracked keypoints)
+        if self.handler.has_data_for_frame(target_batch * self.config.batch_size):
             self.handler.load_frame_for_ui(idx)
         else:
-            logger.info(f"Navigation blocked: Frame {idx} has no points/results yet.")
+            # Also allow if target is the first frame of the next batch
+            # (carry-forward will be triggered by load_frame_for_ui)
+            if idx == target_batch * self.config.batch_size:
+                self.handler.load_frame_for_ui(idx)
+            else:
+                logger.info(f"Navigation blocked: Batch {target_batch} has no data yet. Navigate to its first frame first.")
         
     def prev_batch(self):
         idx = max(0, self.handler.current_frame_idx - self.config.batch_size)
