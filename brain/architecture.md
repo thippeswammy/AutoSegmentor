@@ -132,7 +132,7 @@ The pipeline generates several types of outputs, organized into intermediate wor
 
 After the SAM3 pipeline generates verified images and masks, the `DatasetManager` takes over to prepare data for model training (specifically YOLO).
 
-### `DatasetCreatere.py` Workflow
+### `DatasetCreator.py` Workflow
 1.  **Input**: Consumes the `verified/images` and `verified/masks` directories.
 2.  **Processing**:
     *   **Polygon Extraction**: Converts color masks into polygon coordinates (`get_polygons`).

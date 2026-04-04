@@ -32,7 +32,7 @@ This tool is used to:
 ## How It Works
 The tool is built with a modular architecture:
 1. **create_yolo_structure.py**: Creates a YOLO folder structure (`train`, `valid`, `test`) with unique folder names to avoid overwrites and generates a `data.yaml` file with dataset configuration.
-2. **DatasetCreatere.py**:
+2. **DatasetCreator.py**:
    - **YoloProcessor**: Orchestrates data processing, including folder setup, image loading, augmentation, and saving.
    - **ImageAugmentations**: Applies augmentations (blur, noise, color jitter) using PyTorch tensors, with GPU support.
    - **File Distribution**: Collects image paths, shuffles them, and processes files in parallel using threads.
@@ -80,7 +80,7 @@ The tool is built with a modular architecture:
      ```
 
 4. **Update Configuration**:
-   - Open `DatasetCreatere.py` and modify the `CONFIG` dictionary to match your setup:
+   - Open `DatasetCreator.py` and modify the `CONFIG` dictionary to match your setup:
      ```python
      CONFIG = {
          "dataset_path": r"path/to/your/working_dir",
@@ -109,7 +109,7 @@ The tool is built with a modular architecture:
 ### Running the Tool
 1. **Run the Application**:
    ```bash
-   python DatasetCreatere.py
+   python DatasetCreator.py
    ```
    
 2. **Output**:
@@ -146,7 +146,7 @@ The tool is built with a modular architecture:
 SAM2/
 └── DatasetManager/
     └── YolovDatasetManager/
-        ├── DatasetCreatere.py            # Main script: processes images, applies augmentations, and saves YOLO dataset
+        ├── DatasetCreator.py            # Main script: processes images, applies augmentations, and saves YOLO dataset
         ├── create_yolo_structure.py      # Creates YOLO folder structure and generates data.yaml
         ├── README.md                     # Overview, setup, and usage instructions
         │

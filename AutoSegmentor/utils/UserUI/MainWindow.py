@@ -123,11 +123,12 @@ class AnnotationWindow(QDialog):
         self._connect_signals()
 
         # ── Hold-to-scroll timer ─────────────────────────────────────────────
-        # Fires every 100 ms while A/D/←/→ is held down
+        # Fires every 50 ms while A/D/←/→ is held down (20 FPS)
         self._nav_timer = QTimer(self)
-        self._nav_timer.setInterval(100)
+        self._nav_timer.setInterval(50) 
         self._nav_timer.timeout.connect(self._on_nav_timer)
         self._nav_direction = 0   # -1 = prev, +1 = next, 0 = idle
+        self._nav_is_turbo = False 
 
     def _init_ui(self):
         """Initialize main layout and widgets."""
@@ -158,7 +159,7 @@ class AnnotationWindow(QDialog):
         self.canvas.set_show_grid(self.nav_state.show_grid)
         
         # Loader label
-        self.loader_label = QLabel("Processing batch (SAM2/CoTracker)...", self.canvas)
+        self.loader_label = QLabel("Processing...", self.canvas)
         self.loader_label.setStyleSheet("QLabel { background-color: rgba(0, 0, 0, 180); color: white; font-size: 24px; padding: 20px; border-radius: 10px; }")
         self.loader_label.setAlignment(Qt.AlignCenter)
         self.loader_label.resize(400, 100)
@@ -388,8 +389,10 @@ class AnnotationWindow(QDialog):
     def keyPressEvent(self, event):
         """Start the hold-to-scroll timer on A/D/←/→ press."""
         key = event.key()
+        modifiers = event.modifiers()
         if key in self._NAV_KEYS and not event.isAutoRepeat() and not self._is_text_widget_focused():
             direction = -1 if key in (Qt.Key_Left, Qt.Key_A) else 1
+            self._nav_is_turbo = bool(modifiers & Qt.ShiftModifier)
             if self._nav_direction != direction:
                 self._nav_direction = direction
                 # Fire immediately for the first frame, then rely on timer
@@ -408,11 +411,15 @@ class AnnotationWindow(QDialog):
         super().keyReleaseEvent(event)
 
     def _on_nav_timer(self):
-        """Called every 100 ms while a navigation key is held."""
+        """Called while a navigation key is held."""
+        # Update turbo state dynamically if modifiers change while holding
+        self._nav_is_turbo = bool(QtCore.QCoreApplication.instance().keyboardModifiers() & Qt.ShiftModifier)
+        
+        step = 5 if self._nav_is_turbo else 1
         if self._nav_direction == -1:
-            self.prev_image()
+            for _ in range(step): self.prev_image()
         elif self._nav_direction == 1:
-            self.next_image()
+            for _ in range(step): self.next_image()
         else:
             self._nav_timer.stop()
 
@@ -424,25 +431,8 @@ class AnnotationWindow(QDialog):
         
     def next_image(self):
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + 1)
-        current_batch = self.handler.current_frame_idx // self.config.batch_size
-        target_batch = idx // self.config.batch_size
-
-        # Allow free movement within the same batch
-        if target_batch == current_batch:
-            self.handler.load_frame_for_ui(idx)
-            return
-
-        # Crossing into a NEW batch: allow if the target batch has any data
-        # (prompt, rendered mask, or tracked keypoints)
-        if self.handler.has_data_for_frame(target_batch * self.config.batch_size):
-            self.handler.load_frame_for_ui(idx)
-        else:
-            # Also allow if target is the first frame of the next batch
-            # (carry-forward will be triggered by load_frame_for_ui)
-            if idx == target_batch * self.config.batch_size:
-                self.handler.load_frame_for_ui(idx)
-            else:
-                logger.info(f"Navigation blocked: Batch {target_batch} has no data yet. Navigate to its first frame first.")
+        # Always allow movement — user is labeling sequentially and may skip ahead
+        self.handler.load_frame_for_ui(idx)
         
     def prev_batch(self):
         idx = max(0, self.handler.current_frame_idx - self.config.batch_size)

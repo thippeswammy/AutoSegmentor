@@ -208,7 +208,7 @@ flowchart TD
     end
 
     subgraph "Dataset Export (YOLOv8 compatible)"
-        YDC["YOLO Dataset Builder\n(DatasetCreatere)\npolygons,split,augment"]:::ds
+        YDC["YOLO Dataset Builder\n(DatasetCreator)\npolygons,split,augment"]:::ds
         YSTRUCT["YOLO Structure Creator\ncreate_yolo_structure.py"]:::ds
         YDOC["Docs\nREADME.md"]:::doc
         YOLO[("YOLO Dataset Folder\ntrain/valid/test\nlabels(polygons).txt")]:::store
@@ -341,7 +341,7 @@ flowchart TD
     click CKPTDL "checkpoints/download_ckpts.sh" "Download Script"
     click MCFG "sam2_configs/sam2_hiera_l.yaml" "Model YAML"
 
-    click YDC "DatasetManager/YolovDatasetManager/DatasetCreatere.py" "Dataset Creator"
+    click YDC "DatasetManager/YolovDatasetManager/DatasetCreator.py" "Dataset Creator"
     click YSTRUCT "DatasetManager/YolovDatasetManager/create_yolo_structure.py" "Structure Creator"
     click YDOC "DatasetManager/YolovDatasetManager/README.md" "YOLO Docs"
 

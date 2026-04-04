@@ -30,7 +30,7 @@ class AutoSegmentorEngine(SAM2Model):
 
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
-                 rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
+                 rendered_frames_dir=None, temp_processing_dir=None, working_dir=None, is_drawing=False,
                  window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5,
                  pose_config=None, auto_prompt_encoding=True, sam_enabled=True, review_from_start=False):
         self.inference_state = None
@@ -39,7 +39,7 @@ class AutoSegmentorEngine(SAM2Model):
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
             images_ending_count=images_ending_count, prefix=prefix, video_path_template=video_path_template,
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
-            temp_processing_dir=temp_processing_dir, window_size=window_size,
+            temp_processing_dir=temp_processing_dir, working_dir=working_dir, window_size=window_size,
             label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size,
             pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding, sam_enabled=sam_enabled
         )

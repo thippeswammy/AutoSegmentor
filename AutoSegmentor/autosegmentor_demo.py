@@ -101,6 +101,7 @@ def main():
             video_path_template=video_path_template,
             images_extract_dir=images_extract_dir,
             temp_processing_dir=temp_processing_dir,
+            working_dir=working_dir_name,
             rendered_dirs=rendered_dir,
             overlap_dir=overlap_dir,
             verified_img_dir=verified_img_dir,

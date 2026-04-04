@@ -136,17 +136,18 @@ class ExportDialog(QDialog):
             logger.warning("No export types selected.")
             return
 
-        # Build dynamic config for DatasetCreatere
+        # Build dynamic config for DatasetCreator
         # Note: We need to import YoloProcessor here to avoid circular imports if any
         try:
             import sys
             # Append YolovDatasetManager to path
-            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            # Up 3 levels: UserUI -> utils -> AutoSegmentor -> Root
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
             manager_path = os.path.join(repo_root, 'DatasetManager', 'YolovDatasetManager')
             if manager_path not in sys.path:
                 sys.path.insert(0, manager_path)
             
-            from DatasetCreatere import YoloProcessor
+            from DatasetCreator import YoloProcessor
         except ImportError as e:
             logger.error(f"Could not import YoloProcessor: {e}")
             return

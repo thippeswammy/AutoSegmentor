@@ -39,7 +39,9 @@ co-tracker/
 # ─── DatasetManager ──────────────────────────────────────────────────────────
 /DatasetManager/DatasetHandler/OriginalDataset/idd20kII/
 /DatasetManager/DatasetHandler/code/OLD/
+/DatasetManager/Video6_Export
 
 # ─── Misc ────────────────────────────────────────────────────────────────────
 _C.*
 *.logtem.md
+

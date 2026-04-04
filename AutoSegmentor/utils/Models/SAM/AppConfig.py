@@ -11,17 +11,19 @@ class AppConfig:
 
     def __init__(self, video_number, batch_size=120, images_starting_count=0, images_ending_count=None,
                  prefix="file", video_path_template=None, images_extract_dir=None,
-                 rendered_frames_dir=None, temp_processing_dir=None, window_size=None,
-                 label_colors=None, memory_bank_size=5, prompt_memory_size=5, sam_enabled=True, **kwargs):
+                 rendered_frames_dir=None, temp_processing_dir=None, working_dir=None,
+                 window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5,
+                 sam_enabled=True, **kwargs):
         self.video_number = video_number
         self.batch_size = batch_size
         self.images_starting_count = images_starting_count
         self.images_ending_count = images_ending_count
         self.prefix = prefix
         self.video_path_template = video_path_template or './VideoInputs/Video{}.mp4'
-        self.frames_directory = images_extract_dir or './videos/images'
-        self.rendered_frames_dir = rendered_frames_dir or './videos/outputs'
-        self.temp_directory = temp_processing_dir or './videos/temp'
+        self.working_dir = working_dir or './videos'
+        self.frames_directory = images_extract_dir or os.path.join(self.working_dir, 'images')
+        self.rendered_frames_dir = rendered_frames_dir or os.path.join(self.working_dir, 'outputs')
+        self.temp_directory = temp_processing_dir or os.path.join(self.working_dir, 'temp')
         ensure_directory(self.frames_directory)
         ensure_directory(self.rendered_frames_dir)
         ensure_directory(self.temp_directory)

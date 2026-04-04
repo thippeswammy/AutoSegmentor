@@ -13,8 +13,8 @@ from .UserUI.logger_config import logger
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
                  verified_img_dir, verified_mask_dir, prefix, batch_size, fps, final_video_path,
-                 temp_processing_dir, delete, images_ending_count, pose_config=None, run_mode="all",
-                 auto_prompt_encoding=True, sam_enabled=True, review_from_start=False):
+                 temp_processing_dir, delete, images_ending_count, working_dir=None, pose_config=None,
+                 run_mode="all", auto_prompt_encoding=True, sam_enabled=True, review_from_start=False):
     """Run the pipeline for processing a video with various modes.
     
     This function orchestrates the entire video processing pipeline, allowing for
@@ -60,6 +60,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
             images_extract_dir=images_extract_dir,
             rendered_dirs=rendered_dirs,
             temp_processing_dir=temp_processing_dir,
+            working_dir=working_dir,
             final_video_path=final_video_path,
         )
         logger.info(f"[Pipeline] Total elapsed: {time.time() - pipeline_start:.1f}s")
@@ -77,6 +78,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         images_extract_dir=images_extract_dir,
         rendered_frames_dir=rendered_dirs,
         temp_processing_dir=temp_processing_dir,
+        working_dir=working_dir,
         images_ending_count=images_ending_count,
         pose_config=pose_config,
         auto_prompt_encoding=auto_prompt_encoding,
@@ -166,7 +168,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
 def _run_pose_only(video_number, prefix, batch_size, verified_mask_dir,
                    pose_config, images_ending_count, video_path_template,
                    images_extract_dir, rendered_dirs, temp_processing_dir,
-                   final_video_path):
+                   working_dir, final_video_path):
     """Run only the pose export step using existing verified data."""
     if not pose_config or not pose_config.get('enabled'):
         logger.error("Pose estimation is not enabled in config. Cannot run pose_only mode.")
@@ -184,6 +186,7 @@ def _run_pose_only(video_number, prefix, batch_size, verified_mask_dir,
         images_extract_dir=images_extract_dir,
         rendered_frames_dir=rendered_dirs,
         temp_processing_dir=temp_processing_dir,
+        working_dir=working_dir,
         images_ending_count=images_ending_count,
         pose_config=pose_config,
     )

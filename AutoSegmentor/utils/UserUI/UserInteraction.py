@@ -228,8 +228,9 @@ class UserInteractionHandler:
                 # SAM preview triggered async via debounced PreviewThread
 
             elif frame_idx % self.config.batch_size == 0:
-                # 3. If no data exists yet, do a real-time carry-forward at batch start
-                self.prepare_batch_for_annotation(batch)
+                # 3. If no data exists yet, we NO LONGER do auto carry-forward during navigation.
+                # This prevents UI freezes when scrolling. User can process manually.
+                pass
 
         # NOTE: inference_state_temp is intentionally kept alive here.
         # It will be used by user_prompt_adder_pyqt() on every click until
