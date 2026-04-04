@@ -75,6 +75,7 @@ def main():
     run_mode             = cfg["run_mode"]
     auto_prompt_encoding = cfg["auto_prompt_encoding"]
     sam_enabled          = cfg["sam_enabled"]
+    review_from_start    = cfg.get("review_from_start", False)
 
     total_videos  = video_end
     overall_start = time.time()
@@ -110,6 +111,7 @@ def main():
             run_mode=run_mode,
             auto_prompt_encoding=auto_prompt_encoding,
             sam_enabled=sam_enabled,
+            review_from_start=review_from_start,
         )
 
         _handle_working_dir(

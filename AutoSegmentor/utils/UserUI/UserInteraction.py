@@ -95,19 +95,24 @@ class UserInteractionHandler:
             self.inference_state_temp = None  # Reset so next click retries
 
 
-    def start_ui_loop(self, frame_paths):
+    def start_ui_loop(self, frame_paths, start_frame_idx=None):
         self.frame_paths = frame_paths
         
-        start_batch_idx = self.annotation_manager.check_data_sufficiency()
-        initial_batch = start_batch_idx // self.config.batch_size
+        if start_frame_idx is None:
+            start_frame_idx = self.annotation_manager.check_data_sufficiency()
+            
+        initial_batch = start_frame_idx // self.config.batch_size
         if initial_batch * self.config.batch_size >= len(frame_paths):
             initial_batch = max(0, (len(frame_paths) - 1) // self.config.batch_size)
             
         from .MainWindow import AnnotationWindow
         self.window = AnnotationWindow(self, self.config)
         
-        self.load_frame_for_ui(initial_batch * self.config.batch_size)
-        logger.info("Opening UI window. Proceed with annotations.")
+        # Load the actual start_frame_idx instead of strictly the start of the batch
+        # so if the user resumes at frame 45, they see frame 45 instead of 30.
+        target_frame = min(start_frame_idx, len(frame_paths) - 1)
+        self.load_frame_for_ui(target_frame)
+        logger.info(f"Opening UI window at frame {target_frame}.")
         self.window.exec_()
         
     def save_current_annotation(self):

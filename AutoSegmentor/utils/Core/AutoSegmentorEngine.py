@@ -32,8 +32,9 @@ class AutoSegmentorEngine(SAM2Model):
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, is_drawing=False,
                  window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5,
-                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True):
+                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True, review_from_start=False):
         self.inference_state = None
+        self.review_from_start = review_from_start
         config = AppConfig(
             video_number=video_number, batch_size=batch_size, images_starting_count=images_starting_count,
             images_ending_count=images_ending_count, prefix=prefix, video_path_template=video_path_template,
@@ -418,17 +419,22 @@ class AutoSegmentorEngine(SAM2Model):
 
         self.per_batch_tracked_data = [[] for _ in range(total_batches)]
 
-        start_frame_idx = self.annotation_manager.check_data_sufficiency()
-        initial_batch = start_frame_idx // self.config.batch_size
+        if self.review_from_start:
+            logger.info("[Annotation] Review Mode enabled: starting at Frame 0.")
+            start_frame_idx = 0
+            initial_batch = 0
+        else:
+            start_frame_idx = self.annotation_manager.check_data_sufficiency()
+            initial_batch = start_frame_idx // self.config.batch_size
 
-        if initial_batch > 0:
-            logger.info(f"[Annotation] Pre-tracking {initial_batch} existing batches...")
-            for b in range(initial_batch):
-                self._track_batch_cotracker(b)
+            # Lazy-tracking replaces auto-tracking inside engine at startup.
+            # Tracking will only be triggered when UserInteraction loads a batch!
+            if start_frame_idx >= len(self.frame_paths):
+                logger.info(f"[Annotation] All {total_batches} batches already have prompts, starting UI at the end.")
 
-        if start_frame_idx >= len(self.frame_paths):
-            logger.info(f"[Annotation] All {total_batches} batches already have prompts, but starting UI for review.")
-
-        self.user_interaction.start_ui_loop(self.frame_paths)
+        # In case the check pushes us past the end, bring it back
+        start_frame_idx = min(start_frame_idx, len(self.frame_paths) - 1)
+        
+        self.user_interaction.start_ui_loop(self.frame_paths, start_frame_idx)
 
         clear_directory(self.config.temp_directory)

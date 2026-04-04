@@ -3,7 +3,7 @@ batch_size: 10
 delete: 'yes'
 final_video_path: ./outputs
 fps: 30
-images_ending_count: 200
+images_ending_count: 100
 images_extract_dir: ./working_dir/images
 overlap_dir: ./working_dir/overlap
 pose_estimation:

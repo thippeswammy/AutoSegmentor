@@ -77,6 +77,8 @@ def _save_defaults(data: dict):
         "working_dir_name":    data.get("working_dir_name",    cfg.get("working_dir_name",    "working_dir")),
         "video_path_template": data.get("video_path_template", cfg.get("video_path_template", "")),
         "final_video_path":    data.get("final_video_path",    cfg.get("final_video_path",    "./outputs")),
+        "images_ending_count": data.get("images_ending_count", cfg.get("images_ending_count", 0)),
+        "review_from_start":   data.get("review_from_start",   cfg.get("review_from_start", False)),
         "auto_prompt_encoding": data.get("auto_prompt_encoding", cfg.get("auto_prompt_encoding", True)),
         "run_mode":            data.get("run_mode",    cfg.get("run_mode",    "all")),
     })
@@ -176,6 +178,11 @@ class VideosTab(QScrollArea):
         idx_hl.addWidget(QLabel("End (count):")); idx_hl.addWidget(self.video_end)
         idx_hl.addStretch()
         vpath_form.addRow("Video Range:", idx_row)
+        
+        self.max_frames = QSpinBox(); self.max_frames.setRange(0, 99999); self.max_frames.setFixedWidth(80)
+        self.max_frames.setToolTip("Max number of frames to extract per video (0 = all)")
+        vpath_form.addRow("Max Extract Frames:", self.max_frames)
+        
         layout.addWidget(vpath_box)
 
         # ── Output ──
@@ -224,6 +231,7 @@ class VideosTab(QScrollArea):
         self.video_end.setValue(int(s.get("video_end", 1)))
         self.output_dir.setText(str(s.get("final_video_path", "./outputs")))
         self.working_dir.setText(str(s.get("working_dir_name", "working_dir")))
+        self.max_frames.setValue(int(s.get("images_ending_count", 0)))
         delete = s.get("delete", False)
         self.auto_delete.setChecked(bool(delete) if isinstance(delete, bool) else str(delete).lower() == "yes")
 
@@ -234,6 +242,7 @@ class VideosTab(QScrollArea):
             "video_end":           self.video_end.value(),
             "final_video_path":    self.output_dir.text().strip(),
             "working_dir_name":    self.working_dir.text().strip(),
+            "images_ending_count": self.max_frames.value(),
             "delete":              "yes" if self.auto_delete.isChecked() else "no",
         }
 
@@ -277,6 +286,11 @@ class SettingsTab(QScrollArea):
         self.auto_prompt = QCheckBox("Auto-prompt encoding (use prev mask to seed next batch)")
         self.auto_prompt.setFont(Fonts.body())
         proc_form.addRow("", self.auto_prompt)
+
+        self.review_from_start = QCheckBox("Review Mode (Ignore existing labels, start at frame 0)")
+        self.review_from_start.setFont(Fonts.body())
+        self.review_from_start.setToolTip("Start UI at Frame 0 even if the batch is fully annotated.")
+        proc_form.addRow("", self.review_from_start)
 
         self.mask_engine = QComboBox()
         self.mask_engine.addItem("SAM2 (default)", "sam2")
@@ -428,6 +442,7 @@ class SettingsTab(QScrollArea):
             self.sam_enabled.setChecked(bool(sam))
 
         self.auto_prompt.setChecked(bool(s.get("auto_prompt_encoding", True)))
+        self.review_from_start.setChecked(bool(s.get("review_from_start", False)))
 
         # Pose — flat keys (session) take priority over nested YAML
         if "pose_enabled" in s:
@@ -477,6 +492,7 @@ class SettingsTab(QScrollArea):
             "batch_size":           self.batch_size.value(),
             "fps":                  self.fps.value(),
             "run_mode":             self.run_mode.currentText(),
+            "review_from_start":    self.review_from_start.isChecked(),
             "sam_enabled":          self.sam_enabled.isChecked(),
             "auto_prompt_encoding": self.auto_prompt.isChecked(),
             "mask_engine":          self.mask_engine.currentData(),
@@ -637,8 +653,9 @@ class SetupDialog(QDialog):
             "verified_img_dir":     os.path.join(wdir, "verified", "images"),
             "verified_mask_dir":    os.path.join(wdir, "verified", "mask"),
             "final_video_path":     data["final_video_path"],
-            "images_ending_count":  5000,
+            "images_ending_count":  data["images_ending_count"],
             "run_mode":             data["run_mode"],
+            "review_from_start":    data.get("review_from_start", False),
             "auto_prompt_encoding": data["auto_prompt_encoding"],
             "sam_enabled":          data["sam_enabled"],
             "pose_estimation":      pose_config,
