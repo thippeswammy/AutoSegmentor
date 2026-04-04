@@ -479,30 +479,34 @@ class AnnotationWindow(QDialog):
     # ─── Navigation Handlers ─────────────────────────────────────────────────
     def prev_image(self):
         idx = max(0, self.handler.current_frame_idx - 1)
-        # Always allow backward navigation — reviewed/processed frames are safe
+        logger.debug(f"[Nav] prev_image: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
-        
+
     def next_image(self):
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + 1)
-        # Always allow movement — user is labeling sequentially and may skip ahead
+        logger.debug(f"[Nav] next_image: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
-        
+
     def prev_batch(self):
         idx = max(0, self.handler.current_frame_idx - self.config.batch_size)
         idx = (idx // self.config.batch_size) * self.config.batch_size
+        logger.debug(f"[Nav] prev_batch: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
-        
+
     def next_batch(self):
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + self.config.batch_size)
         idx = (idx // self.config.batch_size) * self.config.batch_size
+        logger.debug(f"[Nav] next_batch: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
 
     # ─── Event Handlers ──────────────────────────────────────────────────────
     def handle_canvas_click(self, x, y, button):
         full_label = self.handler.encode_label(self.handler.current_class_label, self.handler.current_instance_id)
+        btn_name = "RightButton" if button == Qt.RightButton else "LeftButton"
+        logger.debug(f"[UI] handle_canvas_click: ({x},{y})  button={btn_name}  label_before_sign={full_label}")
         if button == Qt.RightButton:
             full_label *= -1
-            
+
         pose_click = None
         if self.handler.pose_mode:
             num_kps = len(self.handler.pose_keypoints)
@@ -511,7 +515,6 @@ class AnnotationWindow(QDialog):
                     kp_name = "Negative_Point"
                     p_id = len(self.handler.pose_click_coords)
                 else:
-                    # Use per-instance count to determine which keypoint slot
                     instance_count = self.handler.get_instance_keypoint_count()
                     kp_name = self.handler.pose_keypoints[instance_count % num_kps]
                     p_id = len(self.handler.pose_click_coords)
@@ -523,17 +526,21 @@ class AnnotationWindow(QDialog):
                     "visible": True,
                     "label": full_label
                 }
+                logger.debug(f"[UI] handle_canvas_click: pose_click={pose_click}")
 
+        logger.debug(f"[UI] Pushing AddPointCommand: point=[{x},{y}]  label={full_label}")
         cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click)
         self.undo_stack.push(cmd)
 
     def handle_point_deleted(self, index):
         if index < len(self.handler.selected_points):
+            logger.debug(f"[UI] handle_point_deleted: index={index}  point={self.handler.selected_points[index]}")
             cmd = DeletePointCommand(self.handler, index)
             self.undo_stack.push(cmd)
 
     def skip_point(self):
         if self.handler.pose_mode and self.handler.current_keypoint_index < len(self.handler.pose_keypoints):
+            logger.debug(f"[UI] skip_point: kp_index={self.handler.current_keypoint_index}")
             cmd = SkipPointCommand(self.handler)
             self.undo_stack.push(cmd)
 
@@ -543,14 +550,15 @@ class AnnotationWindow(QDialog):
 
     def handle_point_moved(self, index, old_x, old_y, new_x, new_y):
         if index < len(self.handler.selected_points):
-            logger.debug(f"[UI] Move point {index}: ({old_x}, {old_y}) -> ({new_x}, {new_y})")
+            logger.debug(f"[UI] handle_point_moved: index={index}  ({old_x},{old_y}) -> ({new_x},{new_y})")
             cmd = DragPointCommand(self.handler, index, [old_x, old_y], [new_x, new_y])
             self.undo_stack.push(cmd)
-            # High-Responsiveness: Trigger update immediately on move completion
+            logger.debug(f"[UI] handle_point_moved: DragPointCommand pushed, triggering SAM preview")
             self._trigger_prompt_update()
 
     def handle_point_dragging(self, index, x, y):
         if index < len(self.handler.selected_points):
+            logger.debug(f"[UI] handle_point_dragging: index={index}  pos=({x},{y})")
             self.handler.selected_points[index] = [x, y]
             if self.handler.pose_mode and self.handler.pose_click_coords:
                 if index < len(self.handler.pose_click_coords):
@@ -566,6 +574,7 @@ class AnnotationWindow(QDialog):
     def handle_visibility_toggled(self, index, is_visible):
         if self.handler.pose_mode and self.handler.pose_click_coords:
             if index < len(self.handler.pose_click_coords):
+                logger.debug(f"[UI] handle_visibility_toggled: index={index}  visible={is_visible}")
                 self.handler.pose_click_coords[index]['visible'] = is_visible
                 self._trigger_prompt_update()
 
@@ -607,6 +616,7 @@ class AnnotationWindow(QDialog):
 
 
     def _on_undo_stack_changed(self, idx):
+        logger.debug(f"[UI] undo_stack index changed to {idx}  — triggering preview update")
         self._trigger_prompt_update()
 
     def _trigger_prompt_update(self):
@@ -616,6 +626,10 @@ class AnnotationWindow(QDialog):
         The SAM2 mask overlay runs in a background PreviewThread so the UI
         never freezes while waiting for GPU inference.
         """
+        logger.debug(
+            f"[UI] _trigger_prompt_update: frame={self.handler.current_frame_idx}  "
+            f"pts={len(self.handler.selected_points)}"
+        )
         # 1. Immediately draw annotations and skeleton — no GPU needed, instant
         self._redraw_annotations()
         self._update_sidebar()
@@ -627,11 +641,11 @@ class AnnotationWindow(QDialog):
     def _start_preview_thread(self):
         """Kick off a SAM2 single-frame preview in a background thread."""
         if self._preview_thread is not None and self._preview_thread.isRunning():
-            # Previous preview still running — queue up another for the latest state
             self._preview_pending = True
             logger.debug("[Preview] Busy — queuing update for latest state")
             return
 
+        logger.debug(f"[Preview] Starting PreviewThread for frame {self.handler.current_frame_idx}")
         self._preview_pending = False
         self.status_bar.showMessage(" ⏳ Updating Mask...", 5000)
         self._preview_thread = PreviewThread(self.handler)
@@ -640,16 +654,18 @@ class AnnotationWindow(QDialog):
 
     def _on_preview_ready(self):
         """Called on the main thread when SAM2 preview is complete."""
+        logger.debug(f"[Preview] _on_preview_ready: frame={self.handler.current_frame_idx}  pending={self._preview_pending}")
         self.status_bar.clearMessage()
         if self.btn_toggle_mask.isChecked():
             self.canvas.update_image(self.handler.current_frame)
-        
+
         # High-Responsiveness: if a preview request arrived while we were busy,
         # run another one now with the very latest positions.
         if self._preview_pending:
             logger.debug("[Preview] Running pending update...")
             self._start_preview_thread()
         else:
+            logger.debug(f"[Preview] No pending update — refreshing canvas from disk frame")
             self.canvas.update_image(
                 cv2.imread(self.handler.frame_paths[self.handler.current_frame_idx])
             )
@@ -714,24 +730,29 @@ class AnnotationWindow(QDialog):
 
     # ─── UI Actions ──────────────────────────────────────────────────────────
     def toggle_mask(self):
+        logger.debug(f"[UI] toggle_mask: checked={self.btn_toggle_mask.isChecked()}")
         self.refresh_display()
 
     def set_class(self, class_id):
+        logger.debug(f"[UI] set_class: {class_id}")
         self.class_combo.setCurrentIndex(class_id - 1)
 
     def change_class(self, index):
+        logger.debug(f"[UI] change_class: combo_index={index}  -> class_id={index + 1}")
         self.handler.change_class_label_pyqt(index + 1)
         self._update_sidebar()
 
     def next_instance(self):
         self.handler.current_instance_id += 1
         self.handler._recalc_keypoint_index()
+        logger.debug(f"[UI] next_instance: instance_id={self.handler.current_instance_id}  kp_index={self.handler.current_keypoint_index}")
         self._update_sidebar()
-        
+
     def prev_instance(self):
         if self.handler.current_instance_id > 1:
             self.handler.current_instance_id -= 1
             self.handler._recalc_keypoint_index()
+            logger.debug(f"[UI] prev_instance: instance_id={self.handler.current_instance_id}  kp_index={self.handler.current_keypoint_index}")
             self._update_sidebar()
 
     def reset_points(self):
@@ -780,15 +801,17 @@ class AnnotationWindow(QDialog):
 
     def jump_to_frame(self):
         text = self.frame_jump_input.text()
+        logger.debug(f"[UI] jump_to_frame: input='{text}'")
         try:
             val = int(text)
             if 0 <= val < len(self.handler.frame_paths):
+                logger.debug(f"[UI] jump_to_frame: jumping to frame {val}")
                 self.handler.load_frame_for_ui(val)
                 self.frame_jump_input.clear()
             else:
-                logger.warning(f"Invalid frame index: {val}")
+                logger.warning(f"[UI] jump_to_frame: invalid frame index {val} (total={len(self.handler.frame_paths)})")
         except ValueError:
-            pass
+            logger.debug(f"[UI] jump_to_frame: non-integer input '{text}', ignoring")
 
     # ─── New Action Handlers ──────────────────────────────────────────────────
 
@@ -883,11 +906,14 @@ class AnnotationWindow(QDialog):
     def process_current_batch(self):
         """Intelligently process or reprocess the current batch."""
         if self.is_processing:
+            logger.debug("[UI] process_current_batch: already processing, ignoring")
             return
 
+        logger.debug(f"[UI] process_current_batch: frame={self.handler.current_frame_idx}")
         self.handler.save_current_annotation()
         batch = self.handler.current_frame_idx // self.config.batch_size
         current_frame = self.handler.current_frame_idx
+        logger.debug(f"[UI] process_current_batch: batch={batch}  current_frame={current_frame}")
 
         # Check if the batch has any prompts (manual or tracked carry-forward)
         batch_prompts = self.handler.annotation_manager.get_batch_prompts(batch, self.config.batch_size)
@@ -923,31 +949,36 @@ class AnnotationWindow(QDialog):
             self.start_processing_thread(batch)
 
     def start_processing_thread(self, batch, query_frame_idx=None):
+        logger.debug(f"[UI] start_processing_thread: batch={batch}  query_frame_idx={query_frame_idx}")
         self.is_processing = True
         self.processing_batch = batch
         self.btn_process_batch.setEnabled(False)
         self.btn_process_batch.setText("Processing...")
-        
+
         # Show loader only if we are still viewing this batch
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.show()
-            
+
         self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx)
         self.processor_thread.finished_batch.connect(self.on_processing_finished)
         self.processor_thread.start()
+        logger.debug(f"[UI] BatchProcessorThread started for batch {batch}")
         
     def on_processing_finished(self, batch):
+        logger.debug(f"[UI] on_processing_finished: batch={batch}  current_frame={self.handler.current_frame_idx}")
         self.is_processing = False
         self.btn_process_batch.setEnabled(True)
         self.btn_process_batch.setText("Process Batch")
-        
+
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.hide()
-            
+
         logger.info(f"Finished processing batch {batch}")
-        
+
         # Explicitly reload current frame to show new masks
+        logger.debug(f"[UI] on_processing_finished: reloading frame {self.handler.current_frame_idx}")
         self.handler.load_frame_for_ui(self.handler.current_frame_idx)
         self.canvas.update_image(self.handler.current_frame)
         self.refresh_display()
         self._update_sidebar()
+        logger.debug(f"[UI] on_processing_finished: display fully refreshed for batch {batch}")

@@ -85,30 +85,39 @@ class UserInteractionHandler:
         inference_state_temp is initialized HERE lazily on first call per frame,
         so that scrolling through frames (hold D) never triggers GPU init_state.
         """
+        logger.debug(f"[UI] user_prompt_adder_pyqt called: frame={self.current_frame_idx}  points={len(self.selected_points)}")
         if self.pipeline_engine.sam2_predictor is None:
+            logger.debug("[UI] user_prompt_adder_pyqt: sam2_predictor is None, skipping")
             return
         if not self.selected_points:  # No points yet — nothing to preview
+            logger.debug("[UI] user_prompt_adder_pyqt: no selected_points, skipping")
             return
 
         # Lazy init: only call init_state when the user actually needs a preview
         if self.inference_state_temp is None:
             frame_path = getattr(self, '_current_frame_path', None)
             if frame_path is None:
+                logger.debug("[UI] user_prompt_adder_pyqt: _current_frame_path is None, cannot init_state")
                 return
+            logger.debug(f"[UI] Lazy-init inference_state_temp for frame {self.current_frame_idx}: {frame_path}")
             try:
                 self.inference_state_temp = self.pipeline_engine.sam2_predictor.init_state(
                     video_path=None, frame_paths=[os.path.abspath(frame_path)]
                 )
-                logger.debug(f"[UI] inference_state_temp lazy-init for frame {self.current_frame_idx}")
+                logger.debug(f"[UI] inference_state_temp lazy-init OK for frame {self.current_frame_idx}")
             except Exception:
                 logger.error(f"[UI] lazy init_state failed:\n{traceback.format_exc()}")
                 return
+        else:
+            logger.debug(f"[UI] Reusing existing inference_state_temp for frame {self.current_frame_idx}")
 
         try:
+            logger.debug(f"[UI] Calling user_prompt_adder: frame={self.current_frame_idx}  pts={self.selected_points}  labels={self.selected_labels}")
             self.pipeline_engine.user_prompt_adder(
                 self.inference_state_temp,
                 self.frame_paths[self.current_frame_idx]
             )
+            logger.debug(f"[UI] user_prompt_adder returned OK for frame {self.current_frame_idx}")
         except Exception:
             logger.error(f"[UI] user_prompt_adder_pyqt failed:\n{traceback.format_exc()}")
             self.inference_state_temp = None  # Reset so next click retries
@@ -144,6 +153,12 @@ class UserInteractionHandler:
             logger.info("UI window closed. Manual phase ended.")
         
     def save_current_annotation(self):
+        """Save current annotation state to disk."""
+        logger.debug(
+            f"[UI] save_current_annotation: frame={self.current_frame_idx}  "
+            f"points={len(self.selected_points)}  labels={self.selected_labels}  "
+            f"pose_kps={len(self.pose_click_coords) if self.pose_mode else 'N/A'}"
+        )
         # Save at current frame index, supporting multiple corrections per batch
         self.annotation_manager.save_points_and_labels(
             frame_idx=self.current_frame_idx,
@@ -154,7 +169,10 @@ class UserInteractionHandler:
 
     def load_frame_for_ui(self, frame_idx):
         if frame_idx >= len(self.frame_paths) or frame_idx < 0:
+            logger.debug(f"[UI] load_frame_for_ui({frame_idx}): out of range (total={len(self.frame_paths)}), skipping")
             return
+
+        logger.debug(f"[UI] load_frame_for_ui: frame={frame_idx}  prev_frame={self.current_frame_idx}")
 
         # Clear the old inference state before loading a new frame
         self.inference_state_temp = None
@@ -162,8 +180,12 @@ class UserInteractionHandler:
         self.current_frame_idx = frame_idx
         frame_path = self.frame_paths[frame_idx]
         batch = frame_idx // self.config.batch_size
+        logger.debug(f"[UI] load_frame_for_ui: batch={batch}  path={frame_path}")
 
         self.current_frame_only_with_points = cv2.imread(frame_path)
+        if self.current_frame_only_with_points is None:
+            logger.error(f"[UI] load_frame_for_ui: cv2.imread returned None for {frame_path}")
+            return
         # Keep a clean raw copy (no disk mask, no overlays).
         # Used as the base for SAM preview (avoids double-mask) and by Reset.
         self._raw_frame = self.current_frame_only_with_points.copy()
@@ -172,11 +194,14 @@ class UserInteractionHandler:
         mask_filename = f"{self.config.prefix}{self.config.video_number}_{frame_idx:05d}.png"
         mask_path = os.path.join(self.config.rendered_frames_dir, mask_filename)
         if os.path.exists(mask_path):
+            logger.debug(f"[UI] load_frame_for_ui: disk mask found -> {mask_path}")
             mask = cv2.imread(mask_path)
             non_zero_mask = np.any(mask > 0, axis=-1)
             non_zero_mask_3d = np.stack([non_zero_mask] * 3, axis=-1)
             blended = cv2.addWeighted(self.current_frame_only_with_points, 0.5, mask, 0.5, 0)
             np.copyto(self.current_frame_only_with_points, blended, where=non_zero_mask_3d)
+        else:
+            logger.debug(f"[UI] load_frame_for_ui: no disk mask for frame {frame_idx}")
 
         self.current_frame = self.current_frame_only_with_points.copy()
 
@@ -199,12 +224,18 @@ class UserInteractionHandler:
         if manual_prompt:
             self.selected_points = [list(p) for p in manual_prompt["points"]]
             self.selected_labels = [int(l) for l in manual_prompt["labels"]]
+            logger.debug(
+                f"[UI] load_frame_for_ui: manual prompt loaded for frame {frame_idx}  "
+                f"pts={len(self.selected_points)}  labels={self.selected_labels}"
+            )
             if self.pose_mode:
                 self.pose_click_coords = manual_prompt["pose_keypoints"]
                 self.current_keypoint_index = len(self.pose_click_coords)
+                logger.debug(f"[UI] load_frame_for_ui: pose_click_coords loaded: {len(self.pose_click_coords)} kp(s)")
             # SAM preview triggered async via debounced PreviewThread
 
         else:
+            logger.debug(f"[UI] load_frame_for_ui: no manual prompt for frame {frame_idx}, checking tracked data")
             # 2. Try to load existing tracking results (Current Batch or Prev Batch Preview)
             tracked_entry = None
             if self.pose_mode and hasattr(self.pipeline_processor, 'per_batch_tracked_data'):
@@ -212,17 +243,21 @@ class UserInteractionHandler:
                 if batch < len(self.pipeline_processor.per_batch_tracked_data):
                     tracked_batch = self.pipeline_processor.per_batch_tracked_data[batch]
                     local_idx = frame_idx % self.config.batch_size
+                    logger.debug(f"[UI] Checking tracked_batch[{batch}] local_idx={local_idx}  len={len(tracked_batch)}")
                     if tracked_batch and local_idx < len(tracked_batch):
                         tracked_entry = tracked_batch[local_idx]
+                        logger.debug(f"[UI] Tracked entry found in current batch {batch}")
 
                 # Check previous batch's overflow (Plus-One Preview)
                 if not tracked_entry and batch > 0 and batch - 1 < len(self.pipeline_processor.per_batch_tracked_data):
                     prev_batch_tracked = self.pipeline_processor.per_batch_tracked_data[batch-1]
                     if prev_batch_tracked and len(prev_batch_tracked) > self.config.batch_size:
                         tracked_entry = prev_batch_tracked[self.config.batch_size]
+                        logger.debug(f"[UI] Tracked entry from prev batch {batch-1} overflow")
 
             if tracked_entry:
                 kps = tracked_entry["keypoints"]
+                logger.debug(f"[UI] Loading {len(kps)} tracked keypoints for frame {frame_idx}")
                 for kp in kps:
                     if "label" in kp:
                         full_label = kp["label"]
@@ -234,12 +269,14 @@ class UserInteractionHandler:
                         self.selected_labels.append(full_label)
                     self.pose_click_coords.append(kp)
                 self.current_keypoint_index = len(self.pose_click_coords)
+                logger.debug(f"[UI] Tracked data loaded: selected_points={len(self.selected_points)}")
                 # SAM preview triggered async via debounced PreviewThread
 
             elif frame_idx % self.config.batch_size == 0:
                 # 3. If no data exists yet, we NO LONGER do auto carry-forward during navigation.
                 # This prevents UI freezes when scrolling. User can process manually.
-                pass
+                logger.debug(f"[UI] load_frame_for_ui: frame {frame_idx} is batch boundary with no data — skipping carry-forward")
+
 
         # NOTE: inference_state_temp is intentionally kept alive here.
         # It will be used by user_prompt_adder_pyqt() on every click until
@@ -255,12 +292,14 @@ class UserInteractionHandler:
         """Check if a frame has manual prompts, tracking results, or a rendered mask."""
         # 1. Manual prompt check
         if self.annotation_manager.get_prompt_for_frame(frame_idx):
+            logger.debug(f"[UI] has_data_for_frame({frame_idx}): manual prompt found")
             return True
 
         # 2. Rendered mask file check (SAM has already processed this frame)
         mask_filename = f"{self.config.prefix}{self.config.video_number}_{frame_idx:05d}.png"
         mask_path = os.path.join(self.config.rendered_frames_dir, mask_filename)
         if os.path.exists(mask_path):
+            logger.debug(f"[UI] has_data_for_frame({frame_idx}): disk mask found at {mask_path}")
             return True
 
         # 3. Tracking data check (CoTracker results)
@@ -271,6 +310,7 @@ class UserInteractionHandler:
                 tracked_batch = self.pipeline_processor.per_batch_tracked_data[batch]
                 local_idx = frame_idx % self.config.batch_size
                 if tracked_batch and local_idx < len(tracked_batch):
+                    logger.debug(f"[UI] has_data_for_frame({frame_idx}): tracked data found in batch {batch} local_idx={local_idx}")
                     return True
 
             # Previous batch overflow (Plus-One Preview)
@@ -278,7 +318,9 @@ class UserInteractionHandler:
                 prev_batch_tracked = self.pipeline_processor.per_batch_tracked_data[batch-1]
                 if prev_batch_tracked and len(prev_batch_tracked) > self.config.batch_size:
                     if frame_idx == batch * self.config.batch_size:
+                        logger.debug(f"[UI] has_data_for_frame({frame_idx}): prev batch overflow found")
                         return True
+        logger.debug(f"[UI] has_data_for_frame({frame_idx}): no data found")
         return False
     def prepare_batch_for_annotation(self, batch):
         """Prepare the first frame of a batch for annotation.

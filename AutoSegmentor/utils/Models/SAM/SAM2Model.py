@@ -18,12 +18,15 @@ class SAM2Model:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {device}")
         if device.type == "cuda":
+            logger.debug("[SAM2Model] Enabling CUDA TF32 and CuDNN TF32")
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
         return device
 
     def build_predictor(self):
         """Build and return the SAM2 video predictor."""
+        logger.debug(f"[SAM2Model] build_predictor: cfg={self.config.model_config_path}  ckpt={self.config.checkpoint_path}")
+        logger.debug(f"[SAM2Model] build_predictor: memory_bank_size={self.config.memory_bank_size}  prompt_memory_size={self.config.prompt_memory_size}")
         return build_sam2_video_predictor(
             self.config.model_config_path,
             self.config.checkpoint_path,

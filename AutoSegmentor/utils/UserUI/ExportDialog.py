@@ -138,6 +138,7 @@ class ExportDialog(QDialog):
         if not folder_name:
             return
             
+        logger.debug(f"[Export] start_export: base={base_path}  folder={folder_name}")
         export_path = os.path.join(base_path, folder_name)
 
         # Prepare types
@@ -146,6 +147,7 @@ class ExportDialog(QDialog):
         if self.cb_segment.isChecked(): export_types.append('mask')
         if self.cb_pose.isChecked(): export_types.append('pose')
 
+        logger.debug(f"[Export] Selected types: {export_types}")
         if not export_types:
             logger.warning("No export types selected.")
             return
@@ -163,7 +165,7 @@ class ExportDialog(QDialog):
             
             from DatasetCreator import YoloProcessor
         except ImportError as e:
-            logger.error(f"Could not import YoloProcessor: {e}")
+            logger.error(f"[Export] Could not import YoloProcessor: {e}")
             return
 
         # Class Mapping: Get from UI classes
@@ -226,7 +228,9 @@ class ExportDialog(QDialog):
         self.start_btn.setEnabled(True)
         self.progress_bar.setVisible(False)
         if success:
-            logger.info(message)
+            logger.info(f"[Export] Success: {message}")
             self.accept()
         else:
-            logger.error(f"Export failed: {message}")
+            logger.error(f"[Export] Failed: {message}")
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Export Error", f"Failed to export dataset:\n{message}")

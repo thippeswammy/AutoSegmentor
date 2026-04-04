@@ -6,6 +6,7 @@ data object tracking current frame, batch, zoom, and tool mode.
 """
 
 from PyQt5.QtWidgets import QUndoCommand
+from .logger_config import logger
 
 
 class AddPointCommand(QUndoCommand):
@@ -19,14 +20,17 @@ class AddPointCommand(QUndoCommand):
         self.pose_click = pose_click  # Optional pose keypoint dict
 
     def redo(self):
+        logger.debug(f"[CMD:AddPoint] redo  — point={self.point}  label={self.label}  pose={bool(self.pose_click)}")
         self.handler.selected_points.append(self.point)
         self.handler.selected_labels.append(self.label)
         if self.pose_click:
             self.handler.pose_click_coords.append(self.pose_click)
             if self.pose_click.get("name") != "Negative_Point":
                 self.handler.current_keypoint_index += 1
+        logger.debug(f"[CMD:AddPoint] after redo — total_points={len(self.handler.selected_points)}")
 
     def undo(self):
+        logger.debug(f"[CMD:AddPoint] undo  — removing point={self.point}  label={self.label}")
         if self.handler.selected_points:
             self.handler.selected_points.pop()
             self.handler.selected_labels.pop()
@@ -34,6 +38,7 @@ class AddPointCommand(QUndoCommand):
             self.handler.pose_click_coords.pop()
             if self.pose_click.get("name") != "Negative_Point":
                 self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)
+        logger.debug(f"[CMD:AddPoint] after undo — total_points={len(self.handler.selected_points)}")
 
 
 class ResetPointsCommand(QUndoCommand):
@@ -49,6 +54,7 @@ class ResetPointsCommand(QUndoCommand):
         self.saved_keypoint_index = handler.current_keypoint_index
 
     def redo(self):
+        logger.debug(f"[CMD:ResetPoints] redo  — clearing {len(self.saved_points)} points")
         self.handler.selected_points.clear()
         self.handler.selected_labels.clear()
         self.handler.pose_click_coords.clear()
@@ -56,6 +62,7 @@ class ResetPointsCommand(QUndoCommand):
             self.handler.current_keypoint_index = 0
 
     def undo(self):
+        logger.debug(f"[CMD:ResetPoints] undo  — restoring {len(self.saved_points)} points")
         self.handler.selected_points = list(self.saved_points)
         self.handler.selected_labels = list(self.saved_labels)
         self.handler.pose_click_coords = list(self.saved_pose_clicks)
@@ -75,14 +82,17 @@ class DeletePointCommand(QUndoCommand):
         self.deleted_pose_click = handler.pose_click_coords[index] if handler.pose_click_coords and index < len(handler.pose_click_coords) else None
 
     def redo(self):
+        logger.debug(f"[CMD:DeletePoint] redo  — index={self.index}  point={self.deleted_point}  label={self.deleted_label}")
         self.handler.selected_points.pop(self.index)
         self.handler.selected_labels.pop(self.index)
         if self.deleted_pose_click:
             self.handler.pose_click_coords.pop(self.index)
             if self.deleted_pose_click.get("name") != "Negative_Point":
                 self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)
+        logger.debug(f"[CMD:DeletePoint] after redo — total_points={len(self.handler.selected_points)}")
 
     def undo(self):
+        logger.debug(f"[CMD:DeletePoint] undo  — reinserting index={self.index}  point={self.deleted_point}")
         self.handler.selected_points.insert(self.index, self.deleted_point)
         self.handler.selected_labels.insert(self.index, self.deleted_label)
         if self.deleted_pose_click:
@@ -102,6 +112,7 @@ class DragPointCommand(QUndoCommand):
         self.new_pos = new_pos
 
     def redo(self):
+        logger.debug(f"[CMD:DragPoint] redo  — index={self.index}  {self.old_pos} -> {self.new_pos}")
         if self.index < len(self.handler.selected_points):
             self.handler.selected_points[self.index] = list(self.new_pos)
             if self.handler.pose_mode and self.handler.pose_click_coords and self.index < len(self.handler.pose_click_coords):
@@ -109,6 +120,7 @@ class DragPointCommand(QUndoCommand):
                 self.handler.pose_click_coords[self.index]['y'] = int(self.new_pos[1])
 
     def undo(self):
+        logger.debug(f"[CMD:DragPoint] undo  — index={self.index}  {self.new_pos} -> {self.old_pos}")
         if self.index < len(self.handler.selected_points):
             self.handler.selected_points[self.index] = list(self.old_pos)
             if self.handler.pose_mode and self.handler.pose_click_coords and self.index < len(self.handler.pose_click_coords):
@@ -140,6 +152,7 @@ class SkipPointCommand(QUndoCommand):
                 }
 
     def redo(self):
+        logger.debug(f"[CMD:SkipPoint] redo  — keypoint={self.pose_click.get('name') if self.pose_click else 'N/A'}")
         self.handler.selected_points.append(self.point)
         self.handler.selected_labels.append(self.label)
         if self.pose_click:
@@ -147,6 +160,7 @@ class SkipPointCommand(QUndoCommand):
             self.handler.current_keypoint_index += 1
 
     def undo(self):
+        logger.debug(f"[CMD:SkipPoint] undo  — removing skipped keypoint={self.pose_click.get('name') if self.pose_click else 'N/A'}")
         if self.handler.selected_points:
             self.handler.selected_points.pop()
             self.handler.selected_labels.pop()

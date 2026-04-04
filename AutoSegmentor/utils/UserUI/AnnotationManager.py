@@ -25,6 +25,7 @@ class AnnotationManager:
         """Load points and labels from JSON file."""
         ensure_directory("./inputs/UserPrompts")
         filename = f"./inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
+        logger.debug(f"[AnnotMgr] Loading annotations from: {filename}")
 
         if not exists(filename):
             logger.warning(f"Points and labels file {filename} not found")
@@ -40,7 +41,8 @@ class AnnotationManager:
             self.frame_indices = [int(entry["frame_idx"]) for entry in data]
             self.pose_keypoints_collection = [entry.get("pose_keypoints", []) for entry in data]
 
-            logger.debug(f"Loaded {len(self.points_collection)} annotations from {filename}")
+            logger.debug(f"[AnnotMgr] Loaded {len(self.points_collection)} annotations from {filename}")
+            logger.debug(f"[AnnotMgr] Frame indices present: {self.frame_indices}")
         except Exception as e:
             logger.error(f"Error loading points and labels from {filename}: {e}")
 
@@ -52,6 +54,7 @@ class AnnotationManager:
         """
         start_frame = batch_number * batch_size
         end_frame = start_frame + batch_size
+        logger.debug(f"[AnnotMgr] get_batch_prompts: batch={batch_number}  frames=[{start_frame}, {end_frame})")
         results = []
 
         for i in range(len(self.frame_indices)):
@@ -64,21 +67,27 @@ class AnnotationManager:
                     "labels": self.labels_collection[i],
                     "pose_keypoints": self.pose_keypoints_collection[i] if i < len(self.pose_keypoints_collection) else []
                 })
+        logger.debug(f"[AnnotMgr] get_batch_prompts: found {len(results)} prompt(s) for batch {batch_number}")
         return results
 
     def get_prompt_for_frame(self, frame_idx):
         """Get the prompt for a specific frame, if any."""
         for i, f_idx in enumerate(self.frame_indices):
             if f_idx == frame_idx:
+                pts = self.points_collection[i]
+                lbs = self.labels_collection[i]
+                logger.debug(f"[AnnotMgr] get_prompt_for_frame({frame_idx}): found {len(pts)} points")
                 return {
-                    "points": self.points_collection[i],
-                    "labels": self.labels_collection[i],
+                    "points": pts,
+                    "labels": lbs,
                     "pose_keypoints": self.pose_keypoints_collection[i] if i < len(self.pose_keypoints_collection) else []
                 }
+        logger.debug(f"[AnnotMgr] get_prompt_for_frame({frame_idx}): no prompt found")
         return None
 
     def get_latest_prompt_before(self, frame_idx):
         """Find the most recent prompt that occurs before the given frame index."""
+        logger.debug(f"[AnnotMgr] get_latest_prompt_before({frame_idx})")
         latest_idx = -1
         latest_data = None
         for i, f_idx in enumerate(self.frame_indices):
@@ -91,6 +100,10 @@ class AnnotationManager:
                         "labels": self.labels_collection[i],
                         "pose_keypoints": self.pose_keypoints_collection[i] if i < len(self.pose_keypoints_collection) else []
                     }
+        if latest_data:
+            logger.debug(f"[AnnotMgr] get_latest_prompt_before({frame_idx}): found at frame {latest_idx}")
+        else:
+            logger.debug(f"[AnnotMgr] get_latest_prompt_before({frame_idx}): none found")
         return latest_data
 
     def save_points_and_labels(self, frame_idx=None, points=None, labels=None, pose_keypoints=None):
@@ -148,7 +161,8 @@ class AnnotationManager:
         try:
             with open(filename, 'w', encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            logger.debug(f"Saved {len(data)} annotations to {filename}")
+            logger.debug(f"[AnnotMgr] Saved {len(data)} annotations to {filename}")
+            logger.debug(f"[AnnotMgr] Saved frame indices: {[e['frame_idx'] for e in data]}")
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
@@ -197,6 +211,7 @@ class AnnotationManager:
                 self.pose_keypoints_collection.append(kps)
 
         # Sort and Save to disk
+        logger.debug(f"[AnnotMgr] save_tracked_batch: batch={batch_number}  entries={len(tracked_dataset)}")
         self.save_points_and_labels()
 
     def check_data_sufficiency(self):

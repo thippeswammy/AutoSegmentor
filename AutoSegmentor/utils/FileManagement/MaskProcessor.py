@@ -31,6 +31,7 @@ class MaskProcessor:
         """Convert mask to bounding boxes. Handles numpy arrays and CUDA tensors."""
         if mask is None or isinstance(mask, (tuple, list)) and mask in [(None,), [None]]:
             self.mask_box_points = None
+            logger.debug("[MaskProc] mask_to_boxes: mask is None, skipping")
             return None
         # Guard: if mask is a CUDA tensor, move to CPU before numpy conversion
         try:
@@ -42,17 +43,22 @@ class MaskProcessor:
         boxes = {}
         object_ids = np.unique(mask)
         object_ids = object_ids[object_ids != 0]
+        logger.debug(f"[MaskProc] mask_to_boxes: object_ids={object_ids.tolist()}")
         for obj_id in object_ids:
             binary_mask = (mask == obj_id).astype(np.uint8)
             contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if not contours:
+                logger.debug(f"[MaskProc] mask_to_boxes: obj_id={obj_id} has no contours, skipping")
                 continue
             largest_contour = max(contours, key=cv2.contourArea)
             if cv2.contourArea(largest_contour) < int(mask.shape[0] * mask.shape[1] * 0.00015):
+                logger.debug(f"[MaskProc] mask_to_boxes: obj_id={obj_id} contour too small, skipping")
                 continue
             x, y, w, h = cv2.boundingRect(largest_contour)
             boxes[int(obj_id)] = [max(x, 0), max(y, 0), min(x + w, mask.shape[1]), min(y + h, mask.shape[0])]
+            logger.debug(f"[MaskProc] mask_to_boxes: obj_id={obj_id}  box={boxes[int(obj_id)]}")
         self.mask_box_points = boxes
+        logger.debug(f"[MaskProc] mask_to_boxes: returning {len(boxes)} box(es)")
         return boxes
 
     def binary_mask_2_color_mask(self, out_frame_idx, frame_filenames, video_segments, present_count, temp_directory,
@@ -62,10 +68,12 @@ class MaskProcessor:
             frame_path = os.path.join(temp_directory, frame_filenames[out_frame_idx])
         else:
             frame_path = frame_filenames
+        logger.debug(f"[MaskProc] binary_mask_2_color_mask: frame_idx={out_frame_idx}  save={save}  path={frame_path}")
         frame = cv2.imread(frame_path)
         if frame is None:
             logger.error(f"Failed to read frame: {frame_path}")
             return (present_count + 1) if save else None
+        logger.debug(f"[MaskProc] Frame read OK: shape={frame.shape}")
         
         full_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
         temp = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
@@ -86,21 +94,25 @@ class MaskProcessor:
             self.last_mask = temp.copy()
         color_mask_image = self.mask2colorMaskImg(full_mask)
         if save:
-            cv2.imwrite(
-                os.path.join(self.config.rendered_frames_dir,
-                             f"{self.config.prefix}{self.config.video_number}_{present_count:05d}.png"),
-                color_mask_image
+            out_path = os.path.join(
+                self.config.rendered_frames_dir,
+                f"{self.config.prefix}{self.config.video_number}_{present_count:05d}.png"
             )
+            logger.debug(f"[MaskProc] Saving color mask -> {out_path}")
+            cv2.imwrite(out_path, color_mask_image)
         else:
+            logger.debug(f"[MaskProc] Returning in-memory color mask (present_count={present_count})")
             return color_mask_image
         return present_count + 1
 
     def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None, starting_frame_idx=None):
         """Generate masks for a batch of frames."""
+        logger.debug(f"[MaskProc] generate_mask: batch={batch_number}  temp_dir={temp_directory}  starting_frame_idx={starting_frame_idx}")
         frame_file_names = sorted(
             [p for p in os.listdir(temp_directory) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
             key=lambda p: int(os.path.splitext(p)[0]) if p[:-4].isdigit() else float('inf')
         )
+        logger.debug(f"[MaskProc] generate_mask: {len(frame_file_names)} frame(s) found in temp dir")
         
         # Helper to safely acquire lock if provided
         class DummyLock:
@@ -115,19 +127,26 @@ class MaskProcessor:
                 return
 
             try:
+                logger.debug(f"[MaskProc] Calling sam2_predictor.init_state for batch {batch_number}")
                 inference_state = sam2_predictor.init_state(video_path=temp_directory, frame_paths=None)
+                logger.debug(f"[MaskProc] init_state OK for batch {batch_number}")
             except Exception as e:
                 logger.error(f"[MaskGen] Failed to initialize inference state: {e}")
                 return
 
             is_prompted = False
             if self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
-                pass
+                logger.debug(f"[MaskProc] last_mask is None — skipping auto_prompt_encoding")
             else:
-                is_prompted = auto_prompt_encoding(inference_state) is not None
-            is_prompted = (prompt_encoding(inference_state, batch_number) is not None) or is_prompted
+                result = auto_prompt_encoding(inference_state)
+                is_prompted = result is not None
+                logger.debug(f"[MaskProc] auto_prompt_encoding result: is_prompted={is_prompted}")
+            manual_result = prompt_encoding(inference_state, batch_number)
+            is_prompted = (manual_result is not None) or is_prompted
+            logger.debug(f"[MaskProc] After prompt_encoding: is_prompted={is_prompted}")
 
         if is_prompted:
+            logger.debug(f"[MaskProc] Starting propagate_in_video for batch {batch_number}")
             video_segments = {}
             # Granular propagation: propagate one frame at a time if possible, or release lock between batches
             # SAM2 propagate_in_video is a generator, we can wrap each step
@@ -137,6 +156,7 @@ class MaskProcessor:
                         out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                         for i, out_obj_id in enumerate(out_obj_ids)
                     }
+            logger.debug(f"[MaskProc] propagate_in_video done: {len(video_segments)} segment(s) produced")
             
             present_count = starting_frame_idx if starting_frame_idx is not None else self.image_counter
             with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
@@ -148,3 +168,6 @@ class MaskProcessor:
                 for future in futures:
                     present_count = max(present_count, future.result())
             self.image_counter = present_count
+            logger.debug(f"[MaskProc] generate_mask complete for batch {batch_number}  image_counter={self.image_counter}")
+        else:
+            logger.debug(f"[MaskProc] generate_mask: is_prompted=False — no masks written for batch {batch_number}")

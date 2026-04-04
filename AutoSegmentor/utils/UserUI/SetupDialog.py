@@ -12,8 +12,8 @@ first run) and saved back on every "Start" or "Save as Defaults" click.
 import json
 import os
 import sys
-
 import yaml
+from .logger_config import logger
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
@@ -51,9 +51,12 @@ def _load_session():
     if os.path.exists(_SESSION_STATE):
         try:
             with open(_SESSION_STATE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
+                data = json.load(f)
+                logger.debug(f"[Setup] Loaded session from {_SESSION_STATE}")
+                return data
+        except Exception as e:
+            logger.error(f"[Setup] Error loading session: {e}")
+    logger.debug(f"[Setup] Session file not found or failed, loading defaults from {_DEFAULT_CONFIG}")
     return _load_yaml(_DEFAULT_CONFIG)
 
 
@@ -61,6 +64,7 @@ def _save_session(data: dict):
     os.makedirs(os.path.dirname(_SESSION_STATE), exist_ok=True)
     with open(_SESSION_STATE, "w") as f:
         json.dump(data, f, indent=2)
+    logger.debug(f"[Setup] Saved session to {_SESSION_STATE}")
 
 
 def _save_defaults(data: dict):

@@ -69,6 +69,7 @@ class AutoSegmentorEngine(SAM2Model):
         """Handle mouse events for point selection."""
         inference_state_temp, frame_path = param
         if event == cv2.EVENT_LBUTTONDOWN:
+            logger.debug(f"[Engine] LButtonDown at ({x},{y})")
             self.user_interaction.selected_points.append([x, y])
             full_label = self.user_interaction.encode_label(
                 self.user_interaction.current_class_label, self.user_interaction.current_instance_id)
@@ -83,16 +84,19 @@ class AutoSegmentorEngine(SAM2Model):
                 if matching_boxes:
                     matching_boxes.sort(key=lambda x: x[0])
                     full_label = matching_boxes[0][1]
+                    logger.debug(f"[Engine] LClick: overrode label from mask_box_points -> {full_label}")
             if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask,
                                                                         (tuple, list)) and
                     self.mask_processor.last_mask in [(None,), [None]]):
                 if self.mask_processor.last_mask[y][x] > 0:
                     full_label = self.mask_processor.last_mask[y][x]
+                    logger.debug(f"[Engine] LClick: overrode label from last_mask pixel -> {full_label}")
             cv2.circle(self.user_interaction.current_frame, (x, y), 2,
                        self.config.label_colors[self.user_interaction.current_class_label], -1)
             cv2.circle(self.user_interaction.current_frame_only_with_points, (x, y), 2,
                        self.config.label_colors[self.user_interaction.current_class_label], -1)
             self.user_interaction.selected_labels.append(full_label)
+            logger.debug(f"[Engine] LClick: point=({x},{y})  label={full_label}  total_pts={len(self.user_interaction.selected_points)}")
             if self.user_interaction.pose_mode:
                 self.user_interaction.record_pose_click(x, y)
                 self.user_interaction.next_keypoint()
@@ -119,6 +123,7 @@ class AutoSegmentorEngine(SAM2Model):
         elif event == cv2.EVENT_LBUTTONUP:
             self.is_drawing = False
         elif event == cv2.EVENT_RBUTTONDOWN:
+            logger.debug(f"[Engine] RButtonDown at ({x},{y})")
             self.user_interaction.selected_points.append([x, y])
             full_label = self.user_interaction.encode_label(
                 self.user_interaction.current_class_label, self.user_interaction.current_instance_id) * -1
@@ -133,17 +138,19 @@ class AutoSegmentorEngine(SAM2Model):
                 if matching_boxes:
                     matching_boxes.sort(key=lambda x: x[0])
                     full_label = matching_boxes[0][1] * -1
+                    logger.debug(f"[Engine] RClick: overrode label from mask_box_points -> {full_label}")
             if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask,
                                                                         (tuple, list)) and
                     self.mask_processor.last_mask in [(None,), [None]]):
                 if int(self.mask_processor.last_mask[y][x]) > 0:
                     full_label = int(self.mask_processor.last_mask[y][x]) * -1
+                    logger.debug(f"[Engine] RClick: overrode label from last_mask pixel -> {full_label}")
             cv2.circle(self.user_interaction.current_frame, (x, y), 4, (0, 0, 255), -1)
             cv2.circle(self.user_interaction.current_frame_only_with_points, (x, y), 4, (0, 0, 255), -1)
             self.user_interaction.selected_labels.append(full_label)
             self.user_prompt_adder(inference_state_temp, frame_path)
             self.user_interaction.draw_text_with_background(self.user_interaction.current_frame)
-            logger.debug(f"Click: ({x}, {y}), Labels: {self.user_interaction.selected_labels}")
+            logger.debug(f"[Engine] RClick: point=({x},{y})  label={full_label}  total_pts={len(self.user_interaction.selected_points)}")
 
     def user_prompt_adder(self, inference_state, frame_path):
         """Add user prompts for a single frame and update the displayed frame.
@@ -152,27 +159,40 @@ class AutoSegmentorEngine(SAM2Model):
         holding (or able to acquire) _predictor_lock. Since _predictor_lock is
         now an RLock, re-entrant calls from the same thread are safe.
         """
+        logger.debug(
+            f"[Engine] user_prompt_adder: frame_path={frame_path}  "
+            f"pts={len(self.user_interaction.selected_points)}  "
+            f"labels={self.user_interaction.selected_labels}"
+        )
         if not self.sam2_predictor:
+            logger.debug("[Engine] user_prompt_adder: sam2_predictor is None, skipping")
             self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
             return
 
         try:
             with self._predictor_lock:
+                logger.debug("[Engine] user_prompt_adder: acquired predictor_lock, resetting state")
                 self.sam2_predictor.reset_state(inference_state)
                 self.is_prompted = False
                 box_points = None
                 if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
                         tuple, list)) and self.mask_processor.last_mask in [(None,), [None]]):
+                    logger.debug("[Engine] user_prompt_adder: running auto_prompt_encoding from last_mask")
                     box_points = self.auto_prompt_encoding(inference_state)
+                    logger.debug(f"[Engine] user_prompt_adder: auto_prompt_encoding done  box_points={box_points is not None}")
+                logger.debug("[Engine] user_prompt_adder: running prompt_encoding")
                 self.prompt_encoding(inference_state)  # batch_number=-1 → single-frame mode
+                logger.debug(f"[Engine] user_prompt_adder: is_prompted={self.is_prompted}")
                 if self.is_prompted:
                     video_segments = {}
+                    logger.debug("[Engine] user_prompt_adder: starting propagate_in_video")
                     for out_frame_idx, out_obj_ids, out_mask_logits in self.sam2_predictor.propagate_in_video(
                             inference_state, isSingle=True):
                         video_segments[out_frame_idx] = {
                             out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                             for i, out_obj_id in enumerate(out_obj_ids)
                         }
+                    logger.debug(f"[Engine] user_prompt_adder: propagate done  segments={list(video_segments.keys())}")
                     mask = self.mask_processor.binary_mask_2_color_mask(
                         out_frame_idx, frame_path, video_segments, 0, self.config.temp_directory, False)
                     if mask is None:
@@ -191,7 +211,9 @@ class AutoSegmentorEngine(SAM2Model):
                     blended = cv2.addWeighted(current_frame_org, 0.5, mask, 0.5, 0)
                     current_frame_org[non_zero_mask_3d] = blended[non_zero_mask_3d]
                     self.user_interaction.current_frame = self.show_box(box_points, current_frame_org)
+                    logger.debug("[Engine] user_prompt_adder: frame overlay applied successfully")
                 else:
+                    logger.debug("[Engine] user_prompt_adder: not prompted — showing points-only frame")
                     self.user_interaction.current_frame = self.user_interaction.current_frame_only_with_points.copy()
         except Exception:
             logger.error(f"[Prompt] user_prompt_adder failed:\n{traceback.format_exc()}")
@@ -210,6 +232,7 @@ class AutoSegmentorEngine(SAM2Model):
 
     def prompt_encoding(self, inference_state, batch_number=-1):
         """Encode prompts for SAM2 model. Handles multiple prompt frames per batch."""
+        logger.debug(f"[Engine] prompt_encoding: batch_number={batch_number}")
         if batch_number == -1:
             points_list = self.user_interaction.selected_points
             label_list = self.user_interaction.selected_labels
@@ -221,13 +244,16 @@ class AutoSegmentorEngine(SAM2Model):
             prompts = self.annotation_manager.get_batch_prompts(batch_number, self.config.batch_size)
 
         if not prompts:
+            logger.debug(f"[Engine] prompt_encoding: no prompts for batch={batch_number}, returning None")
             return None
 
+        logger.debug(f"[Engine] prompt_encoding: encoding {len(prompts)} prompt frame(s)")
         for p_data in prompts:
             f_idx = p_data["frame_idx"]
-            
+
             # Additional safety: ensure f_idx is within video range
             if f_idx >= len(self.frame_paths):
+                logger.debug(f"[Engine] prompt_encoding: f_idx={f_idx} out of range, skipping")
                 continue
 
             points_np = np.array(p_data["points"], dtype=np.float32)
@@ -235,14 +261,17 @@ class AutoSegmentorEngine(SAM2Model):
 
             unique_labels = np.unique(np.abs(labels_np))
             if len(unique_labels) == 0:
+                logger.debug(f"[Engine] prompt_encoding: f_idx={f_idx} has no unique labels, skipping")
                 continue
 
+            logger.debug(f"[Engine] prompt_encoding: f_idx={f_idx}  unique_labels={unique_labels.tolist()}  pts={len(points_np)}")
             for label in unique_labels:
                 self.is_prompted = True
                 obj_mask = np.abs(labels_np) == label
                 points_np1 = points_np[obj_mask]
                 raw_labels_np1 = labels_np[obj_mask]
                 labels_np1 = (raw_labels_np1 > 0).astype(np.int32)
+                logger.debug(f"[Engine] prompt_encoding: adding obj_id={label}  frame_idx={f_idx % self.config.batch_size}  pts_for_obj={len(points_np1)}")
 
                 self.sam2_predictor.add_new_points_or_box(
                     inference_state=inference_state,
@@ -252,23 +281,29 @@ class AutoSegmentorEngine(SAM2Model):
                     points=points_np1,
                     labels=labels_np1
                 )
+        logger.debug(f"[Engine] prompt_encoding: done  is_prompted={self.is_prompted}")
         return True
 
     def auto_prompt_encoding(self, inference_state):
         """Encode automatic prompts from previous masks."""
+        logger.debug("[Engine] auto_prompt_encoding called")
         if not self.config.auto_prompt_encoding:
+            logger.debug("[Engine] auto_prompt_encoding: disabled in config, skipping")
             return None
         points_list = []
         label_list = []
         box_prompt = self.mask_processor.mask_to_boxes(self.mask_processor.last_mask)
         if box_prompt is None:
+            logger.debug("[Engine] auto_prompt_encoding: mask_to_boxes returned None, skipping")
             return None
+        logger.debug(f"[Engine] auto_prompt_encoding: {len(box_prompt)} box(es) found")
         for k, v in box_prompt.items():
             points_list.append(v)
             label_list.append(k)
         points_np = [np.array(points, dtype=np.float32) for points in points_list]
         labels_np = label_list
         for i in range(len(points_np)):
+            logger.debug(f"[Engine] auto_prompt_encoding: adding box obj_id={labels_np[i]}  box={points_np[i].tolist()}")
             self.is_prompted = True
             self.sam2_predictor.add_new_points_or_box(
                 inference_state=inference_state,
@@ -276,6 +311,7 @@ class AutoSegmentorEngine(SAM2Model):
                 obj_id=int(labels_np[i]),
                 box=points_np[i]
             )
+        logger.debug(f"[Engine] auto_prompt_encoding: done  {len(points_np)} box(es) added")
         return points_np
 
     def _track_batch_cotracker(self, batch_number, query_frame_idx=None):
