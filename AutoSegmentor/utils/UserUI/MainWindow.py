@@ -447,7 +447,9 @@ class AnnotationWindow(QDialog):
                     kp_name = "Negative_Point"
                     p_id = len(self.handler.pose_click_coords)
                 else:
-                    kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index % num_kps]
+                    # Use per-instance count to determine which keypoint slot
+                    instance_count = self.handler.get_instance_keypoint_count()
+                    kp_name = self.handler.pose_keypoints[instance_count % num_kps]
                     p_id = len(self.handler.pose_click_coords)
                 pose_click = {
                     "name": kp_name,
@@ -601,10 +603,19 @@ class AnnotationWindow(QDialog):
         
         if self.handler.pose_mode:
             num_kps = len(self.handler.pose_keypoints)
-            current_mod = self.handler.current_keypoint_index % num_kps if num_kps > 0 else 0
-            # Isolate the current instance's pose coords to properly update visibility toggles
-            start_idx = (self.handler.current_keypoint_index // num_kps) * num_kps if num_kps > 0 else 0
-            current_coords = self.handler.pose_click_coords[start_idx:]
+            # Count keypoints for the CURRENT class+instance only
+            instance_kp_count = self.handler.get_instance_keypoint_count()
+            current_mod = instance_kp_count % num_kps if num_kps > 0 else 0
+            
+            # Find pose_coords belonging to current instance for visibility toggles
+            target_label = self.handler.encode_label(
+                self.handler.current_class_label, self.handler.current_instance_id
+            )
+            current_coords = [
+                pc for pc in self.handler.pose_click_coords
+                if pc.get('name') != 'Negative_Point'
+                and abs(pc.get('label', 0)) == target_label
+            ]
             
             self.sidebar.keypoint_progress.update_progress(
                 current_mod,
@@ -635,11 +646,13 @@ class AnnotationWindow(QDialog):
 
     def next_instance(self):
         self.handler.current_instance_id += 1
+        self.handler._recalc_keypoint_index()
         self._update_sidebar()
         
     def prev_instance(self):
         if self.handler.current_instance_id > 1:
             self.handler.current_instance_id -= 1
+            self.handler._recalc_keypoint_index()
             self._update_sidebar()
 
     def reset_points(self):

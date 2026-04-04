@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 from .UITheme import (
     Colors, ANNOTATION_COLORS_QT, ANNOTATION_COLORS_BRIGHT,
     POINT_RADIUS, POINT_RADIUS_SELECTED, BADGE_FONT_SIZE,
-    ZOOM_VIEW_SIZE
+    ZOOM_VIEW_SIZE, get_class_point_color
 )
 
 
@@ -266,15 +266,17 @@ class AnnotationCanvas(QGraphicsView):
         self._clear_skeleton()
 
     def draw_annotations(self, points, labels, pose_keypoints=None, pose_coords=None, pose_config=None):
-        """Draw annotation points with numbered badges and class colors."""
+        """Draw annotation points with numbered badges and per-instance colors."""
         self._is_redrawing = True
         try:
             self.clear_annotations()
             for idx, (pt, lbl) in enumerate(zip(points, labels)):
                 x, y = pt[0], pt[1]
-                class_id = abs(lbl) // 1000
                 is_negative = lbl < 0
-                color = ANNOTATION_COLORS_QT.get(class_id, QColor(Colors.TEXT_PRIMARY))
+                class_id = abs(lbl) // 1000
+                
+                # Color by CLASS (complement of mask color) — instances separated by skeleton grouping
+                color = get_class_point_color(class_id)
                 if is_negative:
                     color = QColor(Colors.ACCENT_RED)
                     
@@ -306,23 +308,14 @@ class AnnotationCanvas(QGraphicsView):
     def _draw_skeleton(self, points, labels, pose_coords=None):
         """Draw connecting lines between consecutive annotation points.
 
-        In pose mode these are keypoint skeleton lines (dashed cyan).
-        In segment mode these are simple connector lines to show the order
-        points were placed, matching the legacy stable behaviour.
+        Uses per-instance colors so skeleton lines match point colors.
+        Lines are only drawn between consecutive points of the same instance.
         """
         self._clear_skeleton()
         if len(points) < 2:
             return
-        pen = QPen(QColor(Colors.ACCENT_CYAN), 1.5, Qt.DashLine)
-        pen.setCosmetic(True)
 
-        pen_invisible = QPen(QColor(Colors.ACCENT_CYAN), 1.5, Qt.DotLine)
-        pen_invisible.setCosmetic(True)
-        c = QColor(Colors.ACCENT_CYAN)
-        c.setAlpha(60)
-        pen_invisible.setColor(c)
-
-        # Filter out negative points (auxiliary background trackers) entirely from the skeleton sequence
+        # Filter out negative points (auxiliary background trackers) from the skeleton sequence
         positive_seq = []
         for idx in range(len(points)):
             if labels and idx < len(labels) and labels[idx] < 0:
@@ -339,14 +332,28 @@ class AnnotationCanvas(QGraphicsView):
             return
 
         for i in range(len(positive_seq) - 1):
-            if abs(positive_seq[i]["label"]) != abs(positive_seq[i + 1]["label"]):
+            lbl_a = abs(positive_seq[i]["label"])
+            lbl_b = abs(positive_seq[i + 1]["label"])
+            if lbl_a != lbl_b:
                 continue
+            
+            # Use the class's point color (complement of mask) for the skeleton line
+            class_id = lbl_a // 1000
+            instance_color = get_class_point_color(class_id)
                 
             x1, y1 = positive_seq[i]["pt"]
             x2, y2 = positive_seq[i + 1]["pt"]
 
-            p = pen if (positive_seq[i]["vis"] and positive_seq[i + 1]["vis"]) else pen_invisible
-            line = self._scene.addLine(x1, y1, x2, y2, p)
+            both_visible = positive_seq[i]["vis"] and positive_seq[i + 1]["vis"]
+            if both_visible:
+                pen = QPen(instance_color, 1.5, Qt.DashLine)
+            else:
+                faded = QColor(instance_color)
+                faded.setAlpha(60)
+                pen = QPen(faded, 1.5, Qt.DotLine)
+            pen.setCosmetic(True)
+            
+            line = self._scene.addLine(x1, y1, x2, y2, pen)
             self._skeleton_items.append(line)
 
     def _clear_skeleton(self):

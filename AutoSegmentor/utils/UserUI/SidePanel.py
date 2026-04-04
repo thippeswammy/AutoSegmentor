@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
 
 
 from .UITheme import (
-    Colors, ANNOTATION_COLORS_QT, Fonts, SIDEBAR_WIDTH
+    Colors, ANNOTATION_COLORS_QT, Fonts, SIDEBAR_WIDTH, get_class_point_color
 )
 
 
@@ -114,7 +114,8 @@ class AnnotationListPanel(QGroupBox):
             instance_id = abs(lbl) % 1000
             is_neg = lbl < 0
             sign = "−" if is_neg else "+"
-            color = ANNOTATION_COLORS_QT.get(class_id, QColor(Colors.TEXT_PRIMARY))
+            # Use per-class point color (complement of mask) matching the canvas
+            color = QColor(Colors.ACCENT_RED) if is_neg else get_class_point_color(class_id)
             text = f" {sign} [{idx + 1}]  C{class_id}:I{instance_id}  ({int(pt[0])}, {int(pt[1])})"
             item = QListWidgetItem(text)
             item.setForeground(color)
@@ -266,8 +267,8 @@ class ToolInfoPanel(QGroupBox):
         self.mode_label.setText(f"Mode: {mode}")
         self.class_label.setText(f"Class: {class_id}")
         self.instance_label.setText(f"Instance: {instance_id}")
-        # Update color dot
-        color = ANNOTATION_COLORS_QT.get(class_id, QColor(255, 80, 80))
+        # Update color dot — show the per-class point color (complement of mask)
+        color = get_class_point_color(class_id)
         pixmap = QPixmap(12, 12)
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)

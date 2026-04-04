@@ -53,12 +53,31 @@ class UserInteractionHandler:
     def encode_label(class_id, instance_id):
         return class_id * 1000 + instance_id
 
+    def get_instance_keypoint_count(self, class_id=None, instance_id=None):
+        """Count positive keypoints for a specific (class, instance) combo.
+        
+        If class_id/instance_id are None, uses the current active values.
+        """
+        if class_id is None:
+            class_id = self.current_class_label
+        if instance_id is None:
+            instance_id = self.current_instance_id
+        target_label = self.encode_label(class_id, instance_id)
+        return sum(1 for pc in self.pose_click_coords
+                   if pc.get('name') != 'Negative_Point'
+                   and abs(pc.get('label', 0)) == target_label)
+
+    def _recalc_keypoint_index(self):
+        """Recalculate current_keypoint_index for the current class+instance."""
+        self.current_keypoint_index = self.get_instance_keypoint_count()
+
     def change_class_label_pyqt(self, label):
         self.current_class_label = label
         self.current_instance_id = 1
         for i in self.selected_labels:
             if abs(i // 1000) == label:
                 self.current_instance_id = max(abs(i) % 1000, self.current_instance_id)
+        self._recalc_keypoint_index()
 
     def user_prompt_adder_pyqt(self):
         """Trigger single-frame SAM2 mask preview.

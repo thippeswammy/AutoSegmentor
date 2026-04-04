@@ -93,6 +93,52 @@ ANNOTATION_COLORS_BRIGHT = {
 }
 
 
+# ─── Per-Class Point Colors (Complementary to Mask) ─────────────────────────────
+#
+# Each class's MASK color (ANNOTATION_COLORS_QT) is used for rendering masks.
+# The POINT color below is the approximate RGB complement, ensuring maximum
+# contrast when points/skeleton lines sit on top of the mask overlay.
+#
+# Class 1 mask = Red(255,80,80)     → Point = Cyan(0,220,220)
+# Class 2 mask = Blue(80,140,255)   → Point = Amber(255,180,0)
+# Class 3 mask = Green(80,220,80)   → Point = Purple(200,50,200)
+# Class 4 mask = Yellow(255,220,50) → Point = Blue(60,60,255)
+# Class 5 mask = Magenta(220,80,220)→ Point = Green(50,220,50)
+# etc.
+
+POINT_COLORS_QT = {
+    1:  QColor(  0, 220, 220),  # Cyan        (vs Red mask)
+    2:  QColor(255, 180,   0),  # Amber       (vs Blue mask)
+    3:  QColor(200,  50, 200),  # Purple      (vs Green mask)
+    4:  QColor( 60,  60, 255),  # Royal Blue  (vs Yellow mask)
+    5:  QColor( 50, 220,  50),  # Lime        (vs Magenta mask)
+    6:  QColor(255,  80,  80),  # Coral       (vs Cyan mask)
+    7:  QColor(128, 255, 128),  # Mint        (vs Purple mask)
+    8:  QColor( 60, 140, 255),  # Sky Blue    (vs Orange mask)
+    9:  QColor(255, 200,  50),  # Gold        (vs White mask)
+    10: QColor(255, 128, 255),  # Pink        (vs Gray mask)
+}
+
+
+def get_class_point_color(class_id):
+    """Return a high-contrast point/line QColor for a given class_id.
+
+    The returned color is the complement of the class's mask color,
+    ensuring points and skeleton lines are clearly visible even when
+    drawn on top of a SAM mask overlay.
+
+    Args:
+        class_id: integer class identifier (1-based).
+    Returns:
+        QColor contrasting with the mask color for this class.
+    """
+    if class_id in POINT_COLORS_QT:
+        return QColor(POINT_COLORS_QT[class_id])  # copy
+    # Fallback: golden-angle-based hue for unknown classes
+    hue = (class_id * 137.508) % 360
+    return QColor.fromHslF(hue / 360.0, 0.90, 0.62)
+
+
 # ─── Font Configuration ─────────────────────────────────────────────────────────
 
 class Fonts:

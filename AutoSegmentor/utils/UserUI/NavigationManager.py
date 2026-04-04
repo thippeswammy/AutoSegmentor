@@ -132,10 +132,11 @@ class SkipPointCommand(QUndoCommand):
         if self.handler.pose_mode:
             num_kps = len(self.handler.pose_keypoints)
             if num_kps > 0:
-                kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index % num_kps]
+                instance_count = self.handler.get_instance_keypoint_count()
+                kp_name = self.handler.pose_keypoints[instance_count % num_kps]
                 self.pose_click = {
                     "name": kp_name,
-                    "point_id": self.handler.current_keypoint_index,
+                    "point_id": len(self.handler.pose_click_coords),
                     "x": 0,
                     "y": 0,
                     "visible": False,
