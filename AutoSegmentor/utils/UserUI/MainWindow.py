@@ -200,14 +200,17 @@ class AnnotationWindow(QDialog):
 
         file_menu.addSeparator()
 
-        finish_action = QAction("Finish Pipeline", self)
-        finish_action.triggered.connect(self.accept)
+        finish_action = QAction("&Save and Finish", self)
+        finish_action.setShortcut("Ctrl+Return")
+        finish_action.setStatusTip("Save current progress and finish the manual annotation phase")
+        finish_action.triggered.connect(self._on_finish_pipeline)
         file_menu.addAction(finish_action)
 
         file_menu.addSeparator()
 
-        quit_action = QAction("E&xit Without Saving", self)
+        quit_action = QAction("&Quit Without Saving", self)
         quit_action.setShortcut("Ctrl+Q")
+        quit_action.setStatusTip("Close the tool without saving the current frame")
         quit_action.triggered.connect(self.reject)
         file_menu.addAction(quit_action)
 
@@ -246,6 +249,37 @@ class AnnotationWindow(QDialog):
         shortcuts_action.setShortcut("H")
         shortcuts_action.triggered.connect(self._show_help_overlay)
         help_menu.addAction(shortcuts_action)
+
+    def closeEvent(self, event):
+        """Intercept window close to prevent accidental data loss."""
+        if self.is_processing:
+            reply = QMessageBox.question(
+                self, 'Background Task Running',
+                "A background process (SAM2/CoTracker) is still running.\n\n"
+                "Closing the window now may stop the process. Exit anyway?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                event.ignore()
+                return
+
+        # check if there are points on the current frame that haven't been saved
+        if self.undo_stack.canUndo() or self.handler.selected_points:
+            reply = QMessageBox.question(
+                self, 'Save Progress?',
+                "Do you want to save your progress on the current frame before exiting?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, QMessageBox.Save
+            )
+
+            if reply == QMessageBox.Save:
+                self.handler.save_current_annotation()
+                event.accept()
+            elif reply == QMessageBox.Discard:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -730,6 +764,12 @@ class AnnotationWindow(QDialog):
         self._save_status_label.setText("  ✓  Saved")
         QTimer.singleShot(2000, lambda: self._save_status_label.setText(""))
         logger.info("Progress saved by user (Ctrl+S).")
+
+    def _on_finish_pipeline(self):
+        """Save current frame and exit pipeline phase with success."""
+        self.handler.save_current_annotation()
+        logger.info("Save and Finish triggered. Pipeline phase accepted.")
+        self.accept()
 
     def _on_export_yolo(self):
         """Ctrl+E — show YOLO dataset export dialog."""
