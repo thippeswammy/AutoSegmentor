@@ -133,7 +133,8 @@ class UserInteractionHandler:
         self.load_frame_for_ui(target_frame)
         logger.info(f"Opening UI window at frame {target_frame}.")
         try:
-            self.window.exec_()
+            result = self.window.exec_()
+            return result == 1  # 1 = QDialog.Accepted
         finally:
             # Final cleanup: ensure the window object is cleared
             # and any lingering state is reset if needed.

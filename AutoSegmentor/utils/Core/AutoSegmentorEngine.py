@@ -435,6 +435,7 @@ class AutoSegmentorEngine(SAM2Model):
         # In case the check pushes us past the end, bring it back
         start_frame_idx = min(start_frame_idx, len(self.frame_paths) - 1)
         
-        self.user_interaction.start_ui_loop(self.frame_paths, start_frame_idx)
+        result = self.user_interaction.start_ui_loop(self.frame_paths, start_frame_idx)
 
         clear_directory(self.config.temp_directory)
+        return result

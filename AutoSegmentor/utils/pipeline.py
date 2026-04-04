@@ -85,7 +85,9 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         sam_enabled=sam_enabled,
         review_from_start=review_from_start
     )
-    processor.run()
+    if not processor.run():
+        logger.info("Pipeline terminated: Manual annotation session was discarded or cancelled.")
+        return
     logger.info(f"[Pipeline] Engine processing completed in {time.time() - t0:.1f}s")
 
     if run_mode != "mask_only" and pose_config and pose_config.get('enabled'):
