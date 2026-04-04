@@ -286,8 +286,6 @@ class AnnotationWindow(QDialog):
         self.class_combo.setCurrentIndex(self.handler.current_class_label - 1)
         self.class_combo.currentIndexChanged.connect(self.change_class)
         self.tool_bar.addWidget(self.class_combo)
-        if self.handler.pose_mode:
-            self.class_combo.setEnabled(False)
             
         self.tool_bar.addWidget(QLabel("  Inst: "))
         self.inst_lbl = QLabel(str(self.handler.current_instance_id))
@@ -325,7 +323,7 @@ class AnnotationWindow(QDialog):
 
     def _setup_shortcuts(self):
         for i in range(1, 10):
-            QShortcut(QKeySequence(str(i)), self, lambda checked, idx=i: self.set_class(idx))
+            QShortcut(QKeySequence(str(i)), self, lambda idx=i: self.set_class(idx))
 
         QShortcut(QKeySequence("Tab"),       self, self.next_instance)
         QShortcut(QKeySequence("Shift+Tab"), self, self.prev_instance)
@@ -443,14 +441,16 @@ class AnnotationWindow(QDialog):
             
         pose_click = None
         if self.handler.pose_mode:
-            if self.handler.current_keypoint_index < len(self.handler.pose_keypoints):
-                kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index]
+            num_kps = len(self.handler.pose_keypoints)
+            if num_kps > 0:
+                kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index % num_kps]
                 pose_click = {
                     "name": kp_name,
                     "point_id": self.handler.current_keypoint_index,
                     "x": int(x),
                     "y": int(y),
-                    "visible": True
+                    "visible": True,
+                    "label": full_label
                 }
 
         cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click)
@@ -595,11 +595,17 @@ class AnnotationWindow(QDialog):
         self.inst_lbl.setText(str(self.handler.current_instance_id))
         
         if self.handler.pose_mode:
+            num_kps = len(self.handler.pose_keypoints)
+            current_mod = self.handler.current_keypoint_index % num_kps if num_kps > 0 else 0
+            # Isolate the current instance's pose coords to properly update visibility toggles
+            start_idx = (self.handler.current_keypoint_index // num_kps) * num_kps if num_kps > 0 else 0
+            current_coords = self.handler.pose_click_coords[start_idx:]
+            
             self.sidebar.keypoint_progress.update_progress(
-                self.handler.current_keypoint_index,
-                self.handler.pose_click_coords
+                current_mod,
+                current_coords
             )
-            self.sidebar.keypoint_progress.set_current(self.handler.current_keypoint_index)
+            self.sidebar.keypoint_progress.set_current(current_mod)
 
     def set_batch_info(self, batch, total_batches, frame_idx, total_frames):
         self.nav_state.set_batch_info(batch, total_batches, frame_idx, total_frames)

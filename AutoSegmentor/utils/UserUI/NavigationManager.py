@@ -125,15 +125,18 @@ class SkipPointCommand(QUndoCommand):
         self.point = [0, 0] # Dummy coordinates for skipped points
         self.label = handler.encode_label(handler.current_class_label, handler.current_instance_id) * -1 # Mark as negative
         self.pose_click = None
-        if self.handler.pose_mode and self.handler.current_keypoint_index < len(self.handler.pose_keypoints):
-            kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index]
-            self.pose_click = {
-                "name": kp_name,
-                "point_id": self.handler.current_keypoint_index,
-                "x": 0,
-                "y": 0,
-                "visible": False
-            }
+        if self.handler.pose_mode:
+            num_kps = len(self.handler.pose_keypoints)
+            if num_kps > 0:
+                kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index % num_kps]
+                self.pose_click = {
+                    "name": kp_name,
+                    "point_id": self.handler.current_keypoint_index,
+                    "x": 0,
+                    "y": 0,
+                    "visible": False,
+                    "label": self.label
+                }
 
     def redo(self):
         self.handler.selected_points.append(self.point)

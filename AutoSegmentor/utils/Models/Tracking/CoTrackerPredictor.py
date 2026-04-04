@@ -142,21 +142,21 @@ class CoTrackerPredictor:
         T = tracks_np.shape[0]
         for t in range(T):
             frame_kps = []
-            for i, kp_name in enumerate(self.keypoint_defs):
-                if i >= num_keypoints:
-                    break
-
+            for i, coord in enumerate(sorted_coords):
                 is_visible = bool(visibility_np[t, i])
                 x = int(round(tracks_np[t, i, 0])) if is_visible else -1
                 y = int(round(tracks_np[t, i, 1])) if is_visible else -1
 
-                frame_kps.append({
-                    "name": kp_name,
-                    "point_id": i,
+                kp_data = {
+                    "name": coord["name"],
+                    "point_id": coord["point_id"],
                     "x": x,
                     "y": y,
                     "visible": 2 if is_visible else 0  # COCO: 2=visible, 0=not labeled
-                })
+                }
+                if "label" in coord:
+                    kp_data["label"] = coord["label"]
+                frame_kps.append(kp_data)
 
             self.tracked_frames.append({
                 "frame_index": t,
@@ -221,12 +221,15 @@ def track_between_frames(keypoint_coords, frame_from_path, frame_to_path, checkp
     result = []
     for i, coord in enumerate(sorted_coords):
         is_visible = bool(visibility_np[1, i])
-        result.append({
+        kp_data = {
             "name": coord["name"],
             "point_id": coord["point_id"],
             "x": int(round(tracks_np[1, i, 0])) if is_visible else coord["x"],
             "y": int(round(tracks_np[1, i, 1])) if is_visible else coord["y"],
-        })
+        }
+        if "label" in coord:
+            kp_data["label"] = coord["label"]
+        result.append(kp_data)
 
     logger.info(f"Carry-forward tracking: {num_kps} keypoints tracked between frames")
     return result

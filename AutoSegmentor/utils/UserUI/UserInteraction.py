@@ -54,9 +54,6 @@ class UserInteractionHandler:
         return class_id * 1000 + instance_id
 
     def change_class_label_pyqt(self, label):
-        if self.pose_mode:
-            logger.warning("Class selection disabled in Pose Mode")
-            return
         self.current_class_label = label
         self.current_instance_id = 1
         for i in self.selected_labels:
@@ -171,7 +168,7 @@ class UserInteractionHandler:
             self.selected_labels = [int(l) for l in manual_prompt["labels"]]
             if self.pose_mode:
                 self.pose_click_coords = manual_prompt["pose_keypoints"]
-                self.current_keypoint_index = len(self.pose_keypoints)
+                self.current_keypoint_index = len(self.pose_click_coords)
             # SAM preview triggered async via debounced PreviewThread
 
         else:
@@ -193,13 +190,17 @@ class UserInteractionHandler:
 
             if tracked_entry:
                 kps = tracked_entry["keypoints"]
-                full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
                 for kp in kps:
+                    if "label" in kp:
+                        full_label = kp["label"]
+                    else:
+                        full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
+                    
                     if kp.get("visible", 2) > 0:
                         self.selected_points.append([kp["x"], kp["y"]])
                         self.selected_labels.append(full_label)
                     self.pose_click_coords.append(kp)
-                self.current_keypoint_index = len(self.pose_keypoints)
+                self.current_keypoint_index = len(self.pose_click_coords)
                 # SAM preview triggered async via debounced PreviewThread
 
             elif frame_idx % self.config.batch_size == 0:
@@ -330,6 +331,6 @@ class UserInteractionHandler:
                         "name": kp["name"], "point_id": kp["point_id"],
                         "x": x, "y": y, "visible": kp.get("visible", True)
                     })
-                self.current_keypoint_index = len(self.pose_keypoints)
+                self.current_keypoint_index = len(self.pose_click_coords)
                 self.user_prompt_adder_pyqt()
 
