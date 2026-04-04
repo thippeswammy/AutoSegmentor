@@ -60,7 +60,7 @@ class BatchProcessorThread(QThread):
                 # Persistence: Save tracked keypoints to JSON continuously
                 tracked_data = processor.per_batch_tracked_data[self.batch]
                 if tracked_data:
-                    self.handler.annotation_manager.save_tracked_batch(tracked_data)
+                    self.handler.annotation_manager.save_tracked_batch(tracked_data, self.batch)
 
             self.finished_batch.emit(self.batch)
         except Exception:

@@ -151,18 +151,23 @@ class AnnotationManager:
         except Exception as e:
             logger.error(f"Error saving points and labels to {filename}: {e}")
 
-    def save_tracked_batch(self, tracked_dataset):
+    def save_tracked_batch(self, tracked_dataset, batch_number):
         """Batch update tracked data into internal collections and save to JSON.
         
         Args:
             tracked_dataset: List of dicts from CoTracker containing frames and their keypoints.
-                             [{"frame_idx": int, "keypoints": [...]}, ...]
+                             [{"frame_index": int, "keypoints": [...]}, ...]
+            batch_number: Integer batch number (0-indexed) to calculate absolute frame indices.
         """
         if not tracked_dataset:
             return
 
+        batch_start = batch_number * self.config.batch_size
+
         for entry in tracked_dataset:
-            f_idx = entry["frame_idx"]
+            # CoTrackerPredictor uses "frame_index" (relative), fallback to "frame_idx"
+            rel_idx = entry.get("frame_index", entry.get("frame_idx", 0))
+            f_idx = batch_start + rel_idx
             kps = entry["keypoints"]
             
             # Extract points and labels from the keypoints list
