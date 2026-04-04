@@ -306,55 +306,51 @@ class AnnotationCanvas(QGraphicsView):
         self._draw_skeleton(points, labels, pose_coords)
 
     def _draw_skeleton(self, points, labels, pose_coords=None):
-        """Draw connecting lines between consecutive annotation points.
+        """Draw connecting lines between annotation points of the same instance.
 
-        Uses per-instance colors so skeleton lines match point colors.
-        Lines are only drawn between consecutive points of the same instance.
+        Points are GROUPED by label (class+instance) first, then consecutive
+        points within each group are connected. This means switching to another
+        class/instance and back will NOT break the skeleton chain.
         """
         self._clear_skeleton()
         if len(points) < 2:
             return
 
-        # Filter out negative points (auxiliary background trackers) from the skeleton sequence
-        positive_seq = []
+        # 1. Collect positive points, tagged with their label and visibility
+        from collections import defaultdict
+        groups = defaultdict(list)  # label -> list of {pt, vis}
+
         for idx in range(len(points)):
             if labels and idx < len(labels) and labels[idx] < 0:
-                continue
+                continue  # skip negative / background points
             
+            lbl = abs(labels[idx]) if labels else 1
             vis = pose_coords[idx].get('visible', True) if pose_coords and idx < len(pose_coords) else True
-            positive_seq.append({
-                "pt": points[idx],
-                "label": labels[idx] if labels else 1,
-                "vis": vis
-            })
-            
-        if len(positive_seq) < 2:
-            return
+            groups[lbl].append({"pt": points[idx], "vis": vis})
 
-        for i in range(len(positive_seq) - 1):
-            lbl_a = abs(positive_seq[i]["label"])
-            lbl_b = abs(positive_seq[i + 1]["label"])
-            if lbl_a != lbl_b:
+        # 2. Draw skeleton lines within each group
+        for lbl, group in groups.items():
+            if len(group) < 2:
                 continue
-            
-            # Use the class's point color (complement of mask) for the skeleton line
-            class_id = lbl_a // 1000
-            instance_color = get_class_point_color(class_id)
-                
-            x1, y1 = positive_seq[i]["pt"]
-            x2, y2 = positive_seq[i + 1]["pt"]
 
-            both_visible = positive_seq[i]["vis"] and positive_seq[i + 1]["vis"]
-            if both_visible:
-                pen = QPen(instance_color, 1.5, Qt.DashLine)
-            else:
-                faded = QColor(instance_color)
-                faded.setAlpha(60)
-                pen = QPen(faded, 1.5, Qt.DotLine)
-            pen.setCosmetic(True)
-            
-            line = self._scene.addLine(x1, y1, x2, y2, pen)
-            self._skeleton_items.append(line)
+            class_id = lbl // 1000
+            base_color = get_class_point_color(class_id)
+
+            for i in range(len(group) - 1):
+                x1, y1 = group[i]["pt"]
+                x2, y2 = group[i + 1]["pt"]
+
+                both_visible = group[i]["vis"] and group[i + 1]["vis"]
+                if both_visible:
+                    pen = QPen(base_color, 1.5, Qt.DashLine)
+                else:
+                    faded = QColor(base_color)
+                    faded.setAlpha(60)
+                    pen = QPen(faded, 1.5, Qt.DotLine)
+                pen.setCosmetic(True)
+
+                line = self._scene.addLine(x1, y1, x2, y2, pen)
+                self._skeleton_items.append(line)
 
     def _clear_skeleton(self):
         for item in self._skeleton_items:
