@@ -1,0 +1,42 @@
+auto_prompt_encoding: true
+batch_size: 10
+delete: 'yes'
+final_video_path: ./outputs
+fps: 30
+images_ending_count: 200
+images_extract_dir: ./working_dir/images
+overlap_dir: ./working_dir/overlap
+pose_estimation:
+  class_id: 1
+  cotracker:
+    checkpoint: F:/RunningProjects/AutoSegmentor/co-tracker/checkpoints/scaled_offline.pth
+    window_len: 60
+  enabled: true
+  keypoints:
+  - p1
+  - p2
+  - p3
+  - p4
+  - p5
+  - p6
+  - p7
+  - p8
+  - p9
+  - p10
+  - p11
+  - p12
+  object_id: 1
+  radius: 5
+  tracker: cotracker
+prefix: Img
+rendered_dir: ./working_dir/render
+run_mode: all
+sam:
+  enabled: true
+temp_processing_dir: ./working_dir/temp
+verified_img_dir: ./working_dir/verified/images
+verified_mask_dir: ./working_dir/verified/mask
+video_end: 1
+video_path_template: ./inputs/VideoInputs/Video{}.mp4
+video_start: 6
+working_dir_name: working_dir
