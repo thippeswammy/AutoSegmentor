@@ -107,8 +107,6 @@ class DragPointCommand(QUndoCommand):
             if self.handler.pose_mode and self.handler.pose_click_coords and self.index < len(self.handler.pose_click_coords):
                 self.handler.pose_click_coords[self.index]['x'] = int(self.new_pos[0])
                 self.handler.pose_click_coords[self.index]['y'] = int(self.new_pos[1])
-            if hasattr(self.handler, 'user_prompt_adder_pyqt'):
-                self.handler.user_prompt_adder_pyqt()
 
     def undo(self):
         if self.index < len(self.handler.selected_points):
@@ -116,8 +114,6 @@ class DragPointCommand(QUndoCommand):
             if self.handler.pose_mode and self.handler.pose_click_coords and self.index < len(self.handler.pose_click_coords):
                 self.handler.pose_click_coords[self.index]['x'] = int(self.old_pos[0])
                 self.handler.pose_click_coords[self.index]['y'] = int(self.old_pos[1])
-            if hasattr(self.handler, 'user_prompt_adder_pyqt'):
-                self.handler.user_prompt_adder_pyqt()
 
 
 class SkipPointCommand(QUndoCommand):

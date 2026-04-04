@@ -85,10 +85,13 @@ class PreviewThread(QThread):
         self.handler = handler
 
     def run(self):
+        import time
+        start_t = time.perf_counter()
         try:
             logger.debug("[Preview] SAM2 preview started")
             self.handler.user_prompt_adder_pyqt()
-            logger.debug("[Preview] SAM2 preview done")
+            elapsed = time.perf_counter() - start_t
+            logger.debug(f"[Preview] SAM2 preview done in {elapsed:.3f}s")
         except Exception:
             logger.error(f"[Preview] SAM2 preview failed:\n{traceback.format_exc()}")
         finally:
@@ -103,6 +106,7 @@ class AnnotationWindow(QDialog):
         self.config = config
         self.is_processing = False
         self._preview_thread = None  # Background SAM2 preview thread
+        self._preview_pending = False # Queue flag for high-responsiveness
 
         # Debounce timer: SAM preview fires 500ms after user STOPS navigating.
         # This prevents SAM inference from running on every single frame while
@@ -539,8 +543,11 @@ class AnnotationWindow(QDialog):
 
     def handle_point_moved(self, index, old_x, old_y, new_x, new_y):
         if index < len(self.handler.selected_points):
+            logger.debug(f"[UI] Move point {index}: ({old_x}, {old_y}) -> ({new_x}, {new_y})")
             cmd = DragPointCommand(self.handler, index, [old_x, old_y], [new_x, new_y])
             self.undo_stack.push(cmd)
+            # High-Responsiveness: Trigger update immediately on move completion
+            self._trigger_prompt_update()
 
     def handle_point_dragging(self, index, x, y):
         if index < len(self.handler.selected_points):
@@ -614,22 +621,34 @@ class AnnotationWindow(QDialog):
         self._update_sidebar()
 
         # 2. Start async SAM2 preview in background thread
+        logger.debug(f"[UI] Triggering SAM2 preview for frame {self.handler.current_frame_idx}")
         self._start_preview_thread()
 
     def _start_preview_thread(self):
         """Kick off a SAM2 single-frame preview in a background thread."""
         if self._preview_thread is not None and self._preview_thread.isRunning():
-            # Previous preview still running — skip to avoid GPU contention
-            logger.debug("[Preview] Skipping — previous preview still running")
+            # Previous preview still running — queue up another for the latest state
+            self._preview_pending = True
+            logger.debug("[Preview] Busy — queuing update for latest state")
             return
+
+        self._preview_pending = False
+        self.status_bar.showMessage(" ⏳ Updating Mask...", 5000)
         self._preview_thread = PreviewThread(self.handler)
         self._preview_thread.preview_ready.connect(self._on_preview_ready)
         self._preview_thread.start()
 
     def _on_preview_ready(self):
         """Called on the main thread when SAM2 preview is complete."""
+        self.status_bar.clearMessage()
         if self.btn_toggle_mask.isChecked():
             self.canvas.update_image(self.handler.current_frame)
+        
+        # High-Responsiveness: if a preview request arrived while we were busy,
+        # run another one now with the very latest positions.
+        if self._preview_pending:
+            logger.debug("[Preview] Running pending update...")
+            self._start_preview_thread()
         else:
             self.canvas.update_image(
                 cv2.imread(self.handler.frame_paths[self.handler.current_frame_idx])
