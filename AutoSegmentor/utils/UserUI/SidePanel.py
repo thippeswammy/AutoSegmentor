@@ -8,7 +8,7 @@ from PyQt5.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QGroupBox, QProgressBar, QFrame, QScrollArea,
-    QSizePolicy, QCheckBox
+    QSizePolicy, QCheckBox, QPushButton
 )
 
 
@@ -344,6 +344,8 @@ class SidePanel(QScrollArea):
     KeypointProgressPanel, and LiveConfigPanel into a scrollable sidebar.
     """
 
+    export_requested = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWidgetResizable(True)
@@ -372,7 +374,16 @@ class SidePanel(QScrollArea):
         layout.addWidget(self.annotation_list)
         layout.addWidget(self.keypoint_progress)
         layout.addWidget(self.live_config)
+        
         layout.addStretch()
+
+        # Export Button at the very bottom
+        self.export_btn = QPushButton(" Export Dataset")
+        self.export_btn.setFont(Fonts.header())
+        self.export_btn.setFixedHeight(40)
+        self.export_btn.setObjectName("acceptButton")
+        self.export_btn.clicked.connect(self.export_requested.emit)
+        layout.addWidget(self.export_btn)
 
         self.setWidget(container)
 

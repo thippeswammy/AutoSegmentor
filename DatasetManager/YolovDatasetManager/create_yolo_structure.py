@@ -43,13 +43,12 @@ def create_yolo_folder_structure(folder_name, main_path='', num_classes=None):
     val_path, _ = create_unique_folder(dataset_path, 'valid')
     test_path, _ = create_unique_folder(dataset_path, 'test')
 
-    # Create subdirectories for images and labels
-    os.makedirs(os.path.join(train_path, 'images'), exist_ok=True)
-    os.makedirs(os.path.join(train_path, 'labels'), exist_ok=True)
-    os.makedirs(os.path.join(val_path, 'images'), exist_ok=True)
-    os.makedirs(os.path.join(val_path, 'labels'), exist_ok=True)
-    os.makedirs(os.path.join(test_path, 'images'), exist_ok=True)
-    os.makedirs(os.path.join(test_path, 'labels'), exist_ok=True)
+    # Create subdirectories for images and specialized labels
+    for path in [train_path, val_path, test_path]:
+        os.makedirs(os.path.join(path, 'images'), exist_ok=True)
+        os.makedirs(os.path.join(path, 'labels_box'), exist_ok=True)
+        os.makedirs(os.path.join(path, 'labels_mask'), exist_ok=True)
+        os.makedirs(os.path.join(path, 'labels_pose'), exist_ok=True)
 
     # Create the .yaml file with the dataset configuration
     yaml_content = f"""train: ../train/images

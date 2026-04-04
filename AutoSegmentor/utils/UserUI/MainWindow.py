@@ -19,6 +19,7 @@ from .UITheme import DARK_STYLESHEET, SIDEBAR_WIDTH, TOOLBAR_HEIGHT, STATUSBAR_H
 from .AnnotationCanvas import AnnotationCanvas
 from .SidePanel import SidePanel
 from .NavigationManager import AddPointCommand, ResetPointsCommand, DeletePointCommand, SkipPointCommand, DragPointCommand, NavigationState
+from .ExportDialog import ExportDialog
 from .logger_config import logger
 
 class BatchProcessorThread(QThread):
@@ -367,6 +368,7 @@ class AnnotationWindow(QDialog):
         self.canvas.point_dragging.connect(self.handle_point_dragging)
         self.canvas.point_deleted.connect(self.handle_point_deleted)
         self.sidebar.keypoint_progress.visibility_toggled.connect(self.handle_visibility_toggled)
+        self.sidebar.export_requested.connect(self._on_export_yolo)
         self.undo_stack.indexChanged.connect(self._on_undo_stack_changed)
 
     # ─── Hold-to-scroll key handling ───────────────────────────────────────────
@@ -740,19 +742,9 @@ class AnnotationWindow(QDialog):
         logger.info("Progress saved by user (Ctrl+S).")
 
     def _on_export_yolo(self):
-        """Ctrl+E — trigger YOLO dataset export (non-blocking)."""
-        try:
-            from DatasetManager.YolovDatasetManager.DatasetCreatere import DatasetCreator
-            creator = DatasetCreator()
-            wdir = self.config.working_dir_name if hasattr(self.config, 'working_dir_name') else "working_dir"
-            creator.create_dataset(verified_img_dir=getattr(self.config, 'verified_img_dir', ''),
-                                   verified_mask_dir=getattr(self.config, 'verified_mask_dir', ''))
-            self._save_status_label.setText("  ✓  YOLO export done")
-            QTimer.singleShot(3000, lambda: self._save_status_label.setText(""))
-        except Exception as e:
-            logger.warning(f"YOLO export failed: {e}")
-            self._save_status_label.setText(f"  ✗  Export failed: {e}")
-            QTimer.singleShot(4000, lambda: self._save_status_label.setText(""))
+        """Ctrl+E — show YOLO dataset export dialog."""
+        dlg = ExportDialog(self, self.handler)
+        dlg.exec_()
 
     def _show_help_overlay(self):
         """H — show shortcut cheatsheet popup."""

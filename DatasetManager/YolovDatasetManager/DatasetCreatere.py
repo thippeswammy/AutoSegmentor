@@ -72,9 +72,14 @@ class YoloProcessor:
             raise
 
         self.train_image_count = self.val_image_count = self.test_image_count = 0
+        self.annotation_manager = config.get('annotation_manager') # Pass manager directly
+        self.export_types = config.get('export_types', ['mask']) # ['box', 'mask', 'pose']
+        
+        # Paths for specialized labels
         self.train_save_path = os.path.join(fullPath, 'train')
         self.val_save_path = os.path.join(fullPath, 'valid')
         self.test_save_path = os.path.join(fullPath, 'test')
+        
         self.SOURCE_img_type_ext = config['SOURCE_img_type_ext']
         self.SOURCE_mask_type_ext = config['SOURCE_mask_type_ext']
         self.SOURCE_mask_folder_name = config['SOURCE_mask_folder_name']
@@ -86,22 +91,31 @@ class YoloProcessor:
         self.class_names = config['class_names']
         self.class_to_id = config['class_to_id']
         self.train_split = config['train_split']
-        self.source_dir_original_img = config['dataset_path'] + "/" + self.SOURCE_original_folder_name
-        self.source_dir_mask_img = config['dataset_path'] + "/" + self.SOURCE_mask_folder_name
+        self.source_dir_original_img = os.path.join(config['dataset_path'], self.SOURCE_original_folder_name)
+        self.source_dir_mask_img = os.path.join(config['dataset_path'], self.SOURCE_mask_folder_name)
         self.test_split = config['test_split']
         self.val_split = config['val_split']
         self.main_path = config['dataset_saving_working_dir']
-        self.factTimes = config['augment_times']
-        self.num_threads = config['num_threads']
-        self.keepValDatasetOriginal = config['Keep_val_dataset_original']
-        self.DESTINATION_img_type_ext = config['DESTINATION_img_type_ext']
-        self.DESTINATION_label_type_ext = config['DESTINATION_label_type_ext']
+        self.factTimes = config.get('augment_times', 1)
+        self.num_threads = config.get('num_threads', 4)
+        self.keepValDatasetOriginal = config.get('Keep_val_dataset_original', True)
+        self.DESTINATION_img_type_ext = config.get('DESTINATION_img_type_ext', '.jpg')
+        self.DESTINATION_label_type_ext = config.get('DESTINATION_label_type_ext', '.txt')
 
-        if not os.path.exists(self.source_dir_original_img) or not os.path.exists(self.source_dir_mask_img):
-            logging.error(
-                f"Source directories '{self.source_dir_original_img}' or '{self.source_dir_mask_img}' do not exist.")
-            raise FileNotFoundError(
-                f"Source directories '{self.source_dir_original_img}' or '{self.source_dir_mask_img}' not found.")
+        if not os.path.exists(self.source_dir_original_img):
+             logging.error(f"Source directory '{self.source_dir_original_img}' does not exist.")
+             raise FileNotFoundError(f"Source directory '{self.source_dir_original_img}' not found.")
+             
+        # Cache image dimensions from the first available image
+        sample_img_paths = self.collect_image_paths(self.source_dir_original_img)
+        if sample_img_paths:
+            sample_img = cv2.imread(sample_img_paths[0])
+            if sample_img is not None:
+                self.img_h, self.img_w = sample_img.shape[:2]
+            else:
+                self.img_h, self.img_w = 720, 1280 # Fallback
+        else:
+            self.img_h, self.img_w = 720, 1280 # Fallback
 
     def distribute_files_with_threads(self):
         """Distribute files into training, validation, and test sets using multithreading."""
@@ -168,60 +182,74 @@ class YoloProcessor:
             return
 
         label_source_path = self.get_label_path(image_source_path)
+        
+        # 1. Process Mask -> Segmentation / Box
+        yolo_segmentation = None
+        yolo_box = None
         if os.path.exists(label_source_path):
-            yolo_polygons_points_txt = self.process_mask_to_yolo_txt(label_source_path, self.class_to_id)
-            for i in range(1, Times + 1):
-                save_img_path, save_label_path = self.get_destination_paths(file_name, i)
-                if save_img_path and save_label_path:
-                    augmented_img = self.apply_augmentations(image_source_path, i)
-                    if augmented_img is not None:
-                        try:
-                            if isinstance(augmented_img, torch.Tensor):
-                                image_np = np.array(augmented_img.permute(1, 2, 0).cpu().numpy() * 255, dtype=np.uint8)
-                            else:
-                                image_np = np.array(augmented_img)  # PIL Image to numpy array
-                            image_np = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-                            self.save_yolo_format(save_label_path, yolo_polygons_points_txt)
-                            cv2.imwrite(save_img_path, image_np)
-                        except Exception as e:
-                            logging.error(f"Error saving image {save_img_path}: {e}")
+            yolo_segmentation = self.process_mask_to_yolo_txt(label_source_path, self.class_to_id)
+            # Box can be derived from segment or mask processing
+            yolo_box = self.process_mask_to_yolo_box_txt(label_source_path, self.class_to_id)
+
+        # 2. Process Pose -> Keypoints
+        yolo_pose = None
+        if 'pose' in self.export_types and self.annotation_manager:
+            try:
+                frame_idx = int(os.path.splitext(file_name)[0].split('_')[-1])
+            except ValueError:
+                frame_idx = 0 # Fallback
+            yolo_pose = self.process_pose_to_yolo_txt(frame_idx)
+
+        # 3. Save to split
+        for i in range(1, Times + 1):
+            dst = self.get_destination_paths(file_name, i)
+            if dst:
+                augmented_img = self.apply_augmentations(image_source_path, i)
+                if augmented_img is not None:
+                    try:
+                        if isinstance(augmented_img, torch.Tensor):
+                            image_np = np.array(augmented_img.permute(1, 2, 0).cpu().numpy() * 255, dtype=np.uint8)
+                        else:
+                            image_np = np.array(augmented_img)
+                        image_np = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+                        
+                        cv2.imwrite(dst['image'], image_np)
+                        
+                        if 'mask' in self.export_types and yolo_segmentation:
+                            self.save_yolo_format(dst['label_mask'], yolo_segmentation)
+                        
+                        if 'box' in self.export_types and yolo_box:
+                            self.save_yolo_format(dst['label_box'], yolo_box)
+                            
+                        if 'pose' in self.export_types and yolo_pose:
+                            self.save_yolo_format(dst['label_pose'], yolo_pose)
+                            
+                    except Exception as e:
+                        logging.error(f"Error saving {dst['image']}: {e}")
         else:
             logging.warning(f"Label file not found for image: {image_source_path}")
 
     def get_destination_paths(self, file_name, num):
-        """Get the destination paths for saving images and labels."""
-        save_img_path, save_label_path = '', ''
+        """Get the destination paths for saving images and multi-type labels."""
         choices = []
-        if self.train_image_count > 0:
-            choices.append(0)
-        elif self.val_image_count > 0:
-            choices.append(1)
-        elif self.test_image_count > 0:
-            choices.append(2)
-        if self.keepValDatasetOriginal and num == 1:
-            choice = 1
-        else:
-            choice = random.choice(choices)
-
-        if choice == 0:
-            save_img_path = os.path.join(self.train_save_path, 'images',
-                                         f'{file_name}_{num}{self.DESTINATION_img_type_ext}')
-            save_label_path = os.path.join(self.train_save_path, 'labels',
-                                           f'{file_name}_{num}{self.DESTINATION_label_type_ext}')
-            self.train_image_count -= 1
-        elif choice == 1:
-            save_img_path = os.path.join(self.val_save_path, 'images',
-                                         f'{file_name}_{num}{self.DESTINATION_img_type_ext}')
-            save_label_path = os.path.join(self.val_save_path, 'labels',
-                                           f'{file_name}_{num}{self.DESTINATION_label_type_ext}')
-            self.val_image_count -= 1
-        elif choice == 2:
-            save_img_path = os.path.join(self.test_save_path, 'images',
-                                         f'{file_name}_{num}{self.DESTINATION_img_type_ext}')
-            save_label_path = os.path.join(self.test_save_path, 'labels',
-                                           f'{file_name}_{num}{self.DESTINATION_label_type_ext}')
-            self.test_image_count -= 1
-        return save_img_path, save_label_path
+        if self.train_image_count > 0: choices.append(0)
+        elif self.val_image_count > 0: choices.append(1)
+        elif self.test_image_count > 0: choices.append(2)
+        
+        choice = 1 if (self.keepValDatasetOriginal and num == 1) else (random.choice(choices) if choices else 0)
+        
+        base_path = self.train_save_path if choice == 0 else (self.val_save_path if choice == 1 else self.test_save_path)
+        
+        if choice == 0: self.train_image_count -= 1
+        elif choice == 1: self.val_image_count -= 1
+        else: self.test_image_count -= 1
+        
+        return {
+            'image': os.path.join(base_path, 'images', f'{file_name}_{num}{self.DESTINATION_img_type_ext}'),
+            'label_box': os.path.join(base_path, 'labels_box', f'{file_name}_{num}{self.DESTINATION_label_type_ext}'),
+            'label_mask': os.path.join(base_path, 'labels_mask', f'{file_name}_{num}{self.DESTINATION_label_type_ext}'),
+            'label_pose': os.path.join(base_path, 'labels_pose', f'{file_name}_{num}{self.DESTINATION_label_type_ext}')
+        }
 
     def apply_augmentations(self, source_img_path, num):
         """Apply augmentations using PyTorch and return augmented image."""
@@ -274,11 +302,65 @@ class YoloProcessor:
     def process_mask_to_yolo_txt(self, mask_file_path, class_map):
         """Convert the mask file to YOLO format."""
         mask_image = cv2.imread(mask_file_path)
+        if mask_image is None: return None
         image_height, image_width = mask_image.shape[:2]
         polygons = self.get_polygons(mask_image)
-        yolo_polygons_txt = self.convert_polygons_to_yolo(image_width, image_height, polygons)
+        return self.convert_polygons_to_yolo(image_width, image_height, polygons)
 
-        return yolo_polygons_txt
+    def process_mask_to_yolo_box_txt(self, mask_file_path, class_map):
+        """Convert the mask file to YOLO BBox format."""
+        mask_image = cv2.imread(mask_file_path)
+        if mask_image is None: return None
+        image_height, image_width = mask_image.shape[:2]
+        
+        boxes = []
+        for color, label in self.color_to_label.items():
+            mask = np.all(mask_image == color, axis=-1).astype(np.uint8) * 255
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                if w > 0 and h > 0:
+                    cx = (x + w/2) / image_width
+                    cy = (y + h/2) / image_height
+                    nw = w / image_width
+                    nh = h / image_height
+                    boxes.append((label, [cx, cy, nw, nh]))
+        return boxes
+
+    def process_pose_to_yolo_txt(self, frame_idx):
+        """Convert keypoints for a frame to YOLO Pose format."""
+        prompt = self.annotation_manager.get_prompt_for_frame(frame_idx)
+        if not prompt: return None
+        
+        w, h = self.img_w, self.img_h
+        pose_lines = []
+        kps = prompt.get("pose_keypoints", [])
+        if kps:
+            # YOLO Pose format: class_id cx cy w h k1_x k1_y v1 ...
+            # Calculate a box around the keypoints
+            xs = [k["x"] for k in kps if k["x"] >= 0]
+            ys = [k["y"] for k in kps if k["y"] >= 0]
+            if not xs: return None
+            
+            min_x, max_x = min(xs), max(xs)
+            min_y, max_y = min(ys), max(ys)
+            bw, bh = max_x - min_x, max_y - min_y
+            cx, cy = (min_x + max_x) / 2 / w, (min_y + max_y) / 2 / h
+            nw, nh = (bw + 10) / w, (bh + 10) / h # 10px padding
+            
+            line = [cx, cy, nw, nh]
+            for k in kps:
+                vis = 2 if k.get("visible", True) and k["x"] >= 0 else 0
+                nx = k["x"] / w if k["x"] >= 0 else 0
+                ny = k["y"] / h if k["y"] >= 0 else 0
+                line.extend([nx, ny, vis])
+            
+            class_id = 0
+            if kps[0].get("label"):
+                 class_id = (kps[0]["label"] // 1000) - 1
+            
+            pose_lines.append((class_id, line))
+        return pose_lines
 
     def get_polygons(self, mask_image):
         """
@@ -305,13 +387,13 @@ class YoloProcessor:
         return yolo_polygons
 
     @staticmethod
-    def save_yolo_format(save_label_path, yolo_polygons):
+    def save_yolo_format(save_label_path, yolo_data):
         """Save the YOLO formatted text to the specified path."""
         try:
-            with open(save_label_path, 'a') as f:
-                for label, polygon in yolo_polygons:
-                    polygon_str = ' '.join(f"{x} {y}" for x, y in polygon)
-                    f.write(f"{label} {polygon_str}\n")
+            with open(save_label_path, 'w') as f: # Use 'w' instead of 'a' since we save per type
+                for label, coords in yolo_data:
+                    coords_str = ' '.join(f"{c}" for c in coords)
+                    f.write(f"{label} {coords_str}\n")
         except Exception as e:
             logging.error(f"Error saving YOLO label file {save_label_path}: {e}")
 
