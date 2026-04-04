@@ -622,8 +622,6 @@ class AnnotationWindow(QDialog):
         self.refresh_display()
 
     def set_class(self, class_id):
-        if self.handler.pose_mode:
-            return
         self.class_combo.setCurrentIndex(class_id - 1)
 
     def change_class(self, index):

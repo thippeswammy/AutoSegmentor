@@ -323,6 +323,10 @@ class AnnotationCanvas(QGraphicsView):
         pen_invisible.setColor(c)
 
         for i in range(len(points) - 1):
+            if labels and len(labels) > i + 1:
+                if abs(labels[i]) != abs(labels[i + 1]):
+                    continue
+                    
             x1, y1 = points[i]
             x2, y2 = points[i + 1]
 
