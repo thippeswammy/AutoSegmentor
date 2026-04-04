@@ -23,7 +23,8 @@ class AddPointCommand(QUndoCommand):
         self.handler.selected_labels.append(self.label)
         if self.pose_click:
             self.handler.pose_click_coords.append(self.pose_click)
-            self.handler.current_keypoint_index += 1
+            if self.pose_click.get("name") != "Negative_Point":
+                self.handler.current_keypoint_index += 1
 
     def undo(self):
         if self.handler.selected_points:
@@ -31,7 +32,8 @@ class AddPointCommand(QUndoCommand):
             self.handler.selected_labels.pop()
         if self.pose_click and self.handler.pose_click_coords:
             self.handler.pose_click_coords.pop()
-            self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)
+            if self.pose_click.get("name") != "Negative_Point":
+                self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)
 
 
 class ResetPointsCommand(QUndoCommand):
@@ -77,14 +79,16 @@ class DeletePointCommand(QUndoCommand):
         self.handler.selected_labels.pop(self.index)
         if self.deleted_pose_click:
             self.handler.pose_click_coords.pop(self.index)
-            self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)
+            if self.deleted_pose_click.get("name") != "Negative_Point":
+                self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)
 
     def undo(self):
         self.handler.selected_points.insert(self.index, self.deleted_point)
         self.handler.selected_labels.insert(self.index, self.deleted_label)
         if self.deleted_pose_click:
             self.handler.pose_click_coords.insert(self.index, self.deleted_pose_click)
-            self.handler.current_keypoint_index += 1
+            if self.deleted_pose_click.get("name") != "Negative_Point":
+                self.handler.current_keypoint_index += 1
 
 
 class DragPointCommand(QUndoCommand):

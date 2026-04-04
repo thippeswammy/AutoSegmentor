@@ -321,15 +321,21 @@ class UserInteractionHandler:
                     except Exception as e:
                         logger.warning(f"CoTracker carry-forward failed: {e}")
 
-                full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
                 for kp in sorted(tracked_kps, key=lambda k: k["point_id"]):
                     x, y = kp["x"], kp["y"]
+                    
+                    if "label" in kp:
+                        full_label = kp["label"]
+                    else:
+                        full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
+                        
                     if kp.get("visible", 2) > 0:
                         self.selected_points.append([x, y])
                         self.selected_labels.append(full_label)
                     self.pose_click_coords.append({
                         "name": kp["name"], "point_id": kp["point_id"],
-                        "x": x, "y": y, "visible": kp.get("visible", True)
+                        "x": x, "y": y, "visible": kp.get("visible", True),
+                        "label": full_label
                     })
                 self.current_keypoint_index = len(self.pose_click_coords)
                 self.user_prompt_adder_pyqt()

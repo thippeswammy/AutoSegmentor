@@ -322,20 +322,30 @@ class AnnotationCanvas(QGraphicsView):
         c.setAlpha(60)
         pen_invisible.setColor(c)
 
-        for i in range(len(points) - 1):
-            if labels and len(labels) > i + 1:
-                if abs(labels[i]) != abs(labels[i + 1]):
-                    continue
-                    
-            x1, y1 = points[i]
-            x2, y2 = points[i + 1]
+        # Filter out negative points (auxiliary background trackers) entirely from the skeleton sequence
+        positive_seq = []
+        for idx in range(len(points)):
+            if labels and idx < len(labels) and labels[idx] < 0:
+                continue
+            
+            vis = pose_coords[idx].get('visible', True) if pose_coords and idx < len(pose_coords) else True
+            positive_seq.append({
+                "pt": points[idx],
+                "label": labels[idx] if labels else 1,
+                "vis": vis
+            })
+            
+        if len(positive_seq) < 2:
+            return
 
-            # If pose_coords provided, use visibility; otherwise always visible
-            vis1 = pose_coords[i].get('visible', True) if pose_coords and i < len(pose_coords) else True
-            vis2 = pose_coords[i+1].get('visible', True) if pose_coords and (i + 1) < len(pose_coords) else True
+        for i in range(len(positive_seq) - 1):
+            if abs(positive_seq[i]["label"]) != abs(positive_seq[i + 1]["label"]):
+                continue
+                
+            x1, y1 = positive_seq[i]["pt"]
+            x2, y2 = positive_seq[i + 1]["pt"]
 
-            p = pen if (vis1 and vis2) else pen_invisible
-
+            p = pen if (positive_seq[i]["vis"] and positive_seq[i + 1]["vis"]) else pen_invisible
             line = self._scene.addLine(x1, y1, x2, y2, p)
             self._skeleton_items.append(line)
 

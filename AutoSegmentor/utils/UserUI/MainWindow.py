@@ -443,10 +443,15 @@ class AnnotationWindow(QDialog):
         if self.handler.pose_mode:
             num_kps = len(self.handler.pose_keypoints)
             if num_kps > 0:
-                kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index % num_kps]
+                if full_label < 0:
+                    kp_name = "Negative_Point"
+                    p_id = len(self.handler.pose_click_coords)
+                else:
+                    kp_name = self.handler.pose_keypoints[self.handler.current_keypoint_index % num_kps]
+                    p_id = len(self.handler.pose_click_coords)
                 pose_click = {
                     "name": kp_name,
-                    "point_id": self.handler.current_keypoint_index,
+                    "point_id": p_id,
                     "x": int(x),
                     "y": int(y),
                     "visible": True,
