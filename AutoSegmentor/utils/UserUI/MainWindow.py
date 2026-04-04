@@ -927,5 +927,8 @@ class AnnotationWindow(QDialog):
             
         logger.info(f"Finished processing batch {batch}")
         
-        # Stay on current frame after processing to allow manual inspection
+        # Explicitly reload current frame to show new masks
         self.handler.load_frame_for_ui(self.handler.current_frame_idx)
+        self.canvas.update_image(self.handler.current_frame)
+        self.refresh_display()
+        self._update_sidebar()

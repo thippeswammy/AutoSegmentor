@@ -110,7 +110,16 @@ class MaskProcessor:
         lock = predictor_lock if predictor_lock else DummyLock()
 
         with lock:
-            inference_state = sam2_predictor.init_state(video_path=temp_directory, frame_paths=None)
+            if not frame_file_names:
+                logger.error(f"[MaskGen] No frames found in {temp_directory}. Skipping batch {batch_number}.")
+                return
+
+            try:
+                inference_state = sam2_predictor.init_state(video_path=temp_directory, frame_paths=None)
+            except Exception as e:
+                logger.error(f"[MaskGen] Failed to initialize inference state: {e}")
+                return
+
             is_prompted = False
             if self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
                 pass

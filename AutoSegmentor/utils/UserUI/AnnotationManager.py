@@ -56,7 +56,8 @@ class AnnotationManager:
 
         for i in range(len(self.frame_indices)):
             f_idx = self.frame_indices[i]
-            if start_frame <= f_idx < end_frame:
+            # Strict safety: only return prompts for frames that exist in the current video
+            if start_frame <= f_idx < end_frame and f_idx < len(self.frame_paths):
                 results.append({
                     "frame_idx": f_idx,
                     "points": self.points_collection[i],
@@ -202,8 +203,10 @@ class AnnotationManager:
         """Check if enough points and labels are available (at least one per batch)."""
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         batches_with_data = set()
+        # check_data_sufficiency: only count frames that exist in the current video
         for f_idx in self.frame_indices:
-            batches_with_data.add(f_idx // self.config.batch_size)
+            if f_idx < len(self.frame_paths):
+                batches_with_data.add(f_idx // self.config.batch_size)
         
         if len(batches_with_data) >= total_batches:
             if not self._all_batches_logged:

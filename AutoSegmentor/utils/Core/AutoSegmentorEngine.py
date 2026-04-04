@@ -225,6 +225,11 @@ class AutoSegmentorEngine(SAM2Model):
 
         for p_data in prompts:
             f_idx = p_data["frame_idx"]
+            
+            # Additional safety: ensure f_idx is within video range
+            if f_idx >= len(self.frame_paths):
+                continue
+
             points_np = np.array(p_data["points"], dtype=np.float32)
             labels_np = np.array(p_data["labels"], dtype=np.int32)
 
