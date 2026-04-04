@@ -47,19 +47,30 @@ class ExportDialog(QDialog):
 
         # Path Selection
         path_group = QGroupBox("Destination")
-        path_layout = QHBoxLayout()
-        self.path_edit = QLineEdit()
-        # Default to a subfolder in DatasetManager
-        default_base = r"F:\RunningProjects\AutoSegmentor\DatasetManager"
-        default_path = os.path.join(default_base, f"Video{self.config.video_number}_Export")
-        self.path_edit.setText(default_path)
+        path_form = QFormLayout(path_group)
+        
+        # Base Directory (The parent folder)
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        self.default_base = os.path.join(repo_root, "DatasetManager")
+        
+        base_layout = QHBoxLayout()
+        self.base_dir_edit = QLineEdit(self.default_base)
+        self.base_dir_edit.setReadOnly(True)
+        self.base_dir_edit.setStyleSheet("background-color: #2b2b2b; color: #888;")
         
         browse_btn = QPushButton("Browse...")
-        browse_btn.clicked.connect(self.browse_path)
+        browse_btn.setFixedWidth(80)
+        browse_btn.clicked.connect(self.browse_base_path)
         
-        path_layout.addWidget(self.path_edit)
-        path_layout.addWidget(browse_btn)
-        path_group.setLayout(path_layout)
+        base_layout.addWidget(self.base_dir_edit)
+        base_layout.addWidget(browse_btn)
+        path_form.addRow("Base Directory:", base_layout)
+        
+        # Folder Name (The target dataset name)
+        self.folder_name_edit = QLineEdit(f"Video{self.config.video_number}_Export")
+        self.folder_name_edit.setPlaceholderText("e.g. Video6_Export")
+        path_form.addRow("Folder Name:", self.folder_name_edit)
+        
         layout.addWidget(path_group)
 
         # Export Modes
@@ -85,7 +96,7 @@ class ExportDialog(QDialog):
         
         self.aug_spin = QSpinBox()
         self.aug_spin.setRange(1, 50)
-        self.aug_spin.setValue(10)
+        self.aug_spin.setValue(1) # Default to 1 as requested
         param_layout.addRow("Augmentation Times:", self.aug_spin)
         
         self.val_split = QSpinBox()
@@ -116,15 +127,18 @@ class ExportDialog(QDialog):
         btn_layout.addWidget(self.start_btn)
         layout.addLayout(btn_layout)
 
-    def browse_path(self):
-        path = QFileDialog.getExistingDirectory(self, "Select Export Directory", self.path_edit.text())
+    def browse_base_path(self):
+        path = QFileDialog.getExistingDirectory(self, "Select Base Directory", self.base_dir_edit.text())
         if path:
-            self.path_edit.setText(path)
+            self.base_dir_edit.setText(path)
 
     def start_export(self):
-        export_path = self.path_edit.text()
-        if not export_path:
+        base_path = self.base_dir_edit.text()
+        folder_name = self.folder_name_edit.text().strip()
+        if not folder_name:
             return
+            
+        export_path = os.path.join(base_path, folder_name)
 
         # Prepare types
         export_types = []
@@ -185,8 +199,8 @@ class ExportDialog(QDialog):
             "num_threads": 4,
             "class_to_id": class_to_id,
             "color_to_label": color_to_label,
-            "dataset_saving_working_dir": os.path.dirname(export_path),
-            "folder_name": os.path.basename(export_path),
+            "dataset_saving_working_dir": base_path,
+            "folder_name": folder_name,
             "class_names": class_names,
             "DESTINATION_img_type_ext": ".jpg",
             "DESTINATION_label_type_ext": ".txt",
