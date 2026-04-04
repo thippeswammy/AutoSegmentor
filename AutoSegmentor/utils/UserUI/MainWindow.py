@@ -251,25 +251,39 @@ class AnnotationWindow(QDialog):
         help_menu.addAction(shortcuts_action)
 
     def closeEvent(self, event):
-        """Intercept window close to prevent accidental data loss."""
+        """Intercept window close to prevent accidental data loss and orphan threads."""
         if self.is_processing:
             reply = QMessageBox.question(
                 self, 'Background Task Running',
-                "A background process (SAM2/CoTracker) is still running.\n\n"
-                "Closing the window now may stop the process. Exit anyway?",
+                "A background process (SAM2/CoTracker) is currently active.\n\n"
+                "Closing the window now may interrupt this process and cause data loss.\n"
+                "Force exit anyway?",
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if reply == QMessageBox.No:
                 event.ignore()
                 return
+            else:
+                # Forcefully terminate processor thread if it exists
+                if hasattr(self, 'processor_thread') and self.processor_thread.isRunning():
+                    logger.warning("Terminating background processor thread due to forced exit.")
+                    self.processor_thread.terminate()
+                    self.processor_thread.wait()
 
-        # check if there are points on the current frame that haven't been saved
-        if self.undo_stack.canUndo() or self.handler.selected_points:
-            reply = QMessageBox.question(
-                self, 'Save Progress?',
-                "Do you want to save your progress on the current frame before exiting?",
-                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, QMessageBox.Save
-            )
+        # Check for unsaved changes on the current frame
+        is_dirty = self.undo_stack.canUndo() or self.handler.selected_points
+        if is_dirty:
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Unsaved Progress")
+            msg_box.setText("You have unsaved changes on the current frame.")
+            msg_box.setInformativeText("Would you like to save your progress before closing?")
+            msg_box.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg_box.setDefaultButton(QMessageBox.Save)
+            
+            # Make the dialog style match the theme
+            msg_box.setStyleSheet(DARK_STYLESHEET)
+            
+            reply = msg_box.exec_()
 
             if reply == QMessageBox.Save:
                 self.handler.save_current_annotation()
@@ -388,9 +402,10 @@ class AnnotationWindow(QDialog):
         QShortcut(QKeySequence("["), self, self.btn_prev_batch.animateClick)
         QShortcut(QKeySequence("]"), self, self.btn_next_batch.animateClick)
 
-        # Save / Export / Help
+        # Save / Export / Help / Quit
         QShortcut(QKeySequence("Ctrl+S"), self, self._on_save_progress)
         QShortcut(QKeySequence("Ctrl+E"), self, self._on_export_yolo)
+        QShortcut(QKeySequence("Ctrl+W"), self, self.close)  # Standard Window Close
         QShortcut(QKeySequence("H"),      self, self._show_help_overlay)
 
         # NOTE: A / D / ← / → are handled via keyPressEvent / keyReleaseEvent

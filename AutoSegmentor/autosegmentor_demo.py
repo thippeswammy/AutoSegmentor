@@ -9,6 +9,10 @@ import os
 import shutil
 import sys
 import time
+import signal
+
+# Allow terminal interrupts (Ctrl+C) to terminate the PyQt application safely.
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))

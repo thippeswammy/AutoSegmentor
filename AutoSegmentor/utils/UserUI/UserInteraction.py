@@ -132,7 +132,15 @@ class UserInteractionHandler:
         target_frame = min(start_frame_idx, len(frame_paths) - 1)
         self.load_frame_for_ui(target_frame)
         logger.info(f"Opening UI window at frame {target_frame}.")
-        self.window.exec_()
+        try:
+            self.window.exec_()
+        finally:
+            # Final cleanup: ensure the window object is cleared
+            # and any lingering state is reset if needed.
+            if self.window:
+                self.window.deleteLater()
+                self.window = None
+            logger.info("UI window closed. Manual phase ended.")
         
     def save_current_annotation(self):
         # Save at current frame index, supporting multiple corrections per batch
