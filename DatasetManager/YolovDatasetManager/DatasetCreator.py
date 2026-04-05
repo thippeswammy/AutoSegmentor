@@ -99,6 +99,7 @@ class YoloProcessor:
         self.factTimes = config.get('augment_times', 1)
         self.num_threads = config.get('num_threads', 4)
         self.keepValDatasetOriginal = config.get('Keep_val_dataset_original', True)
+        self.enabled_augmentations = config.get('enabled_augmentations', ['color', 'gauss_blur', 'avg_blur', 'gauss_noise', 'sp_noise'])
         self.DESTINATION_img_type_ext = config.get('DESTINATION_img_type_ext', '.jpg')
         self.DESTINATION_label_type_ext = config.get('DESTINATION_label_type_ext', '.txt')
 
@@ -190,6 +191,8 @@ class YoloProcessor:
             yolo_segmentation = self.process_mask_to_yolo_txt(label_source_path, self.class_to_id)
             # Box can be derived from segment or mask processing
             yolo_box = self.process_mask_to_yolo_box_txt(label_source_path, self.class_to_id)
+        elif 'mask' in self.export_types or 'box' in self.export_types:
+            logging.warning(f"Mask label file not found for image: {image_source_path}")
 
         # 2. Process Pose -> Keypoints
         yolo_pose = None
@@ -199,6 +202,8 @@ class YoloProcessor:
             except ValueError:
                 frame_idx = 0 # Fallback
             yolo_pose = self.process_pose_to_yolo_txt(frame_idx)
+            if not yolo_pose:
+                logging.warning(f"Pose keypoints not found for image: {image_source_path}")
 
         # 3. Save to split
         for i in range(1, Times + 1):
@@ -226,18 +231,21 @@ class YoloProcessor:
                             
                     except Exception as e:
                         logging.error(f"Error saving {dst['image']}: {e}")
-        else:
-            logging.warning(f"Label file not found for image: {image_source_path}")
 
     def get_destination_paths(self, file_name, num):
         """Get the destination paths for saving images and multi-type labels."""
         choices = []
         if self.train_image_count > 0: choices.append(0)
-        elif self.val_image_count > 0: choices.append(1)
-        elif self.test_image_count > 0: choices.append(2)
+        if self.val_image_count > 0: choices.append(1)
+        if self.test_image_count > 0: choices.append(2)
         
-        choice = 1 if (self.keepValDatasetOriginal and num == 1) else (random.choice(choices) if choices else 0)
-        
+        # If no choices left, default to train (0)
+        choice = random.choice(choices) if choices else 0
+
+        # Note: If keepValDatasetOriginal is True AND choice == 1 (val), 
+        # the augmentation function will return the original image instead of blurring it.
+        # But we DO NOT force choice=1 purely because num==1, as that breaks the split ratio.
+
         base_path = self.train_save_path if choice == 0 else (self.val_save_path if choice == 1 else self.test_save_path)
         
         if choice == 0: self.train_image_count -= 1
@@ -258,6 +266,11 @@ class YoloProcessor:
             img = Image.open(source_img_path).convert("RGB")
             if self.keepValDatasetOriginal and num == 1:
                 return img
+                
+            # If no augmentations enabled by user, just return original
+            if not self.enabled_augmentations:
+                return img
+                
             if num == 1:
                 bright = [0.6, 0.9]
                 contrast = [0.6, 0.8]
@@ -277,23 +290,30 @@ class YoloProcessor:
                 bright = [0.99, 1.11]
                 contrast = [0.99, 1.11]
 
-            augmentations = T.Compose([
-                T.ColorJitter(brightness=(bright[0], bright[1]), contrast=(contrast[0], contrast[1])),
-                T.ToTensor(),
-            ])
-            img_tensor = augmentations(img).to(device)
-            if num % 6 == 0:
-                img_tensor = self.augmenter.apply_gaussian_blur(img_tensor)
-            elif num % 6 == 1:
-                img_tensor = self.augmenter.apply_average_blur(img_tensor)
-            elif num % 6 == 2:
-                img_tensor = self.augmenter.add_gaussian_noise(img_tensor, random.uniform(0, 0.5),
-                                                               random.uniform(0.005, 0.04))
-            elif num % 6 == 3:
-                img_tensor = self.augmenter.add_salt_pepper_noise(img_tensor, random.uniform(0.005, 0.04),
-                                                                  random.uniform(0.001, 0.05))
+            if 'color' in self.enabled_augmentations:
+                augmentations = T.Compose([
+                    T.ColorJitter(brightness=(bright[0], bright[1]), contrast=(contrast[0], contrast[1])),
+                    T.ToTensor(),
+                ])
             else:
-                return img
+                augmentations = T.Compose([T.ToTensor()])
+                
+            img_tensor = augmentations(img).to(device)
+
+            # Determine filter/noise based on num mod using only selected extra augmentations
+            extra_augs = [aug for aug in self.enabled_augmentations if aug != 'color']
+            
+            if extra_augs:
+                chosen_aug = extra_augs[num % len(extra_augs)]
+                if chosen_aug == 'gauss_blur':
+                    img_tensor = self.augmenter.apply_gaussian_blur(img_tensor)
+                elif chosen_aug == 'avg_blur':
+                    img_tensor = self.augmenter.apply_average_blur(img_tensor)
+                elif chosen_aug == 'gauss_noise':
+                    img_tensor = self.augmenter.add_gaussian_noise(img_tensor, random.uniform(0, 0.5), random.uniform(0.005, 0.04))
+                elif chosen_aug == 'sp_noise':
+                    img_tensor = self.augmenter.add_salt_pepper_noise(img_tensor, random.uniform(0.005, 0.04), random.uniform(0.001, 0.05))
+
             return img_tensor
         except Exception as e:
             logging.error(f"Error applying augmentations on {source_img_path}: {e}")

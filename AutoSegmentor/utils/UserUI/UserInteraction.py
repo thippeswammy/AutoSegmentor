@@ -284,6 +284,7 @@ class UserInteractionHandler:
 
         total_batches = (len(self.frame_paths) + self.config.batch_size - 1) // self.config.batch_size
         if self.window:
+            self.window.undo_stack.clear()
             self.window.set_batch_info(batch, total_batches, frame_idx, len(self.frame_paths))
             self.window.refresh_display()
             self.window._update_sidebar()

@@ -91,7 +91,7 @@ class ExportDialog(QDialog):
         layout.addWidget(mode_group)
 
         # Parameters
-        param_group = QGroupBox("Parameters")
+        param_group = QGroupBox("Splits & Count")
         param_layout = QFormLayout()
         
         self.aug_spin = QSpinBox()
@@ -99,14 +99,65 @@ class ExportDialog(QDialog):
         self.aug_spin.setValue(1) # Default to 1 as requested
         param_layout.addRow("Augmentation Times:", self.aug_spin)
         
+        self.train_split = QSpinBox()
+        self.train_split.setRange(0, 100)
+        self.train_split.setValue(80)
+        self.train_split.setSuffix("%")
+        
         self.val_split = QSpinBox()
         self.val_split.setRange(0, 100)
         self.val_split.setValue(10)
         self.val_split.setSuffix("%")
+        
+        self.test_split = QSpinBox()
+        self.test_split.setRange(0, 100)
+        self.test_split.setValue(10)
+        self.test_split.setSuffix("%")
+        
+        self.train_split.valueChanged.connect(lambda: self._balance_splits(self.train_split))
+        self.val_split.valueChanged.connect(lambda: self._balance_splits(self.val_split))
+        self.test_split.valueChanged.connect(lambda: self._balance_splits(self.test_split))
+        
+        param_layout.addRow("Train Split:", self.train_split)
         param_layout.addRow("Validation Split:", self.val_split)
+        param_layout.addRow("Test Split:", self.test_split)
         
         param_group.setLayout(param_layout)
         layout.addWidget(param_group)
+
+        # Augmentations
+        aug_group = QGroupBox("Augmentations")
+        aug_layout = QVBoxLayout()
+        
+        self.cb_keep_val_original = QCheckBox("Keep Validation/Test Datasets Original")
+        self.cb_keep_val_original.setChecked(True)
+        self.cb_keep_val_original.setToolTip("If checked, Validation and Test sets will not receive augmentations.")
+        
+        self.cb_aug_color = QCheckBox("Color Jitter (Brightness/Contrast)")
+        self.cb_aug_color.setChecked(True)
+        
+        self.cb_aug_gauss_blur = QCheckBox("Gaussian Blur")
+        self.cb_aug_gauss_blur.setChecked(True)
+        
+        self.cb_aug_avg_blur = QCheckBox("Average Blur")
+        self.cb_aug_avg_blur.setChecked(True)
+        
+        self.cb_aug_gauss_noise = QCheckBox("Gaussian Noise")
+        self.cb_aug_gauss_noise.setChecked(True)
+        
+        self.cb_aug_sp_noise = QCheckBox("Salt & Pepper Noise")
+        self.cb_aug_sp_noise.setChecked(True)
+        
+        aug_layout.addWidget(self.cb_keep_val_original)
+        aug_layout.addSpacing(10)
+        aug_layout.addWidget(self.cb_aug_color)
+        aug_layout.addWidget(self.cb_aug_gauss_blur)
+        aug_layout.addWidget(self.cb_aug_avg_blur)
+        aug_layout.addWidget(self.cb_aug_gauss_noise)
+        aug_layout.addWidget(self.cb_aug_sp_noise)
+        
+        aug_group.setLayout(aug_layout)
+        layout.addWidget(aug_group)
 
         # Progress
         self.progress_bar = QProgressBar()
@@ -131,6 +182,45 @@ class ExportDialog(QDialog):
         path = QFileDialog.getExistingDirectory(self, "Select Base Directory", self.base_dir_edit.text())
         if path:
             self.base_dir_edit.setText(path)
+
+    def _balance_splits(self, sender):
+        """Keep the sum of Train, Val, and Test to 100%."""
+        self.train_split.blockSignals(True)
+        self.val_split.blockSignals(True)
+        self.test_split.blockSignals(True)
+        
+        t = self.train_split.value()
+        v = self.val_split.value()
+        test = self.test_split.value()
+        
+        diff = 100 - (t + v + test)
+        
+        if diff != 0:
+            if sender == self.train_split:
+                if self.val_split.value() + diff >= 0:
+                    self.val_split.setValue(self.val_split.value() + diff)
+                else: 
+                    self.test_split.setValue(max(0, self.test_split.value() + diff))
+            elif sender == self.val_split:
+                if self.train_split.value() + diff >= 0:
+                    self.train_split.setValue(self.train_split.value() + diff)
+                else: 
+                    self.test_split.setValue(max(0, self.test_split.value() + diff))
+            else:
+                if self.val_split.value() + diff >= 0:
+                    self.val_split.setValue(self.val_split.value() + diff)
+                else:
+                    self.train_split.setValue(max(0, self.train_split.value() + diff))
+                    
+        # Fallback correction to ensure exactly 100
+        t, v, test = self.train_split.value(), self.val_split.value(), self.test_split.value()
+        if t + v + test != 100:
+            if sender != self.train_split: self.train_split.setValue(100 - v - test)
+            else: self.val_split.setValue(100 - t - test)
+            
+        self.train_split.blockSignals(False)
+        self.val_split.blockSignals(False)
+        self.test_split.blockSignals(False)
 
     def start_export(self):
         base_path = self.base_dir_edit.text()
@@ -185,8 +275,14 @@ class ExportDialog(QDialog):
             # Map BGR to label
             color_to_label[ANNOTATION_COLORS_BGR[i]] = i - 1
 
-        v_pct = self.val_split.value() / 100.0
-        
+        # Collect enabled augmentations
+        enabled_augs = []
+        if self.cb_aug_color.isChecked(): enabled_augs.append('color')
+        if self.cb_aug_gauss_blur.isChecked(): enabled_augs.append('gauss_blur')
+        if self.cb_aug_avg_blur.isChecked(): enabled_augs.append('avg_blur')
+        if self.cb_aug_gauss_noise.isChecked(): enabled_augs.append('gauss_noise')
+        if self.cb_aug_sp_noise.isChecked(): enabled_augs.append('sp_noise')
+
         export_config = {
             "dataset_path": self.config.working_dir,
             "SOURCE_mask_folder_name": "render",
@@ -194,10 +290,11 @@ class ExportDialog(QDialog):
             "SOURCE_mask_type_ext": ".png",
             "SOURCE_img_type_ext": ".jpeg",
             "augment_times": self.aug_spin.value(),
-            "test_split": 0.0,
-            "val_split": v_pct,
-            "train_split": 1.0 - v_pct,
-            "Keep_val_dataset_original": True,
+            "test_split": self.test_split.value() / 100.0,
+            "val_split": self.val_split.value() / 100.0,
+            "train_split": self.train_split.value() / 100.0,
+            "Keep_val_dataset_original": self.cb_keep_val_original.isChecked(),
+            "enabled_augmentations": enabled_augs,
             "num_threads": 4,
             "class_to_id": class_to_id,
             "color_to_label": color_to_label,

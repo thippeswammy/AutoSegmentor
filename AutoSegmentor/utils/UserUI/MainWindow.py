@@ -115,6 +115,7 @@ class AnnotationWindow(QDialog):
         self._preview_debounce_timer.setSingleShot(True)
         self._preview_debounce_timer.setInterval(500)  # ms after last nav key
         self._preview_debounce_timer.timeout.connect(self._start_preview_thread)
+
         # UI State
         self.nav_state = NavigationState()
         self.nav_state.show_crosshair = getattr(self.config, 'ui_show_crosshair', True)
@@ -656,8 +657,6 @@ class AnnotationWindow(QDialog):
         """Called on the main thread when SAM2 preview is complete."""
         logger.debug(f"[Preview] _on_preview_ready: frame={self.handler.current_frame_idx}  pending={self._preview_pending}")
         self.status_bar.clearMessage()
-        if self.btn_toggle_mask.isChecked():
-            self.canvas.update_image(self.handler.current_frame)
 
         # High-Responsiveness: if a preview request arrived while we were busy,
         # run another one now with the very latest positions.
@@ -665,12 +664,18 @@ class AnnotationWindow(QDialog):
             logger.debug("[Preview] Running pending update...")
             self._start_preview_thread()
         else:
-            logger.debug(f"[Preview] No pending update — refreshing canvas from disk frame")
-            self.canvas.update_image(
-                cv2.imread(self.handler.frame_paths[self.handler.current_frame_idx])
-            )
-        # Re-draw annotations on top of the updated mask
+            # Show final result: mask overlay if toggle is ON, raw frame if OFF
+            if self.btn_toggle_mask.isChecked():
+                logger.debug("[Preview] Showing SAM mask overlay on canvas")
+                self.canvas.update_image(self.handler.current_frame)
+            else:
+                logger.debug("[Preview] Mask toggle OFF — refreshing canvas from disk frame")
+                self.canvas.update_image(
+                    cv2.imread(self.handler.frame_paths[self.handler.current_frame_idx])
+                )
+        # Re-draw annotations on top of the updated image
         self._redraw_annotations()
+
 
 
     def _redraw_annotations(self):

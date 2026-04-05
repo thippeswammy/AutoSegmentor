@@ -448,18 +448,6 @@ class AnnotationCanvas(QGraphicsView):
             event.accept()
             return
             
-        item = self.itemAt(event.pos())
-        is_point = False
-        while item is not None:
-            if isinstance(item, DraggablePointItem):
-                is_point = True
-                break
-            item = item.parentItem()
-            
-        if is_point:
-            event.accept()
-            return
-            
         super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
