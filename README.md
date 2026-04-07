@@ -13,7 +13,7 @@ AutoSegmentor supports long videos and visually-rich content graphics, making it
 **You can create datasets for any required object or class simply by giving visual prompts—no manual labeling required.**
 
 > **Demo:**  
-> [Watch the demo video](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=drive_link)
+> [Watch the demo video](./assets/AutoSegmenter.mp4)
 
 ---
 
