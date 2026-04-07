@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
 [![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
 
-![AutoSegmenter2](https://github.com/user-attachments/assets/9cb00e30-7c1a-4c6f-8f3d-ac2811424e00)
+![AutoSegmenter2](./assets/AutoSegmenter_1080.gif)
 
 _AutoSegmentor is a game-changer for anyone working with video data in computer vision. This open-source project provides a comprehensive auto-labeling system that converts raw videos—including long videos and complex scenes—into structured datasets using Meta AI's cutting-edge [Segment Anything Model 2 (SAM2)](https://github.com/facebookresearch/segment-anything)._
 
