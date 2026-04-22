@@ -35,16 +35,16 @@ augmentation:
 
   geometric:
     enabled: true
-    rotate_limit: 30            # max rotation degrees (random +/-)
-    h_flip_prob: 0.5            # probability of horizontal flip
+    rotate_limit: 0            # max rotation degrees (random +/-)
+    h_flip_prob: 0.0            # probability of horizontal flip
     v_flip_prob: 0.0            # probability of vertical flip
-    scale_range: [0.35, 1.20]   # min/max scaling of object before transform
+    scale_range: [0.0,0.0]   # min/max scaling of object before transform
     perspective_scale: [0.03, 0.12]
     shear_limit: 8
 
   copy_paste:
     enabled: true
-    object_scale_range: [0.4, 1.1]   # simulate distance by scaling object during paste
+    object_scale_range: [0, 0]   # simulate distance by scaling object during paste
     alpha_blend_sigma: 7              # smoothing kernel for mask edges
     histogram_match: true             # adapt object lighting to background
 
@@ -80,8 +80,8 @@ augmentation:
 # Label export settings
 export:
   pose: true         # YOLOv8-Pose (12 keypoints)
-  segmentation: false # YOLOv8-Seg (polygon contours)
-  box: false          # YOLOv8-Detection (bounding boxes)
+  segmentation: true # YOLOv8-Seg (polygon contours)
+  box: true          # YOLOv8-Detection (bounding boxes)
 
 # General settings
 class_id: 0

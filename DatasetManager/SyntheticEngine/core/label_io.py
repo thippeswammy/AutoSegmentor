@@ -81,21 +81,35 @@ def load_dataset(
     )
 
     for entry in entries:
-        image_id: str = entry["image_id"]          # e.g. "Img6_00000.jpeg"
-        keypoints_raw: list = entry["keypoints"]   # list of dicts
+        # 1. Resolve image_id and img_path
+        image_id: Optional[str] = entry.get("image_id")
+        frame_idx: Optional[int] = entry.get("frame_idx") or entry.get("frame_index")
 
-        stem = Path(image_id).stem
-        img_path = images_dir / image_id
-        if not img_path.exists():
-            # Try alternate extensions
-            for ext in (".jpeg", ".jpg", ".png"):
-                alt = images_dir / (stem + ext)
-                if alt.exists():
-                    img_path = alt
+        img_path: Optional[Path] = None
+        if image_id:
+            img_path = images_dir / image_id
+            if not img_path.exists():
+                # Try alternate extensions for the given image_id
+                stem = Path(image_id).stem
+                for ext in (".jpeg", ".jpg", ".png"):
+                    alt = images_dir / (stem + ext)
+                    if alt.exists():
+                        img_path = alt
+                        image_id = alt.name
+                        break
+        elif frame_idx is not None:
+            # Fallback: search for image in images_dir that ends with _0000X or just 0000X
+            search_patterns = [f"*_{frame_idx:05d}.*", f"*{frame_idx:05d}.*", f"*{frame_idx}.*"]
+            for pattern in search_patterns:
+                matches = list(images_dir.glob(pattern))
+                if matches:
+                    img_path = matches[0]
+                    image_id = img_path.name
                     break
-            else:
-                log.warning("Image not found, skipping: %s", img_path)
-                continue
+
+        if not img_path or not img_path.exists():
+            log.warning("Image not found for entry: %s (idx: %s)", image_id, frame_idx)
+            continue
 
         image = cv2.imread(str(img_path))
         if image is None:
@@ -103,14 +117,14 @@ def load_dataset(
             continue
 
         img_h, img_w = image.shape[:2]
+        stem = img_path.stem
 
-        # ── Binary mask ──────────────────────────────────────────────────────
+        # 2. Binary mask
         binary_mask = np.zeros((img_h, img_w), dtype=np.uint8)
         mask_path = _find_mask_path(masks_dir, stem)
         if mask_path and target_color is not None:
             color_mask = cv2.imread(str(mask_path))
             if color_mask is not None:
-                # Resize mask to match image if needed
                 if color_mask.shape[:2] != (img_h, img_w):
                     color_mask = cv2.resize(
                         color_mask, (img_w, img_h), interpolation=cv2.INTER_NEAREST
@@ -119,24 +133,30 @@ def load_dataset(
         else:
             log.warning("Mask not found for: %s", image_id)
 
-        # ── Keypoints ────────────────────────────────────────────────────────
-        kps_sorted = sorted(keypoints_raw, key=lambda k: k["point_id"])
+        # 3. Keypoints
         keypoints: List[Keypoint] = []
+        raw_kps = entry.get("keypoints") or entry.get("points")
+        
+        if isinstance(raw_kps, list):
+            if raw_kps and isinstance(raw_kps[0], dict):
+                # Format: [{"point_id": 0, "x": 10, "y": 20, "visible": 2}, ...]
+                sorted_raw = sorted(raw_kps, key=lambda k: k.get("point_id", 0))
+                for i, kp in enumerate(sorted_raw[:num_keypoints]):
+                    vis = int(kp.get("visible", 2)) # Default to visible if missing
+                    pid = kp.get("point_id", i)
+                    x = max(0.0, min(float(img_w - 1), float(kp["x"])))
+                    y = max(0.0, min(float(img_h - 1), float(kp["y"])))
+                    keypoints.append(Keypoint(x, y, vis, pid))
+            elif raw_kps and isinstance(raw_kps[0], list):
+                # Format: [[x, y], [x, y], ...]
+                for i, pt in enumerate(raw_kps[:num_keypoints]):
+                    x = max(0.0, min(float(img_w - 1), float(pt[0])))
+                    y = max(0.0, min(float(img_h - 1), float(pt[1])))
+                    keypoints.append(Keypoint(x, y, 2, i))
 
-        for kp in kps_sorted[:num_keypoints]:
-            vis = int(kp.get("visible", 0))
-            if vis == 0:
-                keypoints.append(Keypoint(0.0, 0.0, 0, kp["point_id"]))
-            else:
-                x = float(kp["x"])
-                y = float(kp["y"])
-                x = max(0.0, min(float(img_w - 1), x))
-                y = max(0.0, min(float(img_h - 1), y))
-                keypoints.append(Keypoint(x, y, vis, kp["point_id"]))
-
-        # Pad to num_keypoints if JSON has fewer entries
+        # Pad to num_keypoints if needed
         while len(keypoints) < num_keypoints:
-            pid = len(keypoints) + 1
+            pid = len(keypoints)
             keypoints.append(Keypoint(0.0, 0.0, 0, pid))
 
         records.append(
