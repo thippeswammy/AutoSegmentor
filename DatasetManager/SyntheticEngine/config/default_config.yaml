@@ -40,7 +40,7 @@ augmentation:
     rotate_limit: 0            # max rotation degrees (random +/-)
     h_flip_prob: 0.0            # probability of horizontal flip
     v_flip_prob: 0.0            # probability of vertical flip
-    scale_range: [0.0,0.0]   # min/max scaling of object before transform
+    scale_range: [1,1]   # min/max scaling of object before transform
     perspective_scale: [0.03, 0.12]
     shear_limit: 8
 
