@@ -82,7 +82,14 @@ class CopyPasteEngine:
             inversion_cfg = self.cfg.get("inversion", {})
             obj_inverted = False
             if random.random() < inversion_cfg.get("object_only_prob", 0.05):
-                fg = 255 - fg
+                intensity_range = inversion_cfg.get("intensity_range", [1.0, 1.0])
+                strength = random.uniform(intensity_range[0], intensity_range[1])
+                
+                if strength == 1.0:
+                    fg = 255 - fg
+                else:
+                    fg = (fg.astype(np.float32) * (1.0 - strength) + 
+                         (255 - fg).astype(np.float32) * strength).astype(np.uint8)
                 obj_inverted = True
 
             # 4. Pick Paste Position on Background
@@ -133,7 +140,12 @@ class CopyPasteEngine:
                 log.debug("Lighting effects: %s", ", ".join(applied_lighting))
 
             # 7. Alpha Blending (Soft Edges)
-            sigma = self.cfg.get("alpha_blend_sigma", 7)
+            sigma_cfg = self.cfg.get("alpha_blend_sigma", 7)
+            if isinstance(sigma_cfg, (list, tuple)):
+                sigma = random.uniform(sigma_cfg[0], sigma_cfg[1])
+            else:
+                sigma = sigma_cfg
+                
             alpha = soft_mask(obj_mask, sigma=sigma)
             
             bg_crop = background[paste_y:paste_y+h_new, paste_x:paste_x+w_new]
@@ -150,8 +162,16 @@ class CopyPasteEngine:
 
             # 8. Full-Image Inversion (Prob B)
             if random.random() < inversion_cfg.get("full_image_prob", 0.03):
-                composite = 255 - composite
-                if self.debug: log.debug("Applied full-image inversion")
+                intensity_range = inversion_cfg.get("intensity_range", [1.0, 1.0])
+                strength = random.uniform(intensity_range[0], intensity_range[1])
+                
+                if strength == 1.0:
+                    composite = 255 - composite
+                else:
+                    composite = (composite.astype(np.float32) * (1.0 - strength) + 
+                                (255 - composite).astype(np.float32) * strength).astype(np.uint8)
+                
+                if self.debug: log.debug("Applied full-image inversion (strength=%.2f)", strength)
 
             # 9. Remap Keypoints to Full Coords
             final_kps: List[Keypoint] = []
