@@ -1,0 +1,99 @@
+# SyntheticEngine Default Configuration
+# =====================================
+
+debug: true
+
+input:
+  # Base directory for source images
+  images_dir: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/images"
+  
+  # Directory for color-mapped RGB masks (as produced by render stage)
+  masks_dir: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/render"
+  
+  # Path to verified pose labels (contains keypoint coordinates)
+  pose_labels_json: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/inputs/UserPrompts/points_labels_europlastic_B_videos10.json"
+  
+  # Directory for background images to paste objects onto
+  backgrounds_dir: "F:/RunningProjects/AutoSegmentor/DatasetManager/SyntheticEngine/backgrounds"
+
+output:
+  # Base directory for generated datasets
+  dataset_dir: "F:/RunningProjects/AutoSegmentor/DatasetManager/SyntheticEngine/outputs"
+  
+  # Folder name for this run
+  folder_name: "pallet_synthetic_test"
+  
+  # Dataset split ratios
+  train_split: 1.0
+  val_split: 0.0
+  test_split: 0.0
+
+augmentation:
+  # Number of synthetic samples to generate from EACH reference image
+  samples_per_source: 10
+  
+  # Multiprocessing: -1 for all CPU cores, 1 for single-threaded debug
+  workers: 1
+
+  geometric:
+    enabled: true
+    rotate_limit: 0            # max rotation degrees (random +/-)
+    h_flip_prob: 0.0            # probability of horizontal flip
+    v_flip_prob: 0.0            # probability of vertical flip
+    scale_range: [1,1]   # min/max scaling of object before transform
+    perspective_scale: [0.03, 0.12]
+    shear_limit: 8
+
+  copy_paste:
+    enabled: true
+    object_scale_range: [0.6, 1.0]   # simulate distance by scaling object during paste
+    alpha_blend_sigma: [1, 15]        # smoothing kernel for mask edges (range for variety)
+    histogram_match: false   # true          # adapt object lighting to background
+
+    # Inversion modes
+    inversion:
+      enabled: true                   # master toggle for inversion effects
+      object_only_prob: 0.10          # probability of inverting ONLY the object
+      full_image_prob: 0.05           # probability of inverting the full composited image
+      intensity_range: [0.5, 1.0]      # how strong the inversion is (range)
+
+    # Pixel math effects
+    lighting:
+      enabled: true                   # master toggle for lighting (shadows/glare)
+      multiply_prob: 0.30             # simulated shadows
+      multiply_range: [0.50, 0.85]
+      add_prob: 0.20                  # simulated glare
+      add_range: [20, 70]
+
+  photometric:
+    enabled: true
+    brightness_range: [-0.35, 0.40]
+    contrast_range: [0.60, 1.40]
+    hue_shift_limit: 12
+    saturation_range: [0.70, 1.30]
+    blur_prob: 0.20
+    noise_prob: 0.25
+    jpeg_prob: 0.10
+
+  occlusion:
+    enabled: true
+    prob: 0.30                        # probability of applying occlusion patches
+    max_patches: 3
+    patch_size_min: 0.05              # relative to object bbox
+    patch_size_max: 0.30
+
+# Label export settings
+export:
+  pose: true         # YOLOv8-Pose (12 keypoints)
+  segmentation: true # YOLOv8-Seg (polygon contours)
+  box: true          # YOLOv8-Detection (bounding boxes)
+
+# General settings
+class_id: 0
+class_names: ["pallet"]
+num_keypoints: 12
+bbox_margin: 0.05
+
+# Color mapping (BGR)
+color_to_label:
+  "[0, 0, 255]": 0   # pallet color (Red in BGR)
