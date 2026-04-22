@@ -1,6 +1,8 @@
 # SyntheticEngine Default Configuration
 # =====================================
 
+debug: true
+
 input:
   # Base directory for source images
   images_dir: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/images"

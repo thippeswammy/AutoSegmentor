@@ -24,9 +24,10 @@ class OcclusionSimulator:
     Applies rectangular occlusion patches to the composited image.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], debug: bool = False):
         self.cfg = config
         self.enabled = config.get("enabled", True)
+        self.debug = debug
 
     def apply(self, record: SampleRecord) -> SampleRecord:
         """
@@ -46,6 +47,8 @@ class OcclusionSimulator:
             num_patches = random.randint(1, self.cfg.get("max_patches", 3))
             img_h, img_w = record.image.shape[:2]
             
+            if self.debug: log.debug("Applying %d occlusion patches", num_patches)
+
             p_size_min = self.cfg.get("patch_size_min", 0.05)
             p_size_max = self.cfg.get("patch_size_max", 0.3)
 
@@ -58,7 +61,6 @@ class OcclusionSimulator:
                     continue
                 
                 # Position patch so it overlaps with the object at least partially
-                # We'll pick a center within the object's bbox plus some margin
                 cx = random.randint(x_obj, x_obj + w_obj)
                 cy = random.randint(y_obj, y_obj + h_obj)
                 
@@ -75,6 +77,7 @@ class OcclusionSimulator:
                     if kp.vis == 2: # Only change "visible" to "occluded"
                         if x1 <= kp.x < x2 and y1 <= kp.y < y2:
                             kp.vis = 1 # Mark as occluded
+                            if self.debug: log.debug("Keypoint %d occluded by patch", kp.point_id)
             
             return record
 

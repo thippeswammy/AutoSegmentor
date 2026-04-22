@@ -19,9 +19,9 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from pipeline.synthetic_pipeline import SyntheticPipeline
 
-def setup_logging():
+def setup_logging(level=logging.INFO):
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(sys.stdout),
@@ -37,19 +37,20 @@ def main():
     
     args = parser.parse_args()
     
-    setup_logging()
-    log = logging.getLogger("SyntheticEngine")
-    
     config_path = Path(args.config)
     if not config_path.exists():
-        log.error("Config file not found: %s", config_path)
+        print(f"Error: Config file not found: {config_path}")
         sys.exit(1)
         
     with open(config_path, "r") as f:
-        # Using yaml.full_load or safe_load. 
-        # Note: color_to_label keys are strings in YAML but need to be tuples/lists
         config = yaml.safe_load(f)
         
+    # Setup logging based on config debug flag
+    debug_mode = config.get('debug', False)
+    level = logging.DEBUG if debug_mode else logging.INFO
+    setup_logging(level=level)
+    log = logging.getLogger("SyntheticEngine")
+    
     # Process color_to_label: convert string "[255, 255, 255]" to actual tuple
     if 'color_to_label' in config:
         new_c2l = {}
@@ -71,7 +72,7 @@ def main():
     if args.workers:
         config['augmentation']['workers'] = args.workers
 
-    log.info("Loaded config from %s", config_path)
+    log.info("Loaded config from %s (Debug: %s)", config_path, debug_mode)
     
     try:
         pipeline = SyntheticPipeline(config)

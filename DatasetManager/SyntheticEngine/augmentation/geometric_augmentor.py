@@ -22,11 +22,12 @@ class GeometricAugmentor:
     images, masks, and keypoints.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], debug: bool = False):
         """
         Initialize the Albumentations pipeline based on config.
         """
         self.enabled = config.get("enabled", True)
+        self.debug = debug
         if not self.enabled:
             self.transform_pipeline = None
             return
@@ -51,7 +52,6 @@ class GeometricAugmentor:
             
         # Shift, Scale, Rotate (more advanced version)
         scale_range = config.get("scale_range", [0.8, 1.2])
-        shear_limit = config.get("shear_limit", 10)
         transforms.append(A.ShiftScaleRotate(
             shift_limit=0.0625, 
             scale_limit=(scale_range[0]-1, scale_range[1]-1), 
@@ -64,7 +64,9 @@ class GeometricAugmentor:
         if perspective_scale:
             transforms.append(A.Perspective(scale=perspective_scale, p=0.4))
 
-        self.transform_pipeline = A.Compose(
+        composer = A.ReplayCompose if self.debug else A.Compose
+        
+        self.transform_pipeline = composer(
             transforms,
             keypoint_params=A.KeypointParams(
                 format='xy', 
@@ -94,6 +96,14 @@ class GeometricAugmentor:
                 mask=record.mask,
                 keypoints=kps
             )
+            
+            if self.debug and 'replay' in result:
+                applied = []
+                for t in result['replay']['transforms']:
+                    if t.get('applied', False):
+                        applied.append(t['__class_fullname__'])
+                if applied:
+                    log.debug("Geometric transforms applied: %s", ", ".join(applied))
             
             # Update record
             return record.update_from_aug(

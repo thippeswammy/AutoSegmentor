@@ -22,11 +22,12 @@ class PhotometricAugmentor:
     Applied to the final composited image.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], debug: bool = False):
         """
         Initialize the Albumentations pipeline based on config.
         """
         self.enabled = config.get("enabled", True)
+        self.debug = debug
         if not self.enabled:
             self.transform_pipeline = None
             return
@@ -71,7 +72,8 @@ class PhotometricAugmentor:
         if jpeg_prob > 0:
             transforms.append(A.ImageCompression(quality_range=(60, 100), p=jpeg_prob))
 
-        self.transform_pipeline = A.Compose(transforms)
+        composer = A.ReplayCompose if self.debug else A.Compose
+        self.transform_pipeline = composer(transforms)
 
     def transform(self, record: SampleRecord) -> SampleRecord:
         """
@@ -82,6 +84,20 @@ class PhotometricAugmentor:
 
         try:
             result = self.transform_pipeline(image=record.image)
+            
+            if self.debug and 'replay' in result:
+                applied = []
+                for t in result['replay']['transforms']:
+                    # Special handling for OneOf
+                    if 'transforms' in t:
+                        for sub_t in t['transforms']:
+                            if sub_t.get('applied', False):
+                                applied.append(sub_t['__class_fullname__'])
+                    elif t.get('applied', False):
+                        applied.append(t['__class_fullname__'])
+                if applied:
+                    log.debug("Photometric transforms applied: %s", ", ".join(applied))
+
             record.image = result['image']
             return record
         except Exception as e:

@@ -49,10 +49,11 @@ class SyntheticPipeline:
         from augmentation.occlusion_simulator import OcclusionSimulator
         from pipeline.yolo_writer import YoloWriter
         
-        self.geom_aug = GeometricAugmentor(config['augmentation']['geometric'])
-        self.photo_aug = PhotometricAugmentor(config['augmentation']['photometric'])
-        self.copy_paste = CopyPasteEngine(config['augmentation']['copy_paste'])
-        self.occlusion = OcclusionSimulator(config['augmentation']['occlusion'])
+        debug = config.get('debug', False)
+        self.geom_aug = GeometricAugmentor(config['augmentation']['geometric'], debug=debug)
+        self.photo_aug = PhotometricAugmentor(config['augmentation']['photometric'], debug=debug)
+        self.copy_paste = CopyPasteEngine(config['augmentation']['copy_paste'], debug=debug)
+        self.occlusion = OcclusionSimulator(config['augmentation']['occlusion'], debug=debug)
         self.writer = YoloWriter(config)
 
     def run(self):
@@ -141,12 +142,13 @@ class SyntheticPipeline:
         from pipeline.yolo_writer import YoloWriter
         from backgrounds.background_manager import BackgroundManager
 
-        # Re-init managers (BackgroundManager needs to re-scan for MP safety or efficiency)
+        # Re-init managers
+        debug = cfg.get('debug', False)
         bg_mgr = BackgroundManager(cfg['input']['backgrounds_dir'])
-        geom = GeometricAugmentor(cfg['augmentation']['geometric'])
-        photo = PhotometricAugmentor(cfg['augmentation']['photometric'])
-        cp = CopyPasteEngine(cfg['augmentation']['copy_paste'])
-        occ = OcclusionSimulator(cfg['augmentation']['occlusion'])
+        geom = GeometricAugmentor(cfg['augmentation']['geometric'], debug=debug)
+        photo = PhotometricAugmentor(cfg['augmentation']['photometric'], debug=debug)
+        cp = CopyPasteEngine(cfg['augmentation']['copy_paste'], debug=debug)
+        occ = OcclusionSimulator(cfg['augmentation']['occlusion'], debug=debug)
         writer = YoloWriter(cfg)
 
         # Pipeline logic

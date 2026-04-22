@@ -26,9 +26,10 @@ class CopyPasteEngine:
     Orchestrates extracting an object from its source and pasting it onto a background.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], debug: bool = False):
         self.cfg = config
         self.enabled = config.get("enabled", True)
+        self.debug = debug
 
     def paste(self, record: SampleRecord, background: np.ndarray) -> SampleRecord:
         """
@@ -63,6 +64,7 @@ class CopyPasteEngine:
             
             w_new, h_new = int(w_obj * scale), int(h_obj * scale)
             if w_new < 5 or h_new < 5:
+                if self.debug: log.debug("Object scaled too small (%.2f), skipping", scale)
                 return record # Too small
                 
             fg = cv2.resize(fg, (w_new, h_new), interpolation=cv2.INTER_LINEAR)
@@ -78,20 +80,26 @@ class CopyPasteEngine:
 
             # 3. Object-Only Inversion (Prob A)
             inversion_cfg = self.cfg.get("inversion", {})
+            obj_inverted = False
             if random.random() < inversion_cfg.get("object_only_prob", 0.05):
                 fg = 255 - fg
+                obj_inverted = True
 
             # 4. Pick Paste Position on Background
             bg_h, bg_w = background.shape[:2]
             if w_new >= bg_w or h_new >= bg_h:
-                # If object is bigger than background, resize background or skip
-                # For now, let's just skip if it's really too big
+                if self.debug: log.debug("Object larger than background, skipping")
                 return record
                 
             paste_x = random.randint(0, bg_w - w_new)
             paste_y = random.randint(0, bg_h - h_new)
             
+            if self.debug:
+                log.debug("Pasting %s: scale=%.2f, pos=(%d, %d)", 
+                          record.source_id, scale, paste_x, paste_y)
+            
             # 5. Histogram Matching (Lighting Adaptation)
+            hist_matched = False
             if self.cfg.get("histogram_match", True):
                 bg_crop = background[paste_y:paste_y+h_new, paste_x:paste_x+w_new]
                 # Match fg to bg_crop
@@ -99,20 +107,30 @@ class CopyPasteEngine:
                     # skimage match_histograms expects RGB or handles channels
                     matched_fg = exposure.match_histograms(fg, bg_crop, channel_axis=-1)
                     fg = matched_fg.astype(np.uint8)
+                    hist_matched = True
                 except Exception as e:
                     log.warning("Histogram matching failed: %s", e)
 
             # 6. Pixel Math (Shadow / Glare)
             lighting_cfg = self.cfg.get("lighting", {})
+            applied_lighting = []
+            if hist_matched: applied_lighting.append("HistMatch")
+            if obj_inverted: applied_lighting.append("ObjInvert")
+
             if random.random() < lighting_cfg.get("multiply_prob", 0.3):
                 m_range = lighting_cfg.get("multiply_range", [0.5, 0.9])
                 factor = random.uniform(m_range[0], m_range[1])
                 fg = (fg.astype(np.float32) * factor).astype(np.uint8)
+                applied_lighting.append(f"Mult(%.2f)" % factor)
             
             if random.random() < lighting_cfg.get("add_prob", 0.2):
                 a_range = lighting_cfg.get("add_range", [20, 70])
                 val = random.randint(a_range[0], a_range[1])
                 fg = cv2.add(fg, np.array([val], dtype=np.uint8))
+                applied_lighting.append(f"Add(%d)" % val)
+
+            if self.debug and applied_lighting:
+                log.debug("Lighting effects: %s", ", ".join(applied_lighting))
 
             # 7. Alpha Blending (Soft Edges)
             sigma = self.cfg.get("alpha_blend_sigma", 7)
@@ -133,6 +151,7 @@ class CopyPasteEngine:
             # 8. Full-Image Inversion (Prob B)
             if random.random() < inversion_cfg.get("full_image_prob", 0.03):
                 composite = 255 - composite
+                if self.debug: log.debug("Applied full-image inversion")
 
             # 9. Remap Keypoints to Full Coords
             final_kps: List[Keypoint] = []
