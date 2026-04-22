@@ -1,26 +1,19 @@
 """
-Video Pose Verification Visualizer
-==================================
-Loads a pose JSON (e.g., pose_label_video8.json) and a video file 
-(e.g., OverlappedVideo8.mp4) to visualize keypoints frame-by-frame.
-
-Usage:
-    python verify_video_pose.py --video outputs/OverlappedVideo8.mp4 --json outputs/pose_label_video8.json
-
-Controls:
-    Right Arrow / 'd' : Next frame
-    Left Arrow  / 'a' : Previous frame
-    'q'               : Quit
+visualize_pose_video.py
+========================
+Loads a pose JSON and a video file to visualize keypoints frame-by-frame.
 """
 
 import argparse
 import json
 import os
 import sys
+import time
+from collections import deque
 import cv2
 import numpy as np
 
-# Adaptive colors (will wrap if more than 8)
+# Adaptive colors
 KP_COLORS = [
     (0, 0, 255),      # Red
     (0, 128, 255),    # Orange
@@ -97,9 +90,6 @@ def draw_info_bar(frame, frame_idx, total_frames, image_id):
     cv2.putText(frame, info_text, (10, 20), FONT, 0.45, (200, 200, 200), 1)
     return frame
 
-import time
-from collections import deque
-
 class FrameCache:
     def __init__(self, cap, max_size=100):
         self.cap = cap
@@ -149,14 +139,14 @@ def main():
     print(f"Video frames: {total_frames}")
     print(f"JSON entries: {len(pose_map)}")
 
-    frame_cache = FrameCache(cap, max_size=200) # Increased buffer size
+    frame_cache = FrameCache(cap, max_size=200) 
     idx = 0
     window_name = "Video Pose Verification"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
     last_idx = -1
     last_update_time = 0
-    step_delay = 0.05 # 200ms repeat delay
+    step_delay = 0.05 
 
     while True:
         current_time = time.time()
@@ -187,24 +177,22 @@ def main():
             
             cv2.imshow(window_name, display_frame)
 
-        # Non-blocking wait to allow for smoother re-triggering
+        # Non-blocking wait
         key = cv2.waitKey(10) & 0xFF
 
         if key == ord('q') or key == 27:
             break
-        elif key == ord('d') or key == 83: # 'd' or Right Arrow (sometimes 83)
-            # Only step if enough time has passed (0.2s)
+        elif key == ord('d') or key == 83: 
             if current_time - last_update_time > step_delay:
                 idx = (idx + 1) % total_frames
                 last_update_time = current_time
-        elif key == ord('a') or key == 81: # 'a' or Left Arrow (sometimes 81)
+        elif key == ord('a') or key == 81: 
             if current_time - last_update_time > step_delay:
                 idx = (idx - 1) % total_frames
                 last_update_time = current_time
-        elif key == 255: # No key pressed
+        elif key == 255: 
             pass
         else:
-            # For any other single tap, reset timer so it responds immediately
             last_update_time = 0
 
     cap.release()

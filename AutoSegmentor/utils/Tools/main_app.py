@@ -1,8 +1,5 @@
 """
-autosegmentor_demo.py — Entry point for AutoSegmentor.
-
-Shows SetupDialog on launch. User can modify all settings or hit
-"Start" to proceed with the last-saved (or default) values.
+main_app.py — Core application logic for AutoSegmentor.
 """
 
 import os
@@ -14,21 +11,22 @@ import signal
 # Allow terminal interrupts (Ctrl+C) to terminate the PyQt application safely.
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-sys.path.append(os.path.dirname(__file__))
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Adjust path to include the project root (3 levels up from utils/Tools/main_app.py)
+# Or let the root-level run_demo.py handle the path.
+# For direct execution of this script:
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
 
 from PyQt5.QtWidgets import QApplication
 
-from utils.UserUI.logger_config import logger
-from utils.UserUI.SetupDialog import SetupDialog
-from utils.pipeline import run_pipeline
+from AutoSegmentor.utils.UserUI.logger_config import logger
+from AutoSegmentor.utils.UserUI.SetupDialog import SetupDialog
+from AutoSegmentor.utils.pipeline import run_pipeline
 
 
 def _handle_working_dir(working_dir_name: str, delete: str, prompt_msg: str) -> bool:
-    """Handle working directory cleanup.
-
-    Returns True if directory was cleared or didn't exist, False if user declined.
-    """
+    """Handle working directory cleanup."""
     if not os.path.exists(working_dir_name):
         return True
 
@@ -47,7 +45,7 @@ def _handle_working_dir(working_dir_name: str, delete: str, prompt_msg: str) -> 
     return False
 
 
-def main():
+def start_application():
     app = QApplication(sys.argv)
 
     # ── Show the Setup Dialog ────────────────────────────────────────────────
@@ -132,4 +130,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    start_application()

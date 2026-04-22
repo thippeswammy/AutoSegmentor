@@ -1,6 +1,6 @@
 """
-convert_to_yolo_pose.py
-=======================
+export_yolo_pose.py
+===================
 Converts pose labels (JSON) to YOLOv8-Pose format (.txt).
 Optionally extracts original frames from video to create a full dataset.
 
@@ -103,13 +103,17 @@ def f6(v: float) -> str:
 
 def convert():
     parser = argparse.ArgumentParser(description="Convert pose JSON to YOLO pose txt.")
-    parser.add_argument("--json", type=str, default=r"f:\RunningProjects\AutoSegmentor\sam3\outputs\pose_label_video6.json", help="Path to labels JSON")
-    parser.add_argument("--video", type=str, default=r"f:\RunningProjects\AutoSegmentor\sam3\outputs\OrgVideo6.mp4", help="Path to video (for dimensions/extraction)")
+    parser.add_argument("--json", type=str, help="Path to labels JSON")
+    parser.add_argument("--video", type=str, help="Path to video (for dimensions/extraction)")
     parser.add_argument("--images_in", type=str, default=None, help="Input images dir (alternative to --video)")
-    parser.add_argument("--out_dir", type=str, default=r"f:\RunningProjects\AutoSegmentor\sam3\outputs\pose_dataset_video6", help="Output dataset directory")
+    parser.add_argument("--out_dir", type=str, help="Output dataset directory")
     parser.add_argument("--extract", action="store_true", help="Extract original frames from video?")
     
     args = parser.parse_args()
+
+    if not args.json or not args.out_dir:
+        parser.print_help()
+        return
 
     json_path = Path(args.json)
     base_out = Path(args.out_dir)
@@ -171,11 +175,8 @@ def convert():
                             img_w, img_h = size; break
             
         if not img_w:
-            if "OrgVideo6" in str(json_path): img_w, img_h = 1920, 1080
-            elif "OrgVideo7" in str(json_path): img_w, img_h = 2336, 1080
-            else:
-                print(f"  [WARN] Size unknown for {image_id}, skipping.")
-                skipped += 1; continue
+            print(f"  [WARN] Size unknown for {image_id}, skipping. Provide --video or --images_in.")
+            skipped += 1; continue
 
         # ── Process Instances ───────────────────────────────────────────────
         lines = []
@@ -206,7 +207,7 @@ def convert():
         label_path.write_text("\n".join(lines) + ("\n" if lines else ""))
         written += 1
 
-    print(f"\n[convert_to_yolo_pose] Done.")
+    print(f"\n[export_yolo_pose] Done.")
     print(f"  Total records : {total}")
     print(f"  Labels written: {written}")
     print(f"  Output Base   : {base_out}")

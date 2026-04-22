@@ -1,23 +1,9 @@
 """
-Pose Verification Visualizer
-=============================
-Loads pose_labels.json, verified/original images, and masks to visualize all 8
+visualize_pose_images.py
+========================
+Loads pose_labels.json, verified/original images, and masks to visualize all
 keypoints on each frame. Draws keypoints as labeled circles and connects them
 with lines to show box1 and box2 outlines.
-
-Automatically finds data from either:
-  - working_dir/verified/ (after full pipeline)
-  - working_dir/ (render + images, before verification)
-
-Usage:
-    python verify_pose.py
-    python verify_pose.py --dir working_dir/verified
-
-Controls:
-    Right Arrow / 'd' : Next frame
-    Left Arrow  / 'a' : Previous frame
-    'q'               : Quit
-    'm'               : Toggle mask overlay on/off
 """
 
 import argparse
@@ -27,17 +13,16 @@ import sys
 import cv2
 import numpy as np
 
-
 # Colors for each keypoint (BGR)
 KP_COLORS = [
     (0, 0, 255),      # 0: top_left_box1     - Red
-    (0, 128, 255),     # 1: top_right_box1    - Orange
-    (0, 255, 255),     # 2: bottom_right_box1 - Yellow
-    (0, 255, 0),       # 3: bottom_left_box1  - Green
-    (255, 0, 0),       # 4: top_left_box2     - Blue
-    (255, 0, 128),     # 5: top_right_box2    - Purple
-    (255, 128, 0),     # 6: bottom_right_box2 - Teal
-    (255, 255, 0),     # 7: bottom_left_box2  - Cyan
+    (0, 128, 255),    # 1: top_right_box1    - Orange
+    (0, 255, 255),    # 2: bottom_right_box1 - Yellow
+    (0, 255, 0),      # 3: bottom_left_box1  - Green
+    (255, 0, 0),      # 4: top_left_box2     - Blue
+    (255, 0, 128),    # 5: top_right_box2    - Purple
+    (255, 128, 0),    # 6: bottom_right_box2 - Teal
+    (255, 255, 0),    # 7: bottom_left_box2  - Cyan
 ]
 
 # Box edge connections (keypoint indices)
@@ -105,7 +90,7 @@ def draw_keypoints(frame, keypoints, show_labels=True):
         x, y = kp["x"], kp["y"]
         visible = kp.get("visible", 0)
         if visible > 0 and x >= 0 and y >= 0:
-            pts[pid] = (x, y)
+            pts[pid] = (int(x), int(y))
 
     # Draw box edges
     for edges, color in [(BOX1_EDGES, (0, 200, 0)), (BOX2_EDGES, (200, 0, 200))]:
@@ -181,7 +166,9 @@ def find_mask_file(mask_dir, image_id):
 
 def main():
     parser = argparse.ArgumentParser(description="Pose Verification Visualizer")
-    parser.add_argument("--dir", default=os.path.join(os.path.dirname(__file__), "working_dir"),
+    # Default to working_dir in the root (2 levels up from utils/Tools)
+    default_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "working_dir")
+    parser.add_argument("--dir", default=default_dir,
                         help="Base directory (default: working_dir)")
     args = parser.parse_args()
 
@@ -242,9 +229,9 @@ def main():
 
         if key == ord('q') or key == 27:
             break
-        elif key == ord('d') or key == 83 or key == 2555904:
+        elif key == ord('d') or key == 83: # 'd' or Right Arrow
             idx = (idx + 1) % total_frames
-        elif key == ord('a') or key == 81 or key == 2424832:
+        elif key == ord('a') or key == 81: # 'a' or Left Arrow
             idx = (idx - 1) % total_frames
         elif key == ord('m'):
             show_mask = not show_mask
