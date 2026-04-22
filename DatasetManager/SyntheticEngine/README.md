@@ -21,7 +21,7 @@ Ensure you have the requirements installed in your project venv:
 2. Review paths and parameters in `config/default_config.yaml`.
 3. Run the generator:
    ```powershell
-   ..\.venv\Scripts\python.exe run.py
+    F:\RunningProjects\AutoSegmentor\.venv\Scripts\python.exe .\debug_sweep.py
    ```
 
 ## Configuration
