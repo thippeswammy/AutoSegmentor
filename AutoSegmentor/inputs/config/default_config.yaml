@@ -1,9 +1,9 @@
 auto_prompt_encoding: true
-batch_size: 10
-delete: 'yes'
+batch_size: 40
+delete: 'no'
 final_video_path: ./outputs
-fps: 30
-images_ending_count: 100
+fps: 10
+images_ending_count: 10
 images_extract_dir: ./working_dir/images
 overlap_dir: ./working_dir/overlap
 pose_estimation:
@@ -25,11 +25,13 @@ pose_estimation:
   - p10
   - p11
   - p12
+  - p13
   object_id: 1
   radius: 5
   tracker: cotracker
-prefix: Img
+prefix: europlastic_B_videos
 rendered_dir: ./working_dir/render
+review_from_start: true
 run_mode: all
 sam:
   enabled: true
@@ -38,5 +40,5 @@ verified_img_dir: ./working_dir/verified/images
 verified_mask_dir: ./working_dir/verified/mask
 video_end: 1
 video_path_template: ./inputs/VideoInputs/Video{}.mp4
-video_start: 6
+video_start: 10
 working_dir_name: working_dir

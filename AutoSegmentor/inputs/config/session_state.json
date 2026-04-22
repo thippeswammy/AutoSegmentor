@@ -1,14 +1,16 @@
 {
   "video_path_template": "./inputs/VideoInputs/Video{}.mp4",
-  "video_start": 6,
+  "video_start": 10,
   "video_end": 1,
   "final_video_path": "./outputs",
   "working_dir_name": "working_dir",
-  "delete": "yes",
-  "prefix": "Img",
-  "batch_size": 60,
-  "fps": 30,
+  "images_ending_count": 10,
+  "delete": "no",
+  "prefix": "europlastic_B_videos",
+  "batch_size": 40,
+  "fps": 10,
   "run_mode": "all",
+  "review_from_start": true,
   "sam_enabled": true,
   "auto_prompt_encoding": true,
   "mask_engine": "sam2",
@@ -31,6 +33,7 @@
     "p9",
     "p10",
     "p11",
-    "p12"
+    "p12",
+    "p13"
   ]
 }
