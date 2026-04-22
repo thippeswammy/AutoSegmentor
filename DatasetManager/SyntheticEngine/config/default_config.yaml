@@ -52,12 +52,14 @@ augmentation:
 
     # Inversion modes
     inversion:
+      enabled: true                   # master toggle for inversion effects
       object_only_prob: 0.10          # probability of inverting ONLY the object
       full_image_prob: 0.05           # probability of inverting the full composited image
       intensity_range: [0.5, 1.0]      # how strong the inversion is (range)
 
     # Pixel math effects
     lighting:
+      enabled: true                   # master toggle for lighting (shadows/glare)
       multiply_prob: 0.30             # simulated shadows
       multiply_range: [0.50, 0.85]
       add_prob: 0.20                  # simulated glare

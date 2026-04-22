@@ -81,7 +81,7 @@ class CopyPasteEngine:
             # 3. Object-Only Inversion (Prob A)
             inversion_cfg = self.cfg.get("inversion", {})
             obj_inverted = False
-            if random.random() < inversion_cfg.get("object_only_prob", 0.05):
+            if inversion_cfg.get("enabled", True) and random.random() < inversion_cfg.get("object_only_prob", 0.05):
                 intensity_range = inversion_cfg.get("intensity_range", [1.0, 1.0])
                 strength = random.uniform(intensity_range[0], intensity_range[1])
                 
@@ -124,17 +124,18 @@ class CopyPasteEngine:
             if hist_matched: applied_lighting.append("HistMatch")
             if obj_inverted: applied_lighting.append("ObjInvert")
 
-            if random.random() < lighting_cfg.get("multiply_prob", 0.3):
-                m_range = lighting_cfg.get("multiply_range", [0.5, 0.9])
-                factor = random.uniform(m_range[0], m_range[1])
-                fg = (fg.astype(np.float32) * factor).astype(np.uint8)
-                applied_lighting.append(f"Mult(%.2f)" % factor)
-            
-            if random.random() < lighting_cfg.get("add_prob", 0.2):
-                a_range = lighting_cfg.get("add_range", [20, 70])
-                val = random.randint(a_range[0], a_range[1])
-                fg = cv2.add(fg, np.array([val], dtype=np.uint8))
-                applied_lighting.append(f"Add(%d)" % val)
+            if lighting_cfg.get("enabled", True):
+                if random.random() < lighting_cfg.get("multiply_prob", 0.3):
+                    m_range = lighting_cfg.get("multiply_range", [0.5, 0.9])
+                    factor = random.uniform(m_range[0], m_range[1])
+                    fg = (fg.astype(np.float32) * factor).astype(np.uint8)
+                    applied_lighting.append(f"Mult(%.2f)" % factor)
+                
+                if random.random() < lighting_cfg.get("add_prob", 0.2):
+                    a_range = lighting_cfg.get("add_range", [20, 70])
+                    val = random.randint(a_range[0], a_range[1])
+                    fg = cv2.add(fg, np.array([val], dtype=np.uint8))
+                    applied_lighting.append(f"Add(%d)" % val)
 
             if self.debug and applied_lighting:
                 log.debug("Lighting effects: %s", ", ".join(applied_lighting))
@@ -161,7 +162,7 @@ class CopyPasteEngine:
             new_mask[paste_y:paste_y+h_new, paste_x:paste_x+w_new] = obj_mask
 
             # 8. Full-Image Inversion (Prob B)
-            if random.random() < inversion_cfg.get("full_image_prob", 0.03):
+            if inversion_cfg.get("enabled", True) and random.random() < inversion_cfg.get("full_image_prob", 0.03):
                 intensity_range = inversion_cfg.get("intensity_range", [1.0, 1.0])
                 strength = random.uniform(intensity_range[0], intensity_range[1])
                 
