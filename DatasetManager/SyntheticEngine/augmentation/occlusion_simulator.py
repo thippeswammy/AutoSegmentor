@@ -33,7 +33,7 @@ class OcclusionSimulator:
         """
         Apply random black patches and update keypoint visibility.
         """
-        if not self.enabled or random.random() > self.cfg.get("prob", 0.3):
+        if not self.enabled:
             return record
 
         try:

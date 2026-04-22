@@ -37,6 +37,7 @@ augmentation:
 
   geometric:
     enabled: true
+    prob: 0.8                  # probability of applying the whole geometric stage
     rotate_limit: 0            # max rotation degrees (random +/-)
     h_flip_prob: 0.0            # probability of horizontal flip
     v_flip_prob: 0.0            # probability of vertical flip
@@ -46,8 +47,9 @@ augmentation:
 
   copy_paste:
     enabled: true
-    object_scale_range: [0.6, 1.0]   # simulate distance by scaling object during paste
-    alpha_blend_sigma: [1, 15]        # smoothing kernel for mask edges (range for variety)
+    prob: 1.0                  # probability of applying copy-paste
+    object_scale_range: [0.3, 1.0]   # simulate distance by scaling object during paste
+    alpha_blend_sigma: [3, 8]        # smoothing kernel for mask edges (range for variety)
     histogram_match: false   # true          # adapt object lighting to background
 
     # Inversion modes
@@ -67,6 +69,7 @@ augmentation:
 
   photometric:
     enabled: true
+    prob: 0.9                  # probability of applying photometric stage
     brightness_range: [-0.35, 0.40]
     contrast_range: [0.60, 1.40]
     hue_shift_limit: 12
@@ -77,7 +80,7 @@ augmentation:
 
   occlusion:
     enabled: true
-    prob: 0.30                        # probability of applying occlusion patches
+    prob: 0.5                  # probability of applying occlusion stage
     max_patches: 3
     patch_size_min: 0.05              # relative to object bbox
     patch_size_max: 0.30

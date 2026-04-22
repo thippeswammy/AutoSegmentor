@@ -113,18 +113,30 @@ class SyntheticPipeline:
 
     def _generate_and_write(self, record: SampleRecord, index: int):
         """Internal helper for single-threaded generation."""
+        import random
+        aug_cfg = self.cfg['augmentation']
+        rec = record
+
         # 1. Geometric (on isolated object)
-        rec = self.geom_aug.transform(record)
+        geom_prob = aug_cfg['geometric'].get('prob', 1.0)
+        if random.random() < geom_prob:
+            rec = self.geom_aug.transform(rec)
         
         # 2. Copy-Paste (onto random background)
-        bg = self.bg_manager.get_random_bg(target_size=None) # Keep bg size
-        rec = self.copy_paste.paste(rec, bg)
+        cp_prob = aug_cfg['copy_paste'].get('prob', 1.0)
+        if random.random() < cp_prob:
+            bg = self.bg_manager.get_random_bg(target_size=None)
+            rec = self.copy_paste.paste(rec, bg)
         
         # 3. Photometric (on full composited image)
-        rec = self.photo_aug.transform(rec)
+        photo_prob = aug_cfg['photometric'].get('prob', 1.0)
+        if random.random() < photo_prob:
+            rec = self.photo_aug.transform(rec)
         
         # 4. Occlusion
-        rec = self.occlusion.apply(rec)
+        occ_prob = aug_cfg['occlusion'].get('prob', 1.0)
+        if random.random() < occ_prob:
+            rec = self.occlusion.apply(rec)
         
         # 5. Write
         self.writer.write(rec, index)
@@ -152,9 +164,29 @@ class SyntheticPipeline:
         writer = YoloWriter(cfg)
 
         # Pipeline logic
-        rec = geom.transform(record)
-        bg = bg_mgr.get_random_bg()
-        rec = cp.paste(rec, bg)
-        rec = photo.transform(rec)
-        rec = occ.apply(rec)
+        import random
+        aug_cfg = cfg['augmentation']
+        rec = record
+
+        # 1. Geometric
+        geom_prob = aug_cfg['geometric'].get('prob', 1.0)
+        if random.random() < geom_prob:
+            rec = geom.transform(rec)
+
+        # 2. Copy-Paste
+        cp_prob = aug_cfg['copy_paste'].get('prob', 1.0)
+        if random.random() < cp_prob:
+            bg = bg_mgr.get_random_bg()
+            rec = cp.paste(rec, bg)
+
+        # 3. Photometric
+        photo_prob = aug_cfg['photometric'].get('prob', 1.0)
+        if random.random() < photo_prob:
+            rec = photo.transform(rec)
+
+        # 4. Occlusion
+        occ_prob = aug_cfg['occlusion'].get('prob', 1.0)
+        if random.random() < occ_prob:
+            rec = occ.apply(rec)
+
         writer.write(rec, index)
