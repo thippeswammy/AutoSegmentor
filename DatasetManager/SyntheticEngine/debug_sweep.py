@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 import logging
+import itertools
 
 # Ensure local imports work
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -36,10 +37,10 @@ def get_intensity_val(range_or_val, level):
     if level == 1: return (low + high) / 2
     return high
 
-def create_debug_config(base_cfg, level, combo_name):
+def create_debug_config(base_cfg, level, combo_stages):
     """
-    Creates a config for a specific combination and intensity level.
-    combo_name: 'geom_only', 'geom_inversion', 'geom_lighting', 'all'
+    Creates a config for a specific set of active stages and intensity level.
+    combo_stages: list of stage names to enable
     """
     import copy
     cfg = copy.deepcopy(base_cfg)
@@ -48,52 +49,39 @@ def create_debug_config(base_cfg, level, combo_name):
     # 1. Reset all to disabled
     for stage in ['geometric', 'copy_paste', 'photometric', 'occlusion']:
         aug[stage]['enabled'] = False
-        aug[stage]['prob'] = 1.0 # Force if enabled
+        aug[stage]['prob'] = 1.0
+        if stage == 'copy_paste':
+            aug[stage]['inversion']['enabled'] = False
+            aug[stage]['lighting']['enabled'] = False
 
-    # 2. Enable based on combo
-    if combo_name == 'geom_only':
-        aug['geometric']['enabled'] = True
-    elif combo_name == 'geom_inversion':
-        aug['geometric']['enabled'] = True
+    # 2. Enable based on combo_stages
+    if any(s in combo_stages for s in ['inversion', 'lighting']):
+        aug['copy_paste']['enabled'] = True
+    
+    if 'geometric' in combo_stages: aug['geometric']['enabled'] = True
+    if 'photometric' in combo_stages: aug['photometric']['enabled'] = True
+    if 'occlusion' in combo_stages: aug['occlusion']['enabled'] = True
+    if 'inversion' in combo_stages: 
         aug['copy_paste']['enabled'] = True
         aug['copy_paste']['inversion']['enabled'] = True
-        aug['copy_paste']['lighting']['enabled'] = False
-    elif combo_name == 'geom_lighting':
-        aug['geometric']['enabled'] = True
+    if 'lighting' in combo_stages: 
         aug['copy_paste']['enabled'] = True
-        aug['copy_paste']['inversion']['enabled'] = False
         aug['copy_paste']['lighting']['enabled'] = True
-    elif combo_name == 'geom_photometric':
-        aug['geometric']['enabled'] = True
-        aug['copy_paste']['enabled'] = True
-        aug['photometric']['enabled'] = True
-    elif combo_name == 'inversion_only':
-        aug['copy_paste']['enabled'] = True
-        aug['copy_paste']['inversion']['enabled'] = True
-        aug['copy_paste']['lighting']['enabled'] = False
-    elif combo_name == 'lighting_only':
-        aug['copy_paste']['enabled'] = True
-        aug['copy_paste']['inversion']['enabled'] = False
-        aug['copy_paste']['lighting']['enabled'] = True
-    elif combo_name == 'photometric_only':
-        aug['copy_paste']['enabled'] = True
-        aug['photometric']['enabled'] = True
-    elif combo_name == 'occlusion_only':
-        aug['copy_paste']['enabled'] = True
-        aug['occlusion']['enabled'] = True
-    elif combo_name == 'all':
-        for stage in ['geometric', 'copy_paste', 'photometric', 'occlusion']:
-            aug[stage]['enabled'] = True
-            if 'inversion' in aug[stage]: aug[stage]['inversion']['enabled'] = True
-            if 'lighting' in aug[stage]: aug[stage]['lighting']['enabled'] = True
 
     # 3. Set Intensity (if enabled)
+    # Geometric
+    g = aug['geometric']
+    if g['enabled']:
+        g['rotate_limit'] = get_intensity_val([10, 45], level)
+        g['scale_range'] = [get_intensity_val([0.9, 0.7], level), get_intensity_val([1.1, 1.3], level)]
+
     # Copy Paste
     cp = aug['copy_paste']
     if cp['enabled']:
         cp['object_scale_range'] = [get_intensity_val(cp['object_scale_range'], level)] * 2
         cp['alpha_blend_sigma'] = get_intensity_val(cp['alpha_blend_sigma'], level)
-        cp['inversion']['intensity_range'] = [get_intensity_val(cp['inversion']['intensity_range'], level)] * 2
+        if cp['inversion']['enabled']:
+            cp['inversion']['intensity_range'] = [get_intensity_val(cp['inversion']['intensity_range'], level)] * 2
         
     # Photometric
     p = aug['photometric']
@@ -147,15 +135,20 @@ def main():
     bg = bg_mgr.get_random_bg()
 
     levels = ["Low", "Mid", "High"]
-    combos = [
-        "geom_only", "inversion_only", "lighting_only", "photometric_only", "occlusion_only",
-        "geom_inversion", "geom_lighting", "geom_photometric", "all"
-    ]
+    stages = ["geometric", "inversion", "lighting", "photometric", "occlusion"]
     
-    for combo in combos:
+    # Generate ALL combinations of stages (1 to 5)
+    all_combos = []
+    for r in range(1, len(stages) + 1):
+        for combo in itertools.combinations(stages, r):
+            all_combos.append(combo)
+
+    total_imgs = len(all_combos) * len(levels)
+    print(f"Generating {total_imgs} variations ({len(all_combos)} combos x {len(levels)} levels)...")
+
+    for combo in all_combos:
+        combo_name = "+".join([s[:4] for s in combo]) # Short name e.g. geom+inv
         for i, level_name in enumerate(levels):
-            log.info(f"Generating combo={combo} intensity={level_name}...")
-            
             cfg = create_debug_config(base_config, i, combo)
             
             # Initialize modules
@@ -165,7 +158,9 @@ def main():
             occ = OcclusionSimulator(cfg['augmentation']['occlusion'], debug=False)
             
             # Run Pipeline
-            rec = geom.transform(record)
+            rec = record
+            if cfg['augmentation']['geometric']['enabled']:
+                rec = geom.transform(rec)
             if cfg['augmentation']['copy_paste']['enabled']:
                 rec = cp.paste(rec, bg)
             if cfg['augmentation']['photometric']['enabled']:
@@ -174,13 +169,11 @@ def main():
                 rec = occ.apply(rec)
             
             # Save
-            save_path = out_dir / f"{combo}_{level_name}.jpg"
+            save_path = out_dir / f"{combo_name}_{level_name}.jpg"
             cv2.imwrite(str(save_path), rec.image)
-            log.info(f"Saved to {save_path}")
+            # log.info(f"Saved to {save_path}")
 
-    print(f"\nSweep Matrix Complete! Check {out_dir} for results.")
-
-    print("\nSweep Complete! Check outputs/debug_sweep/ for results.")
+    print(f"\nExhaustive Sweep Matrix Complete! Check {out_dir} for {total_imgs} results.")
 
 if __name__ == "__main__":
     main()
