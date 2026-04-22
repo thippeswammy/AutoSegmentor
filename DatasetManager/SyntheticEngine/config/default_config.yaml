@@ -42,8 +42,8 @@ augmentation:
     h_flip_prob: 0.0            # probability of horizontal flip
     v_flip_prob: 0.0            # probability of vertical flip
     scale_range: [1,1]   # min/max scaling of object before transform
-    perspective_scale: [0.03, 0.12]
-    shear_limit: 8
+    perspective_scale: [0.01, 0.1]
+    shear_limit: 4
 
   copy_paste:
     enabled: false
@@ -53,7 +53,7 @@ augmentation:
     histogram_match: false   # true          # adapt object lighting to background
 
     # Inversion modes
-    inversion:
+    inversion: #NO problem
       enabled: true                   # master toggle for inversion effects
       object_only_prob: 0.10          # probability of inverting ONLY the object
       full_image_prob: 0.05           # probability of inverting the full composited image
@@ -70,13 +70,13 @@ augmentation:
   photometric:
     enabled: true
     prob: 0.8                  # probability of applying photometric stage
-    brightness_range: [-0.35, 0.40]
+    brightness_range: [-0.1, 0.4]
     contrast_range: [0.60, 1.40]
-    hue_shift_limit: 12
-    saturation_range: [0.70, 1.30]
-    blur_prob: 0.20
-    noise_prob: 0.25
-    jpeg_prob: 0.10
+    hue_shift_limit: 8
+    saturation_range: [0.4, 0.9]
+    blur_prob: 0.10
+    noise_prob: 0.05
+    jpeg_prob: 0.1
 
   occlusion:
     enabled: true
