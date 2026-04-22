@@ -64,12 +64,12 @@ class PhotometricAugmentor:
         # Noise
         noise_prob = config.get("noise_prob", 0.2)
         if noise_prob > 0:
-            transforms.append(A.GaussNoise(var_limit=(10.0, 50.0), p=noise_prob))
+            transforms.append(A.GaussNoise(std_range=(0.2, 0.5), p=noise_prob))
             
         # JPEG Compression
         jpeg_prob = config.get("jpeg_prob", 0.1)
         if jpeg_prob > 0:
-            transforms.append(A.ImageCompression(quality_lower=60, quality_upper=100, p=jpeg_prob))
+            transforms.append(A.ImageCompression(quality_range=(60, 100), p=jpeg_prob))
 
         self.transform_pipeline = A.Compose(transforms)
 

@@ -21,8 +21,7 @@ from backgrounds.background_manager import BackgroundManager
 from augmentation.geometric_augmentor import GeometricAugmentor
 from augmentation.photometric_augmentor import PhotometricAugmentor
 from augmentation.copy_paste_engine import CopyPasteEngine
-from augmentation.occlusion_simulator.py import OcclusionSimulator # Fix: should be .occlusion_simulator
-# Oops, fixing the import path below.
+from augmentation.occlusion_simulator import OcclusionSimulator
 
 log = logging.getLogger(__name__)
 

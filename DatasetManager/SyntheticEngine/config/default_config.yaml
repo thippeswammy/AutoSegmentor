@@ -9,7 +9,7 @@ input:
   masks_dir: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/render"
   
   # Path to verified pose labels (contains keypoint coordinates)
-  pose_labels_json: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/verified/pose_labels.json"
+  pose_labels_json: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/inputs/UserPrompts/points_labels_europlastic_B_videos10.json"
   
   # Directory for background images to paste objects onto
   backgrounds_dir: "F:/RunningProjects/AutoSegmentor/DatasetManager/SyntheticEngine/backgrounds"
@@ -19,7 +19,7 @@ output:
   dataset_dir: "F:/RunningProjects/AutoSegmentor/DatasetManager/SyntheticEngine/outputs"
   
   # Folder name for this run
-  folder_name: "pallet_synthetic_v1"
+  folder_name: "pallet_synthetic_test"
   
   # Dataset split ratios
   train_split: 0.85
@@ -28,10 +28,10 @@ output:
 
 augmentation:
   # Number of synthetic samples to generate from EACH reference image
-  samples_per_source: 50
+  samples_per_source: 1
   
   # Multiprocessing: -1 for all CPU cores, 1 for single-threaded debug
-  workers: -1
+  workers: 1
 
   geometric:
     enabled: true
@@ -91,4 +91,4 @@ bbox_margin: 0.05
 
 # Color mapping (BGR)
 color_to_label:
-  "[255, 255, 255]": 0   # pallet color from render masks
+  "[0, 0, 255]": 0   # pallet color (Red in BGR)

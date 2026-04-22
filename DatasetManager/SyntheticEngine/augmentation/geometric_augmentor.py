@@ -56,7 +56,6 @@ class GeometricAugmentor:
             shift_limit=0.0625, 
             scale_limit=(scale_range[0]-1, scale_range[1]-1), 
             rotate_limit=0, # Already have Rotate
-            shear_limit=shear_limit,
             p=0.5
         ))
         
