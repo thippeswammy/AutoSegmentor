@@ -28,10 +28,14 @@ class PoseExporter:
         )
         ensure_directory(os.path.dirname(self.output_file))
 
-        self.keypoints_def = (
-            self.config.pose_config.get('keypoints', [])
-            if self.config.pose_config else []
-        )
+        if self.config.pose_config:
+            classes = self.config.pose_config.get('classes', [])
+            if classes:
+                self.keypoints_def = classes[0].get('keypoints', [])
+            else:
+                self.keypoints_def = self.config.pose_config.get('keypoints', [])
+        else:
+            self.keypoints_def = []
 
         # Determine tracker type
         self.tracker_type = "lk"  # default fallback

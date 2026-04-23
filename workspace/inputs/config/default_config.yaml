@@ -7,43 +7,53 @@ external_libs:
 - external/co-tracker
 
 # ========================================
-# Pipeline & Video
+# Video Inputs
 # ========================================
-auto_prompt_encoding: true
-batch_size: 30
-delete: 'yes'
-final_video_path: ./workspace/outputs
-fps: 23
-images_ending_count: 10
-prefix: Img
-review_from_start: false
-run_mode: all
-video_end: 1
 video_path_template: ./workspace/VideoInputs/Video{}.mp4
 video_start: 6
+video_end: 1
+
+# ========================================
+# Video Outputs & Storage
+# ========================================
+final_video_path: ./workspace/outputs
 working_dir_name: ./workspace/working_dir
+prefix: Img
+delete: 'yes'
+
+# ========================================
+# Pipeline Settings
+# ========================================
+run_mode: all
+batch_size: 30
+fps: 23
+images_ending_count: 10
+review_from_start: false
+auto_prompt_encoding: true
 
 # ========================================
 # Models
 # ========================================
+sam:
+  enabled: true
+  model_config: sam2_hiera_l.yaml
+  checkpoint: external/segment_anything_2/checkpoints/sam2_hiera_large.pt
+
 pose_estimation:
-  class_id: 1
+  enabled: true
+  tracker: cotracker
+  radius: 5
   cotracker:
     checkpoint: external/co-tracker/checkpoints/scaled_offline.pth
     window_len: 60
-  enabled: true
-  keypoints:
-  - p1
-  - p2
-  - p3
-  - p4
-  object_id: 1
-  radius: 5
-  tracker: cotracker
-sam:
-  checkpoint: external/segment_anything_2/checkpoints/sam2_hiera_large.pt
-  enabled: true
-  model_config: sam2_hiera_l.yaml
+  classes:
+  - class_id: 1
+    object_id: 1
+    keypoints:
+    - p1
+    - p2
+    - p3
+    - p4
 
 # ========================================
 # Other Configs

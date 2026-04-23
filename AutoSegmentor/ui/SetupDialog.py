@@ -65,11 +65,15 @@ def _save_session(data: dict):
     os.makedirs(os.path.dirname(_SESSION_STATE), exist_ok=True)
     
     sections = {
-        "Pipeline & Video": [
-            "run_mode", "video_start", "video_end", "batch_size", "fps",
-            "images_ending_count", "prefix", "delete", "review_from_start",
-            "auto_prompt_encoding", "working_dir_name", "video_path_template",
-            "final_video_path"
+        "Video Inputs": [
+            "video_path_template", "video_start", "video_end"
+        ],
+        "Video Outputs & Storage": [
+            "final_video_path", "working_dir_name", "prefix", "delete"
+        ],
+        "Pipeline Settings": [
+            "run_mode", "batch_size", "fps", "images_ending_count", 
+            "review_from_start", "auto_prompt_encoding"
         ],
         "Models": [
             "sam_enabled", "pose_enabled", "mask_engine", "tracker", 
@@ -125,10 +129,16 @@ def _save_defaults(data: dict):
     pose = cfg.get("pose_estimation", {})
     pose["enabled"]  = data.get("pose_enabled",  pose.get("enabled", False))
     pose["tracker"]  = data.get("tracker",        pose.get("tracker", "cotracker"))
-    pose["class_id"] = data.get("pose_class_id",  pose.get("class_id", 1))
-    pose["object_id"]= data.get("pose_object_id", pose.get("object_id", 1))
     pose["radius"]   = data.get("keypoint_radius", pose.get("radius", 5))
-    pose["keypoints"]= data.get("keypoints",       pose.get("keypoints", []))
+
+    classes = pose.get("classes", [])
+    if not classes:
+        classes.append({})
+    classes[0]["class_id"] = data.get("pose_class_id", 1)
+    classes[0]["object_id"] = data.get("pose_object_id", 1)
+    classes[0]["keypoints"] = data.get("keypoints", [])
+    pose["classes"] = classes
+
     ct = pose.get("cotracker", {})
     ct["checkpoint"]  = data.get("cotracker_checkpoint", ct.get("checkpoint", ""))
     ct["window_len"]  = data.get("cotracker_window_len", ct.get("window_len", 60))
@@ -143,11 +153,15 @@ def _write_config_with_sections(cfg, filepath):
     """Write configuration with logical sections to preserve readability."""
     sections = {
         "External Libraries": ["external_libs"],
-        "Pipeline & Video": [
-            "run_mode", "video_start", "video_end", "batch_size", "fps",
-            "images_ending_count", "prefix", "delete", "review_from_start",
-            "auto_prompt_encoding", "working_dir_name", "video_path_template",
-            "final_video_path"
+        "Video Inputs": [
+            "video_path_template", "video_start", "video_end"
+        ],
+        "Video Outputs & Storage": [
+            "final_video_path", "working_dir_name", "prefix", "delete"
+        ],
+        "Pipeline Settings": [
+            "run_mode", "batch_size", "fps", "images_ending_count", 
+            "review_from_start", "auto_prompt_encoding"
         ],
         "Models": ["sam", "pose_estimation"]
     }
@@ -544,10 +558,18 @@ class SettingsTab(QScrollArea):
             if isinstance(ct, dict):
                 self.ct_checkpoint.setText(str(ct.get("checkpoint", "")))
                 self.ct_window_len.setValue(int(ct.get("window_len", 60)))
-            self.pose_class_id.setValue(int(pose.get("class_id", 1)))
-            self.pose_object_id.setValue(int(pose.get("object_id", 1)))
+            # Handle classes array
+            classes = pose.get("classes", [])
+            if classes and isinstance(classes[0], dict):
+                primary_class = classes[0]
+                self.pose_class_id.setValue(int(primary_class.get("class_id", 1)))
+                self.pose_object_id.setValue(int(primary_class.get("object_id", 1)))
+                keypoints = primary_class.get("keypoints", [])
+            else:
+                self.pose_class_id.setValue(int(pose.get("class_id", 1)))
+                self.pose_object_id.setValue(int(pose.get("object_id", 1)))
+                keypoints = pose.get("keypoints", [])
             self.kp_radius.setValue(int(pose.get("radius", 5)))
-            keypoints = pose.get("keypoints", [])
 
         self.kp_list.clear()
         for kp in keypoints:
@@ -702,10 +724,12 @@ class SetupDialog(QDialog):
         pose_config = {
             "enabled":  data["pose_enabled"],
             "tracker":  data["tracker"],
-            "class_id": data["pose_class_id"],
-            "object_id":data["pose_object_id"],
             "radius":   data["keypoint_radius"],
-            "keypoints":data["keypoints"],
+            "classes": [{
+                "class_id": data["pose_class_id"],
+                "object_id":data["pose_object_id"],
+                "keypoints":data["keypoints"],
+            }],
             "cotracker": {
                 "checkpoint": data["cotracker_checkpoint"],
                 "window_len": data["cotracker_window_len"],

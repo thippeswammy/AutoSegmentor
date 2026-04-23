@@ -406,8 +406,11 @@ class AutoSegmentorEngine(SAM2Model):
                     checkpoint = alt_path
             window_len = ct_cfg.get('window_len', 60)
 
+            classes = pose_cfg.get('classes', [])
+            keypoints = classes[0].get('keypoints', []) if classes else pose_cfg.get('keypoints', [])
+            
             tracker = CoTrackerPredictor(
-                keypoint_defs=pose_cfg.get('keypoints', []),
+                keypoint_defs=keypoints,
                 initial_coords=batch_kps,
                 frame_paths=batch_frame_paths,
                 checkpoint=checkpoint,

@@ -42,9 +42,12 @@ class UserInteractionHandler:
         self.pose_object_id = 1
         if self.config.pose_config and self.config.pose_config.get('enabled'):
             self.pose_mode = True
-            self.pose_keypoints = self.config.pose_config.get('keypoints', [])
-            self.pose_class_id = self.config.pose_config.get('class_id', 1)
-            self.pose_object_id = self.config.pose_config.get('object_id', 1)
+            classes = self.config.pose_config.get('classes', [{}])
+            primary_class = classes[0] if classes else {}
+            
+            self.pose_keypoints = primary_class.get('keypoints', [])
+            self.pose_class_id = primary_class.get('class_id', 1)
+            self.pose_object_id = primary_class.get('object_id', 1)
             self.current_class_label = self.pose_class_id
             self.current_instance_id = self.pose_object_id
             self.display_text = f"Click: {self.pose_keypoints[0]}" if self.pose_keypoints else "Pose Mode: No keypoints defined"
