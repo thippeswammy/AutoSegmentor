@@ -5,7 +5,7 @@
   "final_video_path": "./workspace/outputs",
   "working_dir_name": "./workspace/working_dir",
   "images_ending_count": 0,
-  "delete": "no",
+  "delete": "yes",
   "prefix": "Img",
   "batch_size": 30,
   "fps": 30,
