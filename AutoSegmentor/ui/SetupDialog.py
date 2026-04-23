@@ -63,8 +63,39 @@ def _load_session():
 
 def _save_session(data: dict):
     os.makedirs(os.path.dirname(_SESSION_STATE), exist_ok=True)
+    
+    sections = {
+        "Pipeline & Video": [
+            "run_mode", "video_start", "video_end", "batch_size", "fps",
+            "images_ending_count", "prefix", "delete", "review_from_start",
+            "auto_prompt_encoding", "working_dir_name", "video_path_template",
+            "final_video_path"
+        ],
+        "Models": [
+            "sam_enabled", "pose_enabled", "mask_engine", "tracker", 
+            "pose_class_id", "pose_object_id", "keypoint_radius", 
+            "keypoints", "cotracker_checkpoint", "cotracker_window_len"
+        ]
+    }
+
+    ordered_data = {}
+    grouped_keys = set()
+    for keys in sections.values():
+        grouped_keys.update(keys)
+        
+    other_keys = [k for k in data.keys() if k not in grouped_keys]
+    if other_keys:
+        sections["Other Configs"] = other_keys
+
+    for section_name, keys in sections.items():
+        # Inject dummy key for visual grouping
+        ordered_data[f"___{section_name.upper().replace(' ', '_').replace('&', 'AND')}___"] = "========================================"
+        for k in keys:
+            if k in data:
+                ordered_data[k] = data[k]
+
     with open(_SESSION_STATE, "w") as f:
-        json.dump(data, f, indent=2)
+        json.dump(ordered_data, f, indent=2)
     logger.debug(f"[Setup] Saved session to {_SESSION_STATE}")
 
 
