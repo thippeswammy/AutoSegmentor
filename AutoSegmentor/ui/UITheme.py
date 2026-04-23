@@ -50,6 +50,11 @@ class Colors:
     GRID = "#ffffff15"
     ZOOM_BORDER = "#4fc3f7"
 
+    # Sidebar
+    SIDEBAR_BG = "#161625"
+    SIDEBAR_ITEM_HOVER = "#2a2a40"
+    SIDEBAR_ITEM_SELECTED = "#313150"
+
     # Toolbar
     TOOLBAR_BG = "#1e1e2e"
     TOOLBAR_BUTTON_HOVER = "#3b3b4f"
@@ -458,6 +463,67 @@ QSplitter::handle {{
 }}
 QSplitter::handle:hover {{
     background-color: {Colors.ACCENT_BLUE};
+}}
+
+/* ── Tab Widget ── */
+QTabWidget::pane {{
+    border: 1px solid {Colors.BORDER};
+    background-color: {Colors.BG_DARK};
+    border-radius: 6px;
+    top: -1px;
+}}
+QTabBar::tab {{
+    background-color: {Colors.BG_DARKEST};
+    color: {Colors.TEXT_SECONDARY};
+    padding: 8px 20px;
+    border: 1px solid {Colors.BORDER};
+    border-bottom: none;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    margin-right: 4px;
+}}
+QTabBar::tab:selected {{
+    background-color: {Colors.BG_DARK};
+    color: {Colors.ACCENT_BLUE};
+    font-weight: bold;
+}}
+QTabBar::tab:hover:!selected {{
+    background-color: {Colors.BG_MID};
+}}
+
+/* ── Sidebar ── */
+QListWidget#sidebar {{
+    background-color: {Colors.SIDEBAR_BG};
+    border: none;
+    border-right: 1px solid {Colors.BORDER};
+    padding: 10px 0px;
+}}
+QListWidget#sidebar::item {{
+    padding: 12px 20px;
+    margin: 4px 10px;
+    border-radius: 8px;
+    color: {Colors.TEXT_SECONDARY};
+}}
+QListWidget#sidebar::item:hover {{
+    background-color: {Colors.SIDEBAR_ITEM_HOVER};
+    color: {Colors.TEXT_PRIMARY};
+}}
+QListWidget#sidebar::item:selected {{
+    background-color: {Colors.SIDEBAR_ITEM_SELECTED};
+    color: {Colors.ACCENT_BLUE};
+    font-weight: bold;
+}}
+
+/* ── Line Edit ── */
+QLineEdit {{
+    background-color: {Colors.BG_LIGHT};
+    border: 1px solid {Colors.BORDER};
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: {Colors.TEXT_PRIMARY};
+}}
+QLineEdit:focus {{
+    border-color: {Colors.ACCENT_BLUE};
 }}
 
 /* ── Tooltip ── */

@@ -533,6 +533,55 @@ class AnnotationCanvas(QGraphicsView):
                     QPointF(img_rect.right(), scene_pos.y())
                 )
 
+        # ── HUD (Heads-Up Display) ──
+        # Draw a semi-transparent HUD in the bottom-right corner
+        hud_margin = 15
+        hud_w, hud_h = 240, 110
+        view_w, view_h = self.viewport().width(), self.viewport().height()
+        
+        # Convert scene rect to viewport coordinates to draw static HUD
+        painter.save()
+        painter.setWorldMatrixEnabled(False) # Draw in viewport coords
+        
+        hud_rect = QRectF(view_w - hud_w - hud_margin, view_h - hud_h - hud_margin, hud_w, hud_h)
+        
+        # Background glass effect
+        painter.setBrush(QBrush(QColor(0, 0, 0, 160)))
+        painter.setPen(QPen(QColor(Colors.BORDER), 1, Qt.SolidLine))
+        painter.drawRoundedRect(hud_rect, 8, 8)
+        
+        # HUD Text
+        painter.setPen(QColor(Colors.TEXT_PRIMARY))
+        font = QFont("Segoe UI", 9, QFont.Bold)
+        painter.setFont(font)
+        painter.drawText(hud_rect.adjusted(10, 8, -10, -8), Qt.AlignTop | Qt.AlignLeft, "CONTROLS")
+        
+        font.setBold(False)
+        font.setPointSize(8)
+        painter.setFont(font)
+        painter.setPen(QColor(Colors.TEXT_SECONDARY))
+        painter.drawText(hud_rect.adjusted(10, 30, -10, -8), Qt.AlignTop | Qt.AlignLeft, 
+                         "• [Ctrl+Click]  Add Point\n"
+                         "• [RightClick] Delete\n"
+                         "• [Shift+Drag] Move Point\n"
+                         "• [A / D]       Next/Prev Frame\n"
+                         "• [Ctrl+S]      Save Session")
+        
+        # Zoom Level Badge (top left)
+        badge_w, badge_h = 80, 24
+        badge_rect = QRectF(hud_margin, hud_margin, badge_w, badge_h)
+        painter.setBrush(QBrush(QColor(Colors.ACCENT_BLUE)))
+        painter.setOpacity(0.8)
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(badge_rect, 12, 12)
+        painter.setOpacity(1.0)
+        painter.setPen(QColor(Colors.BG_DARKEST))
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(badge_rect, Qt.AlignCenter, f"Z: {self._zoom_level:.1f}x")
+        
+        painter.restore()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Reposition zoom view at bottom-left
