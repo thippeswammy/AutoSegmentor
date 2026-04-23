@@ -50,7 +50,8 @@ class FrameExtractor:
             raise RuntimeError(f"Failed to open video: {video_path}")
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_limit = self.limitedImages if self.limitedImages is not None else total_frames
+        limit = self.limitedImages if self.limitedImages != 0 else None
+        frame_limit = limit if limit is not None else total_frames
 
         with tqdm(total=min(frame_limit, total_frames), desc="Extracting Frames") as pbar:
             frame_count = 0

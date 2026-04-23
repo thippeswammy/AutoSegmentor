@@ -1,9 +1,9 @@
 auto_prompt_encoding: true
 batch_size: 30
-delete: 'no'
+delete: 'yes'
 final_video_path: ./workspace/outputs
 fps: 30
-images_ending_count: 0
+images_ending_count: 10
 images_extract_dir: ./workspace/working_dir/images
 overlap_dir: ./workspace/working_dir/overlap
 pose_estimation:
@@ -11,8 +11,12 @@ pose_estimation:
   cotracker:
     checkpoint: ''
     window_len: 60
-  enabled: false
-  keypoints: []
+  enabled: true
+  keypoints:
+  - p1
+  - p2
+  - p3
+  - p4
   object_id: 1
   radius: 5
   tracker: cotracker
@@ -27,5 +31,5 @@ verified_img_dir: ./workspace/working_dir/verified/images
 verified_mask_dir: ./workspace/working_dir/verified/mask
 video_end: 1
 video_path_template: ./workspace/VideoInputs/Video{}.mp4
-video_start: 1
+video_start: 6
 working_dir_name: ./workspace/working_dir

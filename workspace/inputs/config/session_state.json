@@ -1,10 +1,10 @@
 {
   "video_path_template": "./workspace/VideoInputs/Video{}.mp4",
-  "video_start": 1,
+  "video_start": 6,
   "video_end": 1,
   "final_video_path": "./workspace/outputs",
   "working_dir_name": "./workspace/working_dir",
-  "images_ending_count": 0,
+  "images_ending_count": 100,
   "delete": "yes",
   "prefix": "Img",
   "batch_size": 30,
@@ -14,12 +14,17 @@
   "sam_enabled": true,
   "auto_prompt_encoding": true,
   "mask_engine": "sam2",
-  "pose_enabled": false,
+  "pose_enabled": true,
   "tracker": "cotracker",
   "cotracker_checkpoint": "",
   "cotracker_window_len": 60,
   "pose_class_id": 1,
   "pose_object_id": 1,
   "keypoint_radius": 5,
-  "keypoints": []
+  "keypoints": [
+    "p1",
+    "p2",
+    "p3",
+    "p4"
+  ]
 }
