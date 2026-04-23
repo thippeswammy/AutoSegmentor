@@ -31,9 +31,10 @@ from .UITheme import DARK_STYLESHEET, Colors, Fonts
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
-_DEFAULT_CONFIG = os.path.join(_ROOT, "inputs", "config", "default_config.yaml")
-_SESSION_STATE  = os.path.join(_ROOT, "inputs", "config", "session_state.json")
+_ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
+_WORKSPACE = os.path.join(_ROOT, "workspace")
+_DEFAULT_CONFIG = os.path.join(_WORKSPACE, "inputs", "config", "default_config.yaml")
+_SESSION_STATE  = os.path.join(_WORKSPACE, "inputs", "config", "session_state.json")
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,9 +79,9 @@ def _save_defaults(data: dict):
         "batch_size":          data.get("batch_size",  cfg.get("batch_size",  30)),
         "fps":                 data.get("fps",         cfg.get("fps",         30)),
         "delete":              data.get("delete",      cfg.get("delete",      False)),
-        "working_dir_name":    data.get("working_dir_name",    cfg.get("working_dir_name",    "working_dir")),
+        "working_dir_name":    data.get("working_dir_name",    cfg.get("working_dir_name",    "./workspace/working_dir")),
         "video_path_template": data.get("video_path_template", cfg.get("video_path_template", "")),
-        "final_video_path":    data.get("final_video_path",    cfg.get("final_video_path",    "./outputs")),
+        "final_video_path":    data.get("final_video_path",    cfg.get("final_video_path",    "./workspace/outputs")),
         "images_ending_count": data.get("images_ending_count", cfg.get("images_ending_count", 0)),
         "review_from_start":   data.get("review_from_start",   cfg.get("review_from_start", False)),
         "auto_prompt_encoding": data.get("auto_prompt_encoding", cfg.get("auto_prompt_encoding", True)),
@@ -167,7 +168,7 @@ class VideosTab(QScrollArea):
         vpath_form.setSpacing(8)
 
         self._video_template_row, self.video_template = _path_row(
-            "./inputs/VideoInputs/Video{}.mp4",
+            "./workspace/VideoInputs/Video{}.mp4",
             self._browse_video_dir
         )
         vpath_form.addRow("Path Template:", self._video_template_row)
@@ -194,10 +195,10 @@ class VideosTab(QScrollArea):
         out_form = QFormLayout(out_box)
         out_form.setSpacing(8)
 
-        self._output_row, self.output_dir = _path_row("./outputs", self._browse_output_dir)
+        self._output_row, self.output_dir = _path_row("./workspace/outputs", self._browse_output_dir)
         out_form.addRow("Output Folder:", self._output_row)
 
-        self._working_row, self.working_dir = _path_row("working_dir", self._browse_working_dir)
+        self._working_row, self.working_dir = _path_row("./workspace/working_dir", self._browse_working_dir)
         out_form.addRow("Working Dir:", self._working_row)
 
         self.auto_delete = QCheckBox("Auto-delete working dir after processing")
@@ -230,11 +231,11 @@ class VideosTab(QScrollArea):
     # ── populate / collect ────────────────────────────────────────────────────
 
     def _populate(self, s: dict):
-        self.video_template.setText(str(s.get("video_path_template", "./inputs/VideoInputs/Video{}.mp4")))
+        self.video_template.setText(str(s.get("video_path_template", "./workspace/VideoInputs/Video{}.mp4")))
         self.video_start.setValue(int(s.get("video_start", 1)))
         self.video_end.setValue(int(s.get("video_end", 1)))
-        self.output_dir.setText(str(s.get("final_video_path", "./outputs")))
-        self.working_dir.setText(str(s.get("working_dir_name", "working_dir")))
+        self.output_dir.setText(str(s.get("final_video_path", "./workspace/outputs")))
+        self.working_dir.setText(str(s.get("working_dir_name", "./workspace/working_dir")))
         self.max_frames.setValue(int(s.get("images_ending_count", 0)))
         delete = s.get("delete", False)
         self.auto_delete.setChecked(bool(delete) if isinstance(delete, bool) else str(delete).lower() == "yes")

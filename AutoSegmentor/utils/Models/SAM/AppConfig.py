@@ -19,8 +19,8 @@ class AppConfig:
         self.images_starting_count = images_starting_count
         self.images_ending_count = images_ending_count
         self.prefix = prefix
-        self.video_path_template = video_path_template or './VideoInputs/Video{}.mp4'
-        self.working_dir = working_dir or './videos'
+        self.video_path_template = video_path_template or './workspace/VideoInputs/Video{}.mp4'
+        self.working_dir = working_dir or './workspace/working_dir'
         self.frames_directory = images_extract_dir or os.path.join(self.working_dir, 'images')
         self.rendered_frames_dir = rendered_frames_dir or os.path.join(self.working_dir, 'outputs')
         self.temp_directory = temp_processing_dir or os.path.join(self.working_dir, 'temp')

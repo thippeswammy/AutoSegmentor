@@ -1,0 +1,31 @@
+auto_prompt_encoding: true
+batch_size: 30
+delete: 'no'
+final_video_path: ./workspace/outputs
+fps: 30
+images_ending_count: 0
+images_extract_dir: ./workspace/working_dir/images
+overlap_dir: ./workspace/working_dir/overlap
+pose_estimation:
+  class_id: 1
+  cotracker:
+    checkpoint: ''
+    window_len: 60
+  enabled: false
+  keypoints: []
+  object_id: 1
+  radius: 5
+  tracker: cotracker
+prefix: Img
+rendered_dir: ./workspace/working_dir/render
+review_from_start: false
+run_mode: all
+sam:
+  enabled: true
+temp_processing_dir: ./workspace/working_dir/temp
+verified_img_dir: ./workspace/working_dir/verified/images
+verified_mask_dir: ./workspace/working_dir/verified/mask
+video_end: 1
+video_path_template: ./workspace/VideoInputs/Video{}.mp4
+video_start: 1
+working_dir_name: ./workspace/working_dir

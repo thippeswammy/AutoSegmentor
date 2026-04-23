@@ -426,7 +426,7 @@ class AutoSegmentorEngine(SAM2Model):
             batch_index = batch_num * self.config.batch_size
 
             while len(self.annotation_manager.points_collection) <= batch_num:
-                target_file = f"./inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
+                target_file = f"./workspace/inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
                 logger.info(f"[MaskGen] Waiting for prompts for batch {batch_num + 1}/{total_batches} in {target_file}... (retrying in 5s)")
                 time.sleep(5)
                 self.annotation_manager.load_points_and_labels()

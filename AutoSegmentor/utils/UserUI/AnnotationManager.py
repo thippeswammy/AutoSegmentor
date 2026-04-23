@@ -23,8 +23,8 @@ class AnnotationManager:
 
     def load_points_and_labels(self):
         """Load points and labels from JSON file."""
-        ensure_directory("./inputs/UserPrompts")
-        filename = f"./inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
+        ensure_directory("./workspace/inputs/UserPrompts")
+        filename = f"./workspace/inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
         logger.debug(f"[AnnotMgr] Loading annotations from: {filename}")
 
         if not exists(filename):
@@ -131,8 +131,8 @@ class AnnotationManager:
             combined = sorted(zip(self.frame_indices, self.points_collection, self.labels_collection, self.pose_keypoints_collection), key=lambda x: x[0])
             self.frame_indices, self.points_collection, self.labels_collection, self.pose_keypoints_collection = map(list, zip(*combined))
 
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-        save_dir = os.path.join(base_path, "inputs/UserPrompts")
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+        save_dir = os.path.join(base_path, "workspace", "inputs", "UserPrompts")
         ensure_directory(save_dir)
         filename = os.path.join(save_dir, f"points_labels_{self.config.prefix}{self.config.video_number}.json")
 
