@@ -80,6 +80,17 @@ class UserInteractionHandler:
         for i in self.selected_labels:
             if abs(i // 1000) == label:
                 self.current_instance_id = max(abs(i) % 1000, self.current_instance_id)
+                
+        # Update pose_keypoints for the new class_id if available
+        if self.pose_mode and self.config.pose_config:
+            classes = self.config.pose_config.get('classes', [])
+            for cls in classes:
+                if cls.get('class_id') == label:
+                    self.pose_keypoints = cls.get('keypoints', [])
+                    self.pose_class_id = label
+                    self.pose_object_id = cls.get('object_id', 1)
+                    break
+        
         self._recalc_keypoint_index()
 
     def user_prompt_adder_pyqt(self):

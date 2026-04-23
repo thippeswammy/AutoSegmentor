@@ -54,8 +54,21 @@ def _load_session():
     return _load_yaml(_DEFAULT_CONFIG)
 
 
-def _save_session(data: dict):
+def _save_session(data: dict, existing_classes=None):
     os.makedirs(os.path.dirname(_SESSION_STATE), exist_ok=True)
+    
+    classes = existing_classes if existing_classes else [{}]
+    classes[0]["class_id"] = data.get("pose_class_id", 1)
+    classes[0]["object_id"] = data.get("pose_object_id", 1)
+    if data.get("keypoints"):
+        classes[0]["keypoints"] = data.get("keypoints")
+        
+    for cls in classes:
+        num_kp = cls.get("num_keypoints", 0)
+        kp_list = cls.get("keypoints", [])
+        if num_kp > 0 and not kp_list:
+            cls["keypoints"] = [f"p{i+1}" for i in range(num_kp)]
+
     nested = {
         "external_libs": data.get("external_libs", []),
         "video_inputs": {
@@ -87,11 +100,7 @@ def _save_session(data: dict):
                 "enabled":   data.get("pose_enabled", False),
                 "tracker":   data.get("tracker", "cotracker"),
                 "radius":    data.get("keypoint_radius", 5),
-                "classes": [{
-                    "class_id":  data.get("pose_class_id", 1),
-                    "object_id": data.get("pose_object_id", 1),
-                    "keypoints": data.get("keypoints", [])
-                }],
+                "classes": classes,
                 "cotracker": {
                     "checkpoint": data.get("cotracker_checkpoint", ""),
                     "window_len": data.get("cotracker_window_len", 60)
@@ -134,7 +143,15 @@ def _save_defaults(data: dict):
     classes = pose.get("classes", [{}])
     classes[0]["class_id"] = data.get("pose_class_id", 1)
     classes[0]["object_id"] = data.get("pose_object_id", 1)
-    classes[0]["keypoints"] = data.get("keypoints", [])
+    if data.get("keypoints"):
+        classes[0]["keypoints"] = data.get("keypoints")
+        
+    for cls in classes:
+        num_kp = cls.get("num_keypoints", 0)
+        kp_list = cls.get("keypoints", [])
+        if num_kp > 0 and not kp_list:
+            cls["keypoints"] = [f"p{i+1}" for i in range(num_kp)]
+            
     pose["classes"] = classes
     ct = pose.get("cotracker", {})
     ct["checkpoint"] = data.get("cotracker_checkpoint", "")
@@ -492,14 +509,29 @@ class SetupDialog(QDialog):
         return d
 
     def _on_start(self):
-        _save_session(self._collect()); self.accept()
+        classes = self._session.get("models", {}).get("pose", {}).get("classes", [])
+        _save_session(self._collect(), classes); self.accept()
 
     def _on_save_defaults(self):
-        data = self._collect(); _save_session(data); _save_defaults(data)
+        data = self._collect()
+        classes = self._session.get("models", {}).get("pose", {}).get("classes", [])
+        _save_session(data, classes); _save_defaults(data)
         self._status.setText("✓ Settings saved to defaults")
 
     def get_config(self) -> dict:
         data = self._collect(); wdir = data["working_dir_name"]
+        classes = self._session.get("models", {}).get("pose", {}).get("classes", [{}])
+        classes[0]["class_id"] = data["pose_class_id"]
+        classes[0]["object_id"] = data["pose_object_id"]
+        if data.get("keypoints"):
+            classes[0]["keypoints"] = data["keypoints"]
+            
+        for cls in classes:
+            num_kp = cls.get("num_keypoints", 0)
+            kp_list = cls.get("keypoints", [])
+            if num_kp > 0 and not kp_list:
+                cls["keypoints"] = [f"p{i+1}" for i in range(num_kp)]
+                
         return {
             "external_libs": self._session.get("external_libs", []),
             "video_inputs": {
@@ -519,7 +551,7 @@ class SetupDialog(QDialog):
                 "sam": { "enabled": data["sam_enabled"], "checkpoint": self._session.get("models",{}).get("sam",{}).get("checkpoint",""), "model_config": "sam2_hiera_l.yaml" },
                 "pose": {
                     "enabled": data["pose_enabled"], "tracker": data["tracker"], "radius": 5,
-                    "classes": [{"class_id": data["pose_class_id"], "object_id": data["pose_object_id"], "keypoints": data["keypoints"]}],
+                    "classes": classes,
                     "cotracker": {"checkpoint": data["cotracker_checkpoint"], "window_len": 60}
                 }
             }
