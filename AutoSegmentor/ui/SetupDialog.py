@@ -83,8 +83,8 @@ def _save_session(data: dict):
         "models": {
             "sam": {
                 "enabled":      data.get("sam_enabled", True),
-                "checkpoint":   data.get("sam_checkpoint", ""),
-                "model_config": data.get("sam_model_config", "sam2_hiera_l.yaml")
+                "checkpoint":   data.get("sam_checkpoint") or "external/segment_anything_2/checkpoints/sam2_hiera_large.pt",
+                "model_config": data.get("sam_model_config") or "sam2_hiera_l.yaml"
             },
             "pose": {
                 "enabled":   data.get("pose_enabled", False),
@@ -524,6 +524,11 @@ class SetupDialog(QDialog):
     def _collect(self) -> dict:
         d = {}
         d.update(self.page_v.collect()); d.update(self.page_m.collect()); d.update(self.page_s.collect())
+        
+        sam_state = self._session.get("models", {}).get("sam", {})
+        d["sam_checkpoint"] = sam_state.get("checkpoint") or "external/segment_anything_2/checkpoints/sam2_hiera_large.pt"
+        d["sam_model_config"] = sam_state.get("model_config") or "sam2_hiera_l.yaml"
+        
         return d
 
     def _on_start(self):
@@ -551,7 +556,7 @@ class SetupDialog(QDialog):
                 "review_from_start": data["review_from_start"], "auto_prompt": data["auto_prompt_encoding"]
             },
             "models": {
-                "sam": { "enabled": data["sam_enabled"], "checkpoint": self._session.get("models",{}).get("sam",{}).get("checkpoint",""), "model_config": "sam2_hiera_l.yaml" },
+                "sam": { "enabled": data["sam_enabled"], "checkpoint": data["sam_checkpoint"], "model_config": data["sam_model_config"] },
                 "pose": {
                     "enabled": data["pose_enabled"], "tracker": data["tracker"], "radius": 5,
                     "classes": data["pose_classes"],

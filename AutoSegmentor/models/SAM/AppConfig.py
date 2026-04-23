@@ -47,8 +47,8 @@ class AppConfig:
         # root is 3 levels up
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
-        self.model_config_path = self.sam_config.get("model_config", "sam2_hiera_l.yaml")
-        checkpoint_raw = self.sam_config.get("checkpoint", "external/segment_anything_2/checkpoints/sam2_hiera_large.pt")
+        self.model_config_path = self.sam_config.get("model_config") or "sam2_hiera_l.yaml"
+        checkpoint_raw = self.sam_config.get("checkpoint") or "external/segment_anything_2/checkpoints/sam2_hiera_large.pt"
         self.checkpoint_path = os.path.normpath(os.path.join(base_path, checkpoint_raw))
         if not os.path.exists(self.checkpoint_path):
             self.checkpoint_path = get_resource_path(checkpoint_raw)
