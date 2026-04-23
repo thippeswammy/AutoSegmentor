@@ -384,7 +384,7 @@ class UserInteractionHandler:
                 tracker_type = self.config.pose_config.get('tracker', 'lk').lower() if self.config.pose_config else 'lk'
                 if tracker_type == 'cotracker' and batch > 0 and prev_frame_idx is not None:
                     try:
-                        from ..Models.Tracking.CoTrackerPredictor import track_between_frames
+                        from ..models.Tracking.CoTrackerPredictor import track_between_frames
                         if 0 <= prev_frame_idx < len(self.frame_paths):
                             prev_frame_path = self.frame_paths[prev_frame_idx]
                             ct_cfg = self.config.pose_config.get('cotracker', {})

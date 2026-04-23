@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import cv2
 import numpy as np
 
-from ..UserUI.logger_config import logger
+from ..ui.logger_config import logger
 
 
 class MaskProcessor:

@@ -8,15 +8,15 @@ import numpy as np
 import pygetwindow as gw
 import torch
 
-from ..FileManagement.FileManager import clear_directory
-from ..FileManagement.FrameExtractor import FrameExtractor
-from ..FileManagement.FrameHandler import FrameHandler
-from ..FileManagement.MaskProcessor import MaskProcessor
-from ..Models.SAM.AppConfig import AppConfig
-from ..Models.SAM.SAM2Model import SAM2Model
-from ..UserUI.AnnotationManager import AnnotationManager
-from ..UserUI.UserInteraction import UserInteractionHandler
-from ..UserUI.logger_config import logger
+from ..file_management.FileManager import clear_directory
+from ..file_management.FrameExtractor import FrameExtractor
+from ..file_management.FrameHandler import FrameHandler
+from ..file_management.MaskProcessor import MaskProcessor
+from ..models.SAM.AppConfig import AppConfig
+from ..models.SAM.SAM2Model import SAM2Model
+from ..ui.AnnotationManager import AnnotationManager
+from ..ui.UserInteraction import UserInteractionHandler
+from ..ui.logger_config import logger
 
 print(torch.cuda.get_device_name(0))
 
@@ -347,7 +347,7 @@ class AutoSegmentorEngine(SAM2Model):
                             curr_idx = batch_number * self.config.batch_size
 
                             try:
-                                from ..Models.Tracking.CoTrackerPredictor import track_between_frames
+                                from ..models.Tracking.CoTrackerPredictor import track_between_frames
                                 ct_cfg = pose_cfg.get('cotracker', {})
                                 checkpoint_raw = ct_cfg.get('checkpoint') or '../co-tracker/checkpoints/scaled_offline.pth'
                                 import os as _os
@@ -391,7 +391,7 @@ class AutoSegmentorEngine(SAM2Model):
         )
 
         try:
-            from ..Models.Tracking.CoTrackerPredictor import CoTrackerPredictor
+            from ..models.Tracking.CoTrackerPredictor import CoTrackerPredictor
             ct_cfg = pose_cfg.get('cotracker', {})
             checkpoint_raw = ct_cfg.get('checkpoint') or '../co-tracker/checkpoints/scaled_offline.pth'
             import os as _os

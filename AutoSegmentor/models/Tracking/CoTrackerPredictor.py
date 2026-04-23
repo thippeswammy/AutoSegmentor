@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import torch
 
-from ...UserUI.logger_config import logger
+from ...ui.logger_config import logger
 
 # Add co-tracker to the path so we can import from it
 _COTRACKER_ROOT = os.path.abspath(

@@ -3,12 +3,12 @@ import shutil
 import sys
 import time
 
-from .FileManagement.FileManager import ensure_directory
-from .FileManagement.ImageCopier import ImageCopier
-from .FileManagement.ImageOverlayProcessor import ImageOverlayProcessor
-from .FileManagement.VideoCreator import VideoCreator
-from .FileManagement.PoseExporter import PoseExporter
-from .UserUI.logger_config import logger
+from .file_management.FileManager import ensure_directory
+from .file_management.ImageCopier import ImageCopier
+from .file_management.ImageOverlayProcessor import ImageOverlayProcessor
+from .file_management.VideoCreator import VideoCreator
+from .file_management.PoseExporter import PoseExporter
+from .ui.logger_config import logger
 
 
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
@@ -67,7 +67,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         return
 
     # Full pipeline (mode: "all" or "mask_only")
-    from .Core.AutoSegmentorEngine import AutoSegmentorEngine
+    from .core.AutoSegmentorEngine import AutoSegmentorEngine
 
     t0 = time.time()
     processor = AutoSegmentorEngine(
@@ -176,8 +176,8 @@ def _run_pose_only(video_number, prefix, batch_size, verified_mask_dir,
         logger.error("Pose estimation is not enabled in config. Cannot run pose_only mode.")
         return
 
-    from .Models.SAM.AppConfig import AppConfig
-    from .UserUI.AnnotationManager import AnnotationManager
+    from .models.SAM.AppConfig import AppConfig
+    from .ui.AnnotationManager import AnnotationManager
 
     # Build a lightweight config (no SAM2 model needed)
     config = AppConfig(

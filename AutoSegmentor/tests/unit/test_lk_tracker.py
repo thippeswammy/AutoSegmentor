@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from utils.Models.Tracking.LKKeypointTracker import LKKeypointTracker
+from autosegmentor.models.Tracking.LKKeypointTracker import LKKeypointTracker
 
 
 def _make_gray_frame(h=480, w=640, value=100):

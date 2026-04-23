@@ -54,11 +54,11 @@ def dialog(qapp, tmp_path, monkeypatch):
         encoding="utf-8"
     )
 
-    import utils.UserUI.SetupDialog as sd_module
+    import autosegmentor.ui.SetupDialog as sd_module
     monkeypatch.setattr(sd_module, "_DEFAULT_CONFIG", str(fake_config))
     monkeypatch.setattr(sd_module, "_SESSION_STATE",  str(fake_session))
 
-    from utils.UserUI.SetupDialog import SetupDialog
+    from autosegmentor.ui.SetupDialog import SetupDialog
     dlg = SetupDialog()
     dlg.show()
     QTest.qWaitForWindowExposed(dlg)

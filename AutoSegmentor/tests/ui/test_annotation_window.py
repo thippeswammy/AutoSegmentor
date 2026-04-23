@@ -109,8 +109,8 @@ def qapp():
 @pytest.fixture
 def handler_and_window(qapp, tmp_path):
     """Build a real UserInteractionHandler + AnnotationWindow with a mock engine."""
-    from utils.UserUI.UserInteraction import UserInteractionHandler
-    from utils.UserUI.MainWindow import AnnotationWindow
+    from autosegmentor.ui.UserInteraction import UserInteractionHandler
+    from autosegmentor.ui.MainWindow import AnnotationWindow
 
     frame_paths = _make_dummy_frames(tmp_path)
     engine = MockEngine()

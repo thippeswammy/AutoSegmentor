@@ -2,7 +2,7 @@ import os
 import threading
 
 import cv2
-from ..UserUI.logger_config import logger
+from ..ui.logger_config import logger
 from tqdm import tqdm
 
 

@@ -1,9 +1,9 @@
 import json
 import os
 import cv2
-from ..UserUI.logger_config import logger
-from ..FileManagement.FileManager import ensure_directory
-from ..Models.Tracking.LKKeypointTracker import LKKeypointTracker
+from ..ui.logger_config import logger
+from ..file_management.FileManager import ensure_directory
+from ..models.Tracking.LKKeypointTracker import LKKeypointTracker
 
 
 class PoseExporter:
@@ -69,7 +69,7 @@ class PoseExporter:
 
     def _track_batch_cotracker(self, batch_kps, batch_frame_paths):
         """Track keypoints through a batch using CoTracker."""
-        from ..Models.Tracking.CoTrackerPredictor import CoTrackerPredictor
+        from ..models.Tracking.CoTrackerPredictor import CoTrackerPredictor
         checkpoint, window_len = self._get_cotracker_config()
         tracker = CoTrackerPredictor(
             keypoint_defs=self.keypoints_def,

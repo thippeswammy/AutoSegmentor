@@ -20,9 +20,9 @@ if ROOT_DIR not in sys.path:
 
 from PyQt5.QtWidgets import QApplication
 
-from autosegmentor.utils.UserUI.logger_config import logger
-from autosegmentor.utils.UserUI.SetupDialog import SetupDialog
-from autosegmentor.utils.pipeline import run_pipeline
+from autosegmentor.ui.logger_config import logger
+from autosegmentor.ui.SetupDialog import SetupDialog
+from autosegmentor.pipeline import run_pipeline
 
 
 def _handle_working_dir(working_dir_name: str, delete: str, prompt_msg: str) -> bool:

@@ -10,7 +10,7 @@ import tempfile
 # Ensure AutoSegmentor is on the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from utils.Models.SAM.AppConfig import AppConfig
+from autosegmentor.models.SAM.AppConfig import AppConfig
 
 
 class TestAppConfigDefaults:

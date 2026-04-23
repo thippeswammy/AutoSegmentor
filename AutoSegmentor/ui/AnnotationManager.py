@@ -4,8 +4,8 @@ from os.path import exists
 
 import numpy as np
 
-from ..FileManagement.FileManager import ensure_directory
-from ..UserUI.logger_config import logger
+from ..file_management.FileManager import ensure_directory
+from ..ui.logger_config import logger
 
 
 class AnnotationManager:

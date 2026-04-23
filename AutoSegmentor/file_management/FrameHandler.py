@@ -3,7 +3,7 @@ import re
 import shutil
 
 from .FileManager import ensure_directory, clear_directory
-from ..UserUI.logger_config import logger
+from ..ui.logger_config import logger
 
 
 class FrameHandler:

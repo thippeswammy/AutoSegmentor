@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from utils.FileManagement.FileManager import ensure_directory
+from autosegmentor.file_management.FileManager import ensure_directory
 
 
 class TestEnsureDirectory:
@@ -40,8 +40,8 @@ class TestAnnotationManagerIO:
     def test_save_and_load_points(self, tmp_path):
         """Test that saved annotation data can be reloaded correctly."""
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-        from utils.Models.SAM.AppConfig import AppConfig
-        from utils.UserUI.AnnotationManager import AnnotationManager
+        from autosegmentor.models.SAM.AppConfig import AppConfig
+        from autosegmentor.ui.AnnotationManager import AnnotationManager
 
         # Minimal config pointing at tmp directories
         config = AppConfig(
@@ -76,8 +76,8 @@ class TestAnnotationManagerIO:
 
     def test_get_prompt_for_frame(self, tmp_path):
         """Test retrieval of saved prompts by frame index."""
-        from utils.Models.SAM.AppConfig import AppConfig
-        from utils.UserUI.AnnotationManager import AnnotationManager
+        from autosegmentor.models.SAM.AppConfig import AppConfig
+        from autosegmentor.ui.AnnotationManager import AnnotationManager
 
         config = AppConfig(
             video_number=2,

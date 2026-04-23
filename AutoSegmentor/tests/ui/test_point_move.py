@@ -15,8 +15,8 @@ def test_drag_point_triggers_preview(tmp_path):
     # Create QApplication for UI widgets
     app = QApplication.instance() or QApplication(sys.argv)
     
-    from utils.UserUI.UserInteraction import UserInteractionHandler
-    from utils.UserUI.MainWindow import AnnotationWindow
+    from autosegmentor.ui.UserInteraction import UserInteractionHandler
+    from autosegmentor.ui.MainWindow import AnnotationWindow
     import cv2
 
     frame_paths = _make_dummy_frames(tmp_path, count=5)

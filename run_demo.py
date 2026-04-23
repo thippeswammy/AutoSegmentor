@@ -17,7 +17,7 @@ for d in [ROOT_DIR, SAM2_SRC, SAM2_MODEL_SRC]:
     if d not in sys.path:
         sys.path.insert(0, d)
 
-from autosegmentor.utils.Tools.main_app import start_application
+from autosegmentor.tools.main_app import start_application
 
 if __name__ == "__main__":
     start_application()

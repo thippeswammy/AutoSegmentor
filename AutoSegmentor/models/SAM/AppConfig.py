@@ -1,5 +1,5 @@
 import os
-from ...FileManagement.FileManager import get_resource_path, ensure_directory
+from ...file_management.FileManager import get_resource_path, ensure_directory
 
 
 class AppConfig:

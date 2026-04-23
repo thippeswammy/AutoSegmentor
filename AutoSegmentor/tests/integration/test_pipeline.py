@@ -14,11 +14,11 @@ class TestPipelineImports:
     """Verify new imports paths work correctly after refactoring."""
 
     def test_app_config_importable(self):
-        from utils.Models.SAM.AppConfig import AppConfig
+        from autosegmentor.models.SAM.AppConfig import AppConfig
         assert AppConfig is not None
 
     def test_lk_tracker_importable(self):
-        from utils.Models.Tracking.LKKeypointTracker import LKKeypointTracker
+        from autosegmentor.models.Tracking.LKKeypointTracker import LKKeypointTracker
         assert LKKeypointTracker is not None
 
     def test_pipeline_importable(self):
@@ -28,19 +28,19 @@ class TestPipelineImports:
         assert spec is not None
 
     def test_file_manager_importable(self):
-        from utils.FileManagement.FileManager import ensure_directory
+        from autosegmentor.file_management.FileManager import ensure_directory
         assert ensure_directory is not None
 
     def test_pose_exporter_importable(self):
-        from utils.FileManagement.PoseExporter import PoseExporter
+        from autosegmentor.file_management.PoseExporter import PoseExporter
         assert PoseExporter is not None
 
     def test_user_interaction_importable(self):
-        from utils.UserUI.UserInteraction import UserInteractionHandler
+        from autosegmentor.ui.UserInteraction import UserInteractionHandler
         assert UserInteractionHandler is not None
 
     def test_annotation_manager_importable(self):
-        from utils.UserUI.AnnotationManager import AnnotationManager
+        from autosegmentor.ui.AnnotationManager import AnnotationManager
         assert AnnotationManager is not None
 
 
@@ -51,8 +51,8 @@ class TestPoseExporterIntegration:
         """End-to-end LK tracking and YOLO-JSON export on synthetic frames."""
         import cv2
         import numpy as np
-        from utils.Models.SAM.AppConfig import AppConfig
-        from utils.Models.Tracking.LKKeypointTracker import LKKeypointTracker
+        from autosegmentor.models.SAM.AppConfig import AppConfig
+        from autosegmentor.models.Tracking.LKKeypointTracker import LKKeypointTracker
 
         # Create tiny synthetic frames
         frame_dir = tmp_path / "frames"
@@ -91,8 +91,8 @@ class TestPoseExporterIntegration:
         import cv2
         import numpy as np
         from unittest.mock import MagicMock
-        from utils.Models.SAM.AppConfig import AppConfig
-        from utils.FileManagement.PoseExporter import PoseExporter
+        from autosegmentor.models.SAM.AppConfig import AppConfig
+        from autosegmentor.file_management.PoseExporter import PoseExporter
 
         # Create minimal directories
         frames_dir = tmp_path / "images"
