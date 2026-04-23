@@ -2,48 +2,75 @@
 .vscode/
 .idea/
 .DS_Store
+*.swp
+*.swo
 
 # ─── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
-.venv
-*.egg*
-.DS_Store
-*-checkpoint.ipynb
-
-# ─── Model Checkpoints ───────────────────────────────────────────────────────
-checkpoints/*.pt
-checkpoints/*.pth
-
-# ─── AutoSegmentor runtime / working dirs (formerly sam3/) ───────────────────
-/AutoSegmentor/working_dir/
-/AutoSegmentor/outputs/
-/AutoSegmentor/inputs/VideoInputs/
-/AutoSegmentor/temp/
-
-# ─── Tests / pytest ──────────────────────────────────────────────────────────
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+*.egg
 .pytest_cache/
 .coverage
 htmlcov/
-/AutoSegmentor/.pytest_cache/
+.mypy_cache/
 
-# ─── Brain / local AI artifacts ──────────────────────────────────────────────
+# ─── Model Checkpoints & Large Binaries ──────────────────────────────────────
+# Ignore all model weights and large binaries globally
+**/*.pt
+**/*.pth
+**/*.onnx
+**/*.tflite
+**/*.ckpt
+**/*.pb
+**/*.weights
+**/*.h5
+
+# ─── Media & Archives ────────────────────────────────────────────────────────
+**/*.mp4
+**/*.avi
+**/*.mov
+**/*.mkv
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.rar
+**/*.7z
+**/*.gif
+
+# Allow assets for README/demo
+!assets/**/*.mp4
+!assets/**/*.gif
+!assets/**/*.png
+!assets/**/*.jpg
+
+# ─── AutoSegmentor runtime / working dirs ────────────────────────────────────
+**/working_dir/
+**/outputs/
+**/temp/
+**/VideoInputs/
+**/Video*_Export*/
+
+# ─── System & Local Data ─────────────────────────────────────────────────────
+NVIDIA/
 brain/
-
-# ─── CoTracker submodule ─────────────────────────────────────────────────────
 co-tracker/
+system.md
+*.log
 
-# ─── Dataset & example assets ────────────────────────────────────────────────
-/sav_dataset/example/sav_000001.mp4
-/notebooks/videos/bedroom.zip
-
-# ─── DatasetManager ──────────────────────────────────────────────────────────
-/DatasetManager/DatasetHandler/OriginalDataset/idd20kII/
+# ─── Dataset Handler Specifics ───────────────────────────────────────────────
+/DatasetManager/DatasetHandler/OriginalDataset/
 /DatasetManager/DatasetHandler/code/OLD/
-/DatasetManager/Video*_Export*/
 /DatasetManager/SyntheticEngine/outputs/
 
-# ─── Misc ────────────────────────────────────────────────────────────────────
-_C.*
-*.log
-system.md
+# ─── Notebooks ───────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*-checkpoint.ipynb
 

@@ -39,6 +39,6 @@ temp_processing_dir: ./working_dir/temp
 verified_img_dir: ./working_dir/verified/images
 verified_mask_dir: ./working_dir/verified/mask
 video_end: 1
-video_path_template: ./inputs/VideoInputs/Video{}.mp4
+video_path_template: ./AutoSegmentor/inputs/VideoInputs/video{}.mp4
 video_start: 10
 working_dir_name: working_dir

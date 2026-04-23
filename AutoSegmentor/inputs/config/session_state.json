@@ -1,5 +1,5 @@
 {
-  "video_path_template": "./inputs/VideoInputs/Video{}.mp4",
+  "video_path_template": "./AutoSegmentor/inputs/VideoInputs/video{}.mp4",
   "video_start": 10,
   "video_end": 1,
   "final_video_path": "./outputs",

@@ -46,10 +46,8 @@ class AppConfig:
         # root is 4 levels up: SAM -> Models -> utils -> AutoSegmentor -> project root
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
 
-        self.model_config_path = os.path.join(base_path, "sam2_configs/sam2_hiera_l.yaml")
-        if not os.path.exists(self.model_config_path):
-            self.model_config_path = get_resource_path("./sam2_configs/sam2_hiera_l.yaml")
-
-        self.checkpoint_path = os.path.join(base_path, "checkpoints/sam2_hiera_large.pt")
+        # Paths inside the new segment_anything_2 directory
+        self.model_config_path = "sam2_hiera_l.yaml"  # Hydra uses name relative to search path
+        self.checkpoint_path = os.path.join(base_path, "segment_anything_2/checkpoints/sam2_hiera_large.pt")
         if not os.path.exists(self.checkpoint_path):
-            self.checkpoint_path = get_resource_path("./checkpoints/sam2_hiera_large.pt")
+            self.checkpoint_path = get_resource_path("./segment_anything_2/checkpoints/sam2_hiera_large.pt")

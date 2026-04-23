@@ -5,7 +5,7 @@ logger = logging.getLogger("SAM2")
 
 # Avoid adding duplicate handlers when module is re-imported
 if not logger.handlers:
-    _fmt = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    _fmt = logging.Formatter('%(asctime)s - %(levelname)s - [%(pathname)s:%(lineno)d] - %(message)s')
 
     # Console handler — INFO and above visible in terminal
     _ch = logging.StreamHandler()
