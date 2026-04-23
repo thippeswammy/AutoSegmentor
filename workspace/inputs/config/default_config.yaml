@@ -1,4 +1,8 @@
 auto_prompt_encoding: true
+external_libs:
+- external/segment_anything_2
+- external/segment_anything_2/sam2
+- external/co-tracker
 batch_size: 30
 delete: 'yes'
 final_video_path: ./workspace/outputs

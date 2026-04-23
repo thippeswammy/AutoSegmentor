@@ -6,16 +6,33 @@ Main entry point for the AutoSegmentor application.
 
 import sys
 import os
+import yaml
+import logging
 
-# Ensure the project root and sam2 source are in sys.path
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("Bootstrap")
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Adding the sam2 source directory directly to sys.path
-SAM2_SRC = os.path.join(ROOT_DIR, "external", "segment_anything_2")
-SAM2_MODEL_SRC = os.path.join(SAM2_SRC, "sam2")
+CONFIG_PATH = os.path.join(ROOT_DIR, "workspace", "inputs", "config", "default_config.yaml")
 
-for d in [ROOT_DIR, SAM2_SRC, SAM2_MODEL_SRC]:
-    if d not in sys.path:
-        sys.path.insert(0, d)
+external_libs = []
+try:
+    with open(CONFIG_PATH, "r") as f:
+        cfg = yaml.safe_load(f)
+        if cfg and "external_libs" in cfg:
+            external_libs = cfg["external_libs"]
+except Exception as e:
+    logger.error(f"Failed to load config from {CONFIG_PATH}: {e}")
+
+# Resolve paths to absolute and add to sys.path
+for lib in external_libs:
+    lib_path = os.path.abspath(os.path.join(ROOT_DIR, lib))
+    logger.info(f"Adding external library to sys.path: {lib_path}")
+    if lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
+
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 from autosegmentor.tools.main_app import start_application
 

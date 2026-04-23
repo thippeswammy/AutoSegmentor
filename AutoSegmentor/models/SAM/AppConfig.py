@@ -44,8 +44,8 @@ class AppConfig:
 
         # Calculate base path up to project root (AutoSegmentor)
         # __file__ is AutoSegmentor/autosegmentor/models/SAM/AppConfig.py
-        # root is 4 levels up
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+        # root is 3 levels up
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
         self.model_config_path = self.sam_config.get("model_config", "sam2_hiera_l.yaml")
         checkpoint_raw = self.sam_config.get("checkpoint", "external/segment_anything_2/checkpoints/sam2_hiera_large.pt")
