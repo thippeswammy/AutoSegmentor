@@ -64,126 +64,138 @@ def _load_session():
 def _save_session(data: dict):
     os.makedirs(os.path.dirname(_SESSION_STATE), exist_ok=True)
     
-    sections = {
-        "Video Inputs": [
-            "video_path_template", "video_start", "video_end"
-        ],
-        "Video Outputs & Storage": [
-            "final_video_path", "working_dir_name", "prefix", "delete"
-        ],
-        "Pipeline Settings": [
-            "run_mode", "batch_size", "fps", "images_ending_count", 
-            "review_from_start", "auto_prompt_encoding"
-        ],
-        "Models": [
-            "sam_enabled", "pose_enabled", "mask_engine", "tracker", 
-            "pose_class_id", "pose_object_id", "keypoint_radius", 
-            "keypoints", "cotracker_checkpoint", "cotracker_window_len"
-        ]
+    # Construct nested structure
+    nested = {
+        "external_libs": data.get("external_libs", []),
+        "video_inputs": {
+            "template":   data.get("video_path_template", ""),
+            "start":      data.get("video_start", 1),
+            "end":        data.get("video_end", 1),
+            "max_frames": data.get("images_ending_count", 0)
+        },
+        "video_outputs": {
+            "final_path":  data.get("final_video_path", "./workspace/outputs"),
+            "working_dir": data.get("working_dir_name", "./workspace/working_dir"),
+            "prefix":      data.get("prefix", "Img"),
+            "delete_after": data.get("delete", False)
+        },
+        "pipeline": {
+            "run_mode":          data.get("run_mode", "all"),
+            "batch_size":        data.get("batch_size", 30),
+            "fps":               data.get("fps", 30),
+            "review_from_start": data.get("review_from_start", False),
+            "auto_prompt":       data.get("auto_prompt_encoding", True)
+        },
+        "models": {
+            "sam": {
+                "enabled":      data.get("sam_enabled", True),
+                "checkpoint":   data.get("sam_checkpoint", ""),
+                "model_config": data.get("sam_model_config", "sam2_hiera_l.yaml")
+            },
+            "pose": {
+                "enabled":   data.get("pose_enabled", False),
+                "tracker":   data.get("tracker", "cotracker"),
+                "radius":    data.get("keypoint_radius", 5),
+                "classes": [{
+                    "class_id":  data.get("pose_class_id", 1),
+                    "object_id": data.get("pose_object_id", 1),
+                    "keypoints": data.get("keypoints", [])
+                }],
+                "cotracker": {
+                    "checkpoint": data.get("cotracker_checkpoint", ""),
+                    "window_len": data.get("cotracker_window_len", 60)
+                }
+            }
+        }
     }
 
-    ordered_data = {}
-    grouped_keys = set()
-    for keys in sections.values():
-        grouped_keys.update(keys)
-        
-    other_keys = [k for k in data.keys() if k not in grouped_keys]
-    if other_keys:
-        sections["Other Configs"] = other_keys
-
-    for section_name, keys in sections.items():
-        # Inject dummy key for visual grouping
-        ordered_data[f"___{section_name.upper().replace(' ', '_').replace('&', 'AND')}___"] = "========================================"
-        for k in keys:
-            if k in data:
-                ordered_data[k] = data[k]
-
     with open(_SESSION_STATE, "w") as f:
-        json.dump(ordered_data, f, indent=2)
+        json.dump(nested, f, indent=2)
     logger.debug(f"[Setup] Saved session to {_SESSION_STATE}")
 
 
 def _save_defaults(data: dict):
-    """Write changed values back to default_config.yaml."""
+    """Write changed values back to default_config.yaml in nested format."""
     cfg = _load_yaml(_DEFAULT_CONFIG)
-    # Flatten the data dict into the YAML structure
-    cfg.update({
-        "video_start":         data.get("video_start", cfg.get("video_start", 1)),
-        "video_end":           data.get("video_end",   cfg.get("video_end",   1)),
-        "prefix":              data.get("prefix",      cfg.get("prefix",      "Img")),
-        "batch_size":          data.get("batch_size",  cfg.get("batch_size",  30)),
-        "fps":                 data.get("fps",         cfg.get("fps",         30)),
-        "delete":              data.get("delete",      cfg.get("delete",      False)),
-        "working_dir_name":    data.get("working_dir_name",    cfg.get("working_dir_name",    "./workspace/working_dir")),
-        "video_path_template": data.get("video_path_template", cfg.get("video_path_template", "")),
-        "final_video_path":    data.get("final_video_path",    cfg.get("final_video_path",    "./workspace/outputs")),
-        "images_ending_count": data.get("images_ending_count", cfg.get("images_ending_count", 0)),
-        "review_from_start":   data.get("review_from_start",   cfg.get("review_from_start", False)),
-        "auto_prompt_encoding": data.get("auto_prompt_encoding", cfg.get("auto_prompt_encoding", True)),
-        "run_mode":            data.get("run_mode",    cfg.get("run_mode",    "all")),
-    })
-    sam = cfg.get("sam", {})
+    
+    # Update nested structures
+    cfg["video_inputs"] = {
+        "template":   data.get("video_path_template", ""),
+        "start":      data.get("video_start", 1),
+        "end":        data.get("video_end", 1),
+        "max_frames": data.get("images_ending_count", 0)
+    }
+    cfg["video_outputs"] = {
+        "final_path":  data.get("final_video_path", "./workspace/outputs"),
+        "working_dir": data.get("working_dir_name", "./workspace/working_dir"),
+        "prefix":      data.get("prefix", "Img"),
+        "delete_after": data.get("delete", False)
+    }
+    cfg["pipeline"] = {
+        "run_mode":          data.get("run_mode", "all"),
+        "batch_size":        data.get("batch_size", 30),
+        "fps":               data.get("fps", 30),
+        "review_from_start": data.get("review_from_start", False),
+        "auto_prompt":       data.get("auto_prompt_encoding", True)
+    }
+    
+    mods = cfg.get("models", {})
+    sam = mods.get("sam", {})
     sam["enabled"] = data.get("sam_enabled", sam.get("enabled", True))
-    cfg["sam"] = sam
-
-    pose = cfg.get("pose_estimation", {})
-    pose["enabled"]  = data.get("pose_enabled",  pose.get("enabled", False))
-    pose["tracker"]  = data.get("tracker",        pose.get("tracker", "cotracker"))
-    pose["radius"]   = data.get("keypoint_radius", pose.get("radius", 5))
-
-    classes = pose.get("classes", [])
-    if not classes:
-        classes.append({})
+    
+    pose = mods.get("pose", {})
+    pose["enabled"] = data.get("pose_enabled", False)
+    pose["tracker"] = data.get("tracker", "cotracker")
+    pose["radius"]  = data.get("keypoint_radius", 5)
+    
+    classes = pose.get("classes", [{}])
     classes[0]["class_id"] = data.get("pose_class_id", 1)
     classes[0]["object_id"] = data.get("pose_object_id", 1)
     classes[0]["keypoints"] = data.get("keypoints", [])
     pose["classes"] = classes
-
+    
     ct = pose.get("cotracker", {})
-    ct["checkpoint"]  = data.get("cotracker_checkpoint", ct.get("checkpoint", ""))
-    ct["window_len"]  = data.get("cotracker_window_len", ct.get("window_len", 60))
+    ct["checkpoint"] = data.get("cotracker_checkpoint", "")
+    ct["window_len"] = data.get("cotracker_window_len", 60)
     pose["cotracker"] = ct
-    cfg["pose_estimation"] = pose
+    
+    cfg["models"] = {"sam": sam, "pose": pose}
 
     os.makedirs(os.path.dirname(_DEFAULT_CONFIG), exist_ok=True)
     _write_config_with_sections(cfg, _DEFAULT_CONFIG)
 
 
 def _write_config_with_sections(cfg, filepath):
-    """Write configuration with logical sections to preserve readability."""
-    sections = {
-        "External Libraries": ["external_libs"],
-        "Video Inputs": [
-            "video_path_template", "video_start", "video_end"
-        ],
-        "Video Outputs & Storage": [
-            "final_video_path", "working_dir_name", "prefix", "delete"
-        ],
-        "Pipeline Settings": [
-            "run_mode", "batch_size", "fps", "images_ending_count", 
-            "review_from_start", "auto_prompt_encoding"
-        ],
-        "Models": ["sam", "pose_estimation"]
-    }
+    """Write configuration with logical sections based on nested structure."""
+    order = [
+        ("External Libraries", ["external_libs"]),
+        ("Video Inputs", ["video_inputs"]),
+        ("Video Outputs & Storage", ["video_outputs"]),
+        ("Pipeline Settings", ["pipeline"]),
+        ("Models", ["models"])
+    ]
     
-    # Collect any keys not explicitly grouped
-    grouped_keys = set()
-    for keys in sections.values():
-        grouped_keys.update(keys)
-    other_keys = [k for k in cfg.keys() if k not in grouped_keys]
-    if other_keys:
-        sections["Other Configs"] = other_keys
-
     lines = []
-    for section_name, keys in sections.items():
+    processed_keys = set()
+    
+    for section_name, keys in order:
         section_dict = {k: cfg[k] for k in keys if k in cfg}
-        if not section_dict:
-            continue
-            
+        if not section_dict: continue
+        processed_keys.update(keys)
+        
         lines.append(f"# {'=' * 40}")
         lines.append(f"# {section_name}")
         lines.append(f"# {'=' * 40}")
         lines.append(yaml.dump(section_dict, default_flow_style=False, allow_unicode=True).strip())
+        lines.append("")
+
+    # Any leftover keys
+    other = {k: v for k, v in cfg.items() if k not in processed_keys}
+    if other:
+        lines.append(f"# {'=' * 40}")
+        lines.append(f"# Other Configs")
+        lines.append(f"# {'=' * 40}")
+        lines.append(yaml.dump(other, default_flow_style=False, allow_unicode=True).strip())
         lines.append("")
         
     with open(filepath, "w") as f:
@@ -312,14 +324,20 @@ class VideosTab(QScrollArea):
     # ── populate / collect ────────────────────────────────────────────────────
 
     def _populate(self, s: dict):
-        self.video_template.setText(str(s.get("video_path_template", "./workspace/VideoInputs/Video{}.mp4")))
-        self.video_start.setValue(int(s.get("video_start", 1)))
-        self.video_end.setValue(int(s.get("video_end", 1)))
-        self.output_dir.setText(str(s.get("final_video_path", "./workspace/outputs")))
-        self.working_dir.setText(str(s.get("working_dir_name", "./workspace/working_dir")))
-        self.max_frames.setValue(int(s.get("images_ending_count", 0)))
-        delete = s.get("delete", False)
-        self.auto_delete.setChecked(bool(delete) if isinstance(delete, bool) else str(delete).lower() == "yes")
+        # Video Inputs
+        vi = s.get("video_inputs", {})
+        self.video_template.setText(str(vi.get("template") or s.get("video_path_template", "./workspace/VideoInputs/Video{}.mp4")))
+        self.video_start.setValue(int(vi.get("start") or s.get("video_start", 1)))
+        self.video_end.setValue(int(vi.get("end") or s.get("video_end", 1)))
+        self.max_frames.setValue(int(vi.get("max_frames") or s.get("images_ending_count", 0)))
+        
+        # Video Outputs
+        vo = s.get("video_outputs", {})
+        self.output_dir.setText(str(vo.get("final_path") or s.get("final_video_path", "./workspace/outputs")))
+        self.working_dir.setText(str(vo.get("working_dir") or s.get("working_dir_name", "./workspace/working_dir")))
+        
+        delete_val = vo.get("delete_after") if "delete_after" in vo else s.get("delete", False)
+        self.auto_delete.setChecked(str(delete_val).lower() == "yes" if not isinstance(delete_val, bool) else delete_val)
 
     def collect(self) -> dict:
         return {
@@ -329,7 +347,7 @@ class VideosTab(QScrollArea):
             "final_video_path":    self.output_dir.text().strip(),
             "working_dir_name":    self.working_dir.text().strip(),
             "images_ending_count": self.max_frames.value(),
-            "delete":              "yes" if self.auto_delete.isChecked() else "no",
+            "delete":              self.auto_delete.isChecked(),
         }
 
 
@@ -509,55 +527,45 @@ class SettingsTab(QScrollArea):
     # ── populate / collect ────────────────────────────────────────────────────
 
     def _populate(self, s: dict):
-        """Populate fields from session dict (handles both flat and nested YAML formats)."""
-        self.prefix.setText(str(s.get("prefix", "Img")))
-        self.batch_size.setValue(int(s.get("batch_size", 30)))
-        self.fps.setValue(int(s.get("fps", 30)))
+        """Populate fields from session dict (handles both flat and nested formats)."""
+        vo = s.get("video_outputs", {})
+        pl = s.get("pipeline", {})
+        
+        self.prefix.setText(str(vo.get("prefix") or s.get("prefix", "Img")))
+        self.batch_size.setValue(int(pl.get("batch_size") or s.get("batch_size", 30)))
+        self.fps.setValue(int(pl.get("fps") or s.get("fps", 30)))
 
-        run_mode = str(s.get("run_mode", "all"))
+        run_mode = str(pl.get("run_mode") or s.get("run_mode", "all"))
         idx = self.run_mode.findText(run_mode)
         self.run_mode.setCurrentIndex(max(0, idx))
 
-        # SAM — flat key 'sam_enabled' (session) OR nested 'sam.enabled' (YAML)
-        sam = s.get("sam", {})
-        if "sam_enabled" in s:
-            self.sam_enabled.setChecked(bool(s["sam_enabled"]))
-        elif isinstance(sam, dict):
+        self.auto_prompt.setChecked(bool(pl.get("auto_prompt") if "auto_prompt" in pl else s.get("auto_prompt_encoding", True)))
+        self.review_from_start.setChecked(bool(pl.get("review_from_start") if "review_from_start" in pl else s.get("review_from_start", False)))
+
+        # SAM & Pose — nested under 'models'
+        mods = s.get("models", {})
+        sam = mods.get("sam") or s.get("sam", {})
+        pose = mods.get("pose") or s.get("pose_estimation", {})
+        
+        # SAM
+        if isinstance(sam, dict):
             self.sam_enabled.setChecked(bool(sam.get("enabled", True)))
         else:
             self.sam_enabled.setChecked(bool(sam))
 
-        self.auto_prompt.setChecked(bool(s.get("auto_prompt_encoding", True)))
-        self.review_from_start.setChecked(bool(s.get("review_from_start", False)))
-
-        # Pose — flat keys (session) take priority over nested YAML
-        if "pose_enabled" in s:
-            # Flat session format
-            self.pose_enabled.setChecked(bool(s["pose_enabled"]))
-            tracker = str(s.get("tracker", "cotracker")).lower()
-            self.rb_cotracker.setChecked(tracker == "cotracker")
-            self.rb_lk.setChecked(tracker == "lk")
-            self._ct_widget.setVisible(tracker == "cotracker")
-            self.ct_checkpoint.setText(str(s.get("cotracker_checkpoint", "")))
-            self.ct_window_len.setValue(int(s.get("cotracker_window_len", 60)))
-            self.pose_class_id.setValue(int(s.get("pose_class_id", 1)))
-            self.pose_object_id.setValue(int(s.get("pose_object_id", 1)))
-            self.kp_radius.setValue(int(s.get("keypoint_radius", 5)))
-            keypoints = s.get("keypoints", [])
-        else:
-            # Nested YAML format (default_config.yaml on first run)
-            pose = s.get("pose_estimation", {})
-            if not isinstance(pose, dict):
-                pose = {}
+        # Pose
+        if isinstance(pose, dict):
             self.pose_enabled.setChecked(bool(pose.get("enabled", False)))
             tracker = str(pose.get("tracker", "cotracker")).lower()
             self.rb_cotracker.setChecked(tracker == "cotracker")
             self.rb_lk.setChecked(tracker == "lk")
             self._ct_widget.setVisible(tracker == "cotracker")
+            
             ct = pose.get("cotracker", {})
             if isinstance(ct, dict):
                 self.ct_checkpoint.setText(str(ct.get("checkpoint", "")))
                 self.ct_window_len.setValue(int(ct.get("window_len", 60)))
+            
             # Handle classes array
             classes = pose.get("classes", [])
             if classes and isinstance(classes[0], dict):
@@ -570,6 +578,9 @@ class SettingsTab(QScrollArea):
                 self.pose_object_id.setValue(int(pose.get("object_id", 1)))
                 keypoints = pose.get("keypoints", [])
             self.kp_radius.setValue(int(pose.get("radius", 5)))
+        else:
+            self.pose_enabled.setChecked(bool(s.get("pose_enabled", False)))
+            keypoints = s.get("keypoints", [])
 
         self.kp_list.clear()
         for kp in keypoints:
@@ -582,6 +593,13 @@ class SettingsTab(QScrollArea):
     def collect(self) -> dict:
         keypoints = [self.kp_list.item(i).text() for i in range(self.kp_list.count())]
         return {
+            "video_path_template": self.video_template.text().strip(),
+            "video_start":         self.video_start.value(),
+            "video_end":           self.video_end.value(),
+            "final_video_path":    self.output_dir.text().strip(),
+            "working_dir_name":    self.working_dir.text().strip(),
+            "images_ending_count": self.max_frames.value(),
+            "delete":              self.auto_delete.isChecked(),
             "prefix":               self.prefix.text().strip(),
             "batch_size":           self.batch_size.value(),
             "fps":                  self.fps.value(),
@@ -604,13 +622,6 @@ class SettingsTab(QScrollArea):
 # ─── Main Dialog ──────────────────────────────────────────────────────────────
 
 class SetupDialog(QDialog):
-    """
-    Launch dialog for AutoSegmentor.
-
-    Call `.get_config()` after `exec_() == QDialog.Accepted` to retrieve
-    the full flattened config dict ready to pass into `run_pipeline`.
-    """
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("AutoSegmentor — Session Setup")
@@ -625,14 +636,11 @@ class SetupDialog(QDialog):
         self._session = _load_session()
         self._build_ui()
 
-    # ── Build ─────────────────────────────────────────────────────────────────
-
     def _build_ui(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Header banner
         header = QLabel("  🚀  AutoSegmentor — Session Setup")
         header.setFont(QFont("Segoe UI", 14, QFont.Bold))
         header.setFixedHeight(48)
@@ -643,7 +651,6 @@ class SetupDialog(QDialog):
         )
         root.addWidget(header)
 
-        # Tabs
         self.tabs = QTabWidget()
         self.tabs.setFont(Fonts.body())
         self.tab_videos   = VideosTab(self._session)
@@ -652,12 +659,10 @@ class SetupDialog(QDialog):
         self.tabs.addTab(self.tab_settings, "⚙️  Settings")
         root.addWidget(self.tabs, 1)
 
-        # Separator
         sep = QFrame(); sep.setFrameShape(QFrame.HLine)
         sep.setStyleSheet(f"background:{Colors.BORDER}; max-height:1px;")
         root.addWidget(sep)
 
-        # Button row
         btn_row = QWidget()
         btn_hl = QHBoxLayout(btn_row)
         btn_hl.setContentsMargins(12, 8, 12, 8)
@@ -681,13 +686,10 @@ class SetupDialog(QDialog):
         btn_hl.addWidget(self.btn_start)
         root.addWidget(btn_row)
 
-        # Status label
         self._status = QLabel("")
         self._status.setAlignment(Qt.AlignCenter)
         self._status.setStyleSheet(f"color: {Colors.ACCENT_GREEN}; font-size: 8pt; padding-bottom: 4px;")
         root.addWidget(self._status)
-
-    # ── Actions ───────────────────────────────────────────────────────────────
 
     def _collect(self) -> dict:
         data = {}
@@ -698,7 +700,6 @@ class SetupDialog(QDialog):
     def _on_start(self):
         data = self._collect()
         _save_session(data)
-        self._status.setText("✓  Session saved")
         self.accept()
 
     def _on_save_defaults(self):
@@ -707,64 +708,60 @@ class SetupDialog(QDialog):
         _save_defaults(data)
         self._status.setText("✓  Saved to default_config.yaml")
 
-    # ── Public API ────────────────────────────────────────────────────────────
-
     def get_config(self) -> dict:
-        """
-        Returns a fully-resolved config dict that `autosegmentor_demo.py` can
-        pass directly to `run_pipeline`.
-        """
+        """Return the fully nested config dict for the pipeline."""
         data = self._collect()
-
-        sam_config = self._session.get("sam", {})
-        if not isinstance(sam_config, dict):
-            sam_config = {}
-        sam_config["enabled"] = data["sam_enabled"]
-
-        pose_config = {
-            "enabled":  data["pose_enabled"],
-            "tracker":  data["tracker"],
-            "radius":   data["keypoint_radius"],
-            "classes": [{
-                "class_id": data["pose_class_id"],
-                "object_id":data["pose_object_id"],
-                "keypoints":data["keypoints"],
-            }],
-            "cotracker": {
-                "checkpoint": data["cotracker_checkpoint"],
-                "window_len": data["cotracker_window_len"],
-            },
-        }
-
         wdir = data["working_dir_name"]
+        
         return {
-            # top-level pipeline params
-            "video_start":          data["video_start"],
-            "video_end":            data["video_end"],
-            "prefix":               data["prefix"],
-            "batch_size":           data["batch_size"],
-            "fps":                  data["fps"],
-            "delete":               data["delete"],
-            "working_dir_name":     wdir,
-            "video_path_template":  data["video_path_template"],
-            "images_extract_dir":   os.path.join(wdir, "images"),
-            "temp_processing_dir":  os.path.join(wdir, "temp"),
-            "rendered_dir":         os.path.join(wdir, "render"),
-            "overlap_dir":          os.path.join(wdir, "overlap"),
-            "verified_img_dir":     os.path.join(wdir, "verified", "images"),
-            "verified_mask_dir":    os.path.join(wdir, "verified", "mask"),
-            "final_video_path":     data["final_video_path"],
-            "images_ending_count":  data["images_ending_count"],
-            "run_mode":             data["run_mode"],
-            "review_from_start":    data.get("review_from_start", False),
-            "auto_prompt_encoding": data["auto_prompt_encoding"],
-            "sam_enabled":          data["sam_enabled"],
-            "sam_config":           sam_config,
-            "pose_estimation":      pose_config,
+            "external_libs": self._session.get("external_libs", []),
+            "video_inputs": {
+                "template":   data["video_path_template"],
+                "start":      data["video_start"],
+                "end":        data["video_end"],
+                "max_frames": data["images_ending_count"]
+            },
+            "video_outputs": {
+                "final_path":  data["final_video_path"],
+                "working_dir": wdir,
+                "prefix":      data["prefix"],
+                "delete_after": data["delete"],
+                "images_extract_dir":   os.path.join(wdir, "images"),
+                "temp_processing_dir":  os.path.join(wdir, "temp"),
+                "rendered_dir":         os.path.join(wdir, "render"),
+                "overlap_dir":          os.path.join(wdir, "overlap"),
+                "verified_img_dir":     os.path.join(wdir, "verified", "images"),
+                "verified_mask_dir":    os.path.join(wdir, "verified", "mask"),
+            },
+            "pipeline": {
+                "run_mode":          data["run_mode"],
+                "batch_size":        data["batch_size"],
+                "fps":               data["fps"],
+                "review_from_start": data.get("review_from_start", False),
+                "auto_prompt":       data["auto_prompt_encoding"]
+            },
+            "models": {
+                "sam": {
+                    "enabled":      data["sam_enabled"],
+                    "checkpoint":   self._session.get("models", {}).get("sam", {}).get("checkpoint", ""),
+                    "model_config": self._session.get("models", {}).get("sam", {}).get("model_config", "sam2_hiera_l.yaml")
+                },
+                "pose": {
+                    "enabled":  data["pose_enabled"],
+                    "tracker":  data["tracker"],
+                    "radius":   data["keypoint_radius"],
+                    "classes": [{
+                        "class_id":  data["pose_class_id"],
+                        "object_id": data["pose_object_id"],
+                        "keypoints": data["keypoints"],
+                    }],
+                    "cotracker": {
+                        "checkpoint": data["cotracker_checkpoint"],
+                        "window_len": data["cotracker_window_len"],
+                    },
+                }
+            }
         }
-
-
-# ─── Standalone test ──────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

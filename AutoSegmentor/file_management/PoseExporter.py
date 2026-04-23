@@ -180,11 +180,13 @@ class PoseExporter:
                     
                     bbox = self._get_bbox_from_mask(frame_idx)
                     
+                    classes = self.config.pose_config.get('classes', [])
+                    obj_id = classes[0].get("object_id", 1) if classes else 1
                     pose_data.append({
                         "image_id": fname,
                         "frame_index": fid,
                         "instances": [{
-                            "instance_id": self.config.pose_config.get("object_id", 1),
+                            "instance_id": obj_id,
                             "bbox": bbox,
                             "keypoints": [{"name": kp, "point_id": j, "x": -1, "y": -1, "visible": 0}
                                            for j, kp in enumerate(self.keypoints_def)]
@@ -222,11 +224,13 @@ class PoseExporter:
 
                 bbox = self._get_bbox_from_mask(global_idx)
 
+                classes = self.config.pose_config.get('classes', [])
+                obj_id = classes[0].get("object_id", 1) if classes else 1
                 pose_data.append({
                     "image_id": fname,
                     "frame_index": fid,
                     "instances": [{
-                        "instance_id": self.config.pose_config.get("object_id", 1),
+                        "instance_id": obj_id,
                         "bbox": bbox,
                         "keypoints": entry["keypoints"]
                     }]

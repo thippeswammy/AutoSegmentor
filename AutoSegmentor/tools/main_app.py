@@ -57,28 +57,37 @@ def start_application():
     cfg = dialog.get_config()
 
     # ── Extract params ───────────────────────────────────────────────────────
-    video_start          = cfg["video_start"]
-    video_end            = cfg["video_end"]
-    prefix               = cfg["prefix"]
-    batch_size           = cfg["batch_size"]
-    fps                  = cfg["fps"]
-    delete               = cfg["delete"]
-    working_dir_name     = cfg["working_dir_name"]
-    video_path_template  = cfg["video_path_template"]
-    images_extract_dir   = cfg["images_extract_dir"]
-    temp_processing_dir  = cfg["temp_processing_dir"]
-    rendered_dir         = cfg["rendered_dir"]
-    overlap_dir          = cfg["overlap_dir"]
-    verified_img_dir     = cfg["verified_img_dir"]
-    verified_mask_dir    = cfg["verified_mask_dir"]
-    final_video_path     = cfg["final_video_path"]
-    images_ending_count  = cfg["images_ending_count"]
-    pose_config          = cfg["pose_estimation"]
-    run_mode             = cfg["run_mode"]
-    auto_prompt_encoding = cfg["auto_prompt_encoding"]
-    sam_enabled          = cfg["sam_enabled"]
-    sam_config           = cfg.get("sam_config", {})
-    review_from_start    = cfg.get("review_from_start", False)
+    vi = cfg["video_inputs"]
+    vo = cfg["video_outputs"]
+    pl = cfg["pipeline"]
+    mods = cfg["models"]
+
+    video_start          = vi["start"]
+    video_end            = vi["end"]
+    images_ending_count  = vi["max_frames"]
+    video_path_template  = vi["template"]
+
+    final_video_path     = vo["final_path"]
+    working_dir_name     = vo["working_dir"]
+    prefix               = vo["prefix"]
+    delete               = vo["delete_after"]
+    
+    images_extract_dir   = vo["images_extract_dir"]
+    temp_processing_dir  = vo["temp_processing_dir"]
+    rendered_dir         = vo["rendered_dir"]
+    overlap_dir          = vo["overlap_dir"]
+    verified_img_dir     = vo["verified_img_dir"]
+    verified_mask_dir    = vo["verified_mask_dir"]
+
+    run_mode             = pl["run_mode"]
+    batch_size           = pl["batch_size"]
+    fps                  = pl["fps"]
+    auto_prompt_encoding = pl["auto_prompt"]
+    review_from_start    = pl.get("review_from_start", False)
+
+    sam_enabled          = mods["sam"]["enabled"]
+    sam_config           = mods["sam"]
+    pose_config          = mods["pose"]
 
     total_videos  = video_end
     overall_start = time.time()

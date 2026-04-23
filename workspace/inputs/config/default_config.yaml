@@ -9,58 +9,51 @@ external_libs:
 # ========================================
 # Video Inputs
 # ========================================
-video_path_template: ./workspace/VideoInputs/Video{}.mp4
-video_start: 6
-video_end: 1
+video_inputs:
+  end: 1
+  max_frames: 10
+  start: 6
+  template: ./workspace/VideoInputs/Video{}.mp4
 
 # ========================================
 # Video Outputs & Storage
 # ========================================
-final_video_path: ./workspace/outputs
-working_dir_name: ./workspace/working_dir
-prefix: Img
-delete: 'yes'
+video_outputs:
+  delete_after: 'yes'
+  final_path: ./workspace/outputs
+  prefix: Img
+  working_dir: ./workspace/working_dir
 
 # ========================================
 # Pipeline Settings
 # ========================================
-run_mode: all
-batch_size: 30
-fps: 23
-images_ending_count: 10
-review_from_start: false
-auto_prompt_encoding: true
+pipeline:
+  auto_prompt: true
+  batch_size: 30
+  fps: 23
+  review_from_start: false
+  run_mode: all
 
 # ========================================
 # Models
 # ========================================
-sam:
-  enabled: true
-  model_config: sam2_hiera_l.yaml
-  checkpoint: external/segment_anything_2/checkpoints/sam2_hiera_large.pt
-
-pose_estimation:
-  enabled: true
-  tracker: cotracker
-  radius: 5
-  cotracker:
-    checkpoint: external/co-tracker/checkpoints/scaled_offline.pth
-    window_len: 60
-  classes:
-  - class_id: 1
-    object_id: 1
-    keypoints:
-    - p1
-    - p2
-    - p3
-    - p4
-
-# ========================================
-# Other Configs
-# ========================================
-images_extract_dir: ./workspace/working_dir/images
-overlap_dir: ./workspace/working_dir/overlap
-rendered_dir: ./workspace/working_dir/render
-temp_processing_dir: ./workspace/working_dir/temp
-verified_img_dir: ./workspace/working_dir/verified/images
-verified_mask_dir: ./workspace/working_dir/verified/mask
+models:
+  pose:
+    classes:
+    - class_id: 1
+      keypoints:
+      - p1
+      - p2
+      - p3
+      - p4
+      object_id: 1
+    cotracker:
+      checkpoint: external/co-tracker/checkpoints/scaled_offline.pth
+      window_len: 60
+    enabled: true
+    radius: 5
+    tracker: cotracker
+  sam:
+    checkpoint: external/segment_anything_2/checkpoints/sam2_hiera_large.pt
+    enabled: true
+    model_config: sam2_hiera_l.yaml
