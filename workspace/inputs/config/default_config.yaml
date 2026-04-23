@@ -2,7 +2,7 @@ auto_prompt_encoding: true
 batch_size: 30
 delete: 'yes'
 final_video_path: ./workspace/outputs
-fps: 30
+fps: 23
 images_ending_count: 10
 images_extract_dir: ./workspace/working_dir/images
 overlap_dir: ./workspace/working_dir/overlap
