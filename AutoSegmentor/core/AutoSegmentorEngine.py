@@ -32,7 +32,7 @@ class AutoSegmentorEngine(SAM2Model):
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, working_dir=None, is_drawing=False,
                  window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5,
-                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True, review_from_start=False):
+                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True, sam_config=None, review_from_start=False):
         self.inference_state = None
         self.review_from_start = review_from_start
         config = AppConfig(
@@ -41,7 +41,8 @@ class AutoSegmentorEngine(SAM2Model):
             images_extract_dir=images_extract_dir, rendered_frames_dir=rendered_frames_dir,
             temp_processing_dir=temp_processing_dir, working_dir=working_dir, window_size=window_size,
             label_colors=label_colors, memory_bank_size=memory_bank_size, prompt_memory_size=prompt_memory_size,
-            pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding, sam_enabled=sam_enabled
+            pose_config=pose_config, auto_prompt_encoding=auto_prompt_encoding, sam_enabled=sam_enabled,
+            sam_config=sam_config
         )
         super().__init__(config)
         if video_path_template is None:
@@ -349,14 +350,14 @@ class AutoSegmentorEngine(SAM2Model):
                             try:
                                 from ..models.Tracking.CoTrackerPredictor import track_between_frames
                                 ct_cfg = pose_cfg.get('cotracker', {})
-                                checkpoint_raw = ct_cfg.get('checkpoint') or '../co-tracker/checkpoints/scaled_offline.pth'
+                                checkpoint_raw = ct_cfg.get('checkpoint') or 'external/co-tracker/checkpoints/scaled_offline.pth'
                                 import os as _os
                                 base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
                                 checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint_raw))
                                 
-                                # Fallback to segment_anything_2/checkpoints if not found in co-tracker
+                                # Fallback to external/segment_anything_2/checkpoints if not found in co-tracker
                                 if not _os.path.exists(checkpoint):
-                                    alt_path = _os.path.normpath(_os.path.join(base_path, '..', 'segment_anything_2', 'checkpoints', 'scaled_offline.pth'))
+                                    alt_path = _os.path.normpath(_os.path.join(base_path, 'external', 'segment_anything_2', 'checkpoints', 'scaled_offline.pth'))
                                     if _os.path.exists(alt_path):
                                         checkpoint = alt_path
                                 window_len = ct_cfg.get('window_len', 60)
@@ -393,14 +394,14 @@ class AutoSegmentorEngine(SAM2Model):
         try:
             from ..models.Tracking.CoTrackerPredictor import CoTrackerPredictor
             ct_cfg = pose_cfg.get('cotracker', {})
-            checkpoint_raw = ct_cfg.get('checkpoint') or '../co-tracker/checkpoints/scaled_offline.pth'
+            checkpoint_raw = ct_cfg.get('checkpoint') or 'external/co-tracker/checkpoints/scaled_offline.pth'
             import os as _os
             base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
             checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint_raw))
 
-            # Fallback to segment_anything_2/checkpoints if not found in co-tracker
+            # Fallback to external/segment_anything_2/checkpoints if not found in co-tracker
             if not _os.path.exists(checkpoint):
-                alt_path = _os.path.normpath(_os.path.join(base_path, '..', 'segment_anything_2', 'checkpoints', 'scaled_offline.pth'))
+                alt_path = _os.path.normpath(_os.path.join(base_path, 'external', 'segment_anything_2', 'checkpoints', 'scaled_offline.pth'))
                 if _os.path.exists(alt_path):
                     checkpoint = alt_path
             window_len = ct_cfg.get('window_len', 60)

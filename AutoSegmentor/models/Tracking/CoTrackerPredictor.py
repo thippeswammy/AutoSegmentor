@@ -9,7 +9,7 @@ from ...ui.logger_config import logger
 
 # Add co-tracker to the path so we can import from it
 _COTRACKER_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', 'co-tracker')
+    os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'external', 'co-tracker')
 )
 if _COTRACKER_ROOT not in sys.path:
     sys.path.insert(0, _COTRACKER_ROOT)

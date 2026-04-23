@@ -35,19 +35,20 @@ class AppConfig:
         }
         self.memory_bank_size = memory_bank_size
         self.prompt_memory_size = prompt_memory_size
-        self.pose_config = kwargs.get('pose_config', None)
+        self.pose_config = kwargs.get('pose_config', {})
+        self.sam_config = kwargs.get('sam_config', {})
         self.auto_prompt_encoding = kwargs.get('auto_prompt_encoding', True)
         self.ui_show_crosshair = kwargs.get('ui_show_crosshair', True)
         self.ui_show_grid = kwargs.get('ui_show_grid', False)
         self.sam_enabled = sam_enabled
 
         # Calculate base path up to project root (AutoSegmentor)
-        # __file__ is AutoSegmentor/utils/Models/SAM/AppConfig.py
-        # root is 4 levels up: SAM -> Models -> utils -> AutoSegmentor -> project root
+        # __file__ is AutoSegmentor/autosegmentor/models/SAM/AppConfig.py
+        # root is 4 levels up
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
 
-        # Paths inside the new segment_anything_2 directory
-        self.model_config_path = "sam2_hiera_l.yaml"  # Hydra uses name relative to search path
-        self.checkpoint_path = os.path.join(base_path, "segment_anything_2/checkpoints/sam2_hiera_large.pt")
+        self.model_config_path = self.sam_config.get("model_config", "sam2_hiera_l.yaml")
+        checkpoint_raw = self.sam_config.get("checkpoint", "external/segment_anything_2/checkpoints/sam2_hiera_large.pt")
+        self.checkpoint_path = os.path.normpath(os.path.join(base_path, checkpoint_raw))
         if not os.path.exists(self.checkpoint_path):
-            self.checkpoint_path = get_resource_path("./segment_anything_2/checkpoints/sam2_hiera_large.pt")
+            self.checkpoint_path = get_resource_path(checkpoint_raw)

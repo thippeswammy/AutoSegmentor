@@ -42,7 +42,7 @@ class PoseExporter:
         """Extract CoTracker config from pose_config."""
         ct_cfg = self.config.pose_config.get('cotracker', {})
         # Resolve checkpoint path relative to AutoSegmentor directory
-        checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
+        checkpoint = ct_cfg.get('checkpoint', 'external/co-tracker/checkpoints/scaled_offline.pth')
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
         checkpoint = os.path.normpath(os.path.join(base_path, checkpoint))
         window_len = ct_cfg.get('window_len', 60)

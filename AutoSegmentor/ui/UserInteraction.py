@@ -388,7 +388,7 @@ class UserInteractionHandler:
                         if 0 <= prev_frame_idx < len(self.frame_paths):
                             prev_frame_path = self.frame_paths[prev_frame_idx]
                             ct_cfg = self.config.pose_config.get('cotracker', {})
-                            checkpoint = ct_cfg.get('checkpoint', '../co-tracker/checkpoints/scaled_offline.pth')
+                            checkpoint = ct_cfg.get('checkpoint', 'external/co-tracker/checkpoints/scaled_offline.pth')
                             import os as _os
                             base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
                             checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))

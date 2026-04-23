@@ -77,6 +77,7 @@ def start_application():
     run_mode             = cfg["run_mode"]
     auto_prompt_encoding = cfg["auto_prompt_encoding"]
     sam_enabled          = cfg["sam_enabled"]
+    sam_config           = cfg.get("sam_config", {})
     review_from_start    = cfg.get("review_from_start", False)
 
     total_videos  = video_end
@@ -114,6 +115,7 @@ def start_application():
             run_mode=run_mode,
             auto_prompt_encoding=auto_prompt_encoding,
             sam_enabled=sam_enabled,
+            sam_config=sam_config,
             review_from_start=review_from_start,
         )
 

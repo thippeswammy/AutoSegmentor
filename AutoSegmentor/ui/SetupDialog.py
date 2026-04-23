@@ -344,7 +344,7 @@ class SettingsTab(QScrollArea):
         ct_form.setSpacing(6)
         ct_form.setContentsMargins(0, 0, 0, 0)
         self._ct_ckpt_row, self.ct_checkpoint = _path_row(
-            "../co-tracker/checkpoints/scaled_offline.pth",
+            "external/co-tracker/checkpoints/scaled_offline.pth",
             self._browse_ct_checkpoint
         )
         ct_form.addRow("Checkpoint:", self._ct_ckpt_row)
@@ -627,6 +627,11 @@ class SetupDialog(QDialog):
         """
         data = self._collect()
 
+        sam_config = self._session.get("sam", {})
+        if not isinstance(sam_config, dict):
+            sam_config = {}
+        sam_config["enabled"] = data["sam_enabled"]
+
         pose_config = {
             "enabled":  data["pose_enabled"],
             "tracker":  data["tracker"],
@@ -663,6 +668,7 @@ class SetupDialog(QDialog):
             "review_from_start":    data.get("review_from_start", False),
             "auto_prompt_encoding": data["auto_prompt_encoding"],
             "sam_enabled":          data["sam_enabled"],
+            "sam_config":           sam_config,
             "pose_estimation":      pose_config,
         }
 

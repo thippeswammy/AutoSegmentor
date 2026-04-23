@@ -14,7 +14,7 @@ from .ui.logger_config import logger
 def run_pipeline(video_number, video_path_template, images_extract_dir, rendered_dirs, overlap_dir,
                  verified_img_dir, verified_mask_dir, prefix, batch_size, fps, final_video_path,
                  temp_processing_dir, delete, images_ending_count, working_dir=None, pose_config=None,
-                 run_mode="all", auto_prompt_encoding=True, sam_enabled=True, review_from_start=False):
+                 run_mode="all", auto_prompt_encoding=True, sam_enabled=True, sam_config=None, review_from_start=False):
     """Run the pipeline for processing a video with various modes.
     
     This function orchestrates the entire video processing pipeline, allowing for
@@ -42,6 +42,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         pose_config (dict?): Configuration for pose processing.
         run_mode (str?): Mode of operation ("all", "mask_only", "pose_only").
         auto_prompt_encoding (bool?): Flag for automatic prompt encoding.
+        sam_config (dict?): Configuration for SAM models.
         review_from_start (bool?): Flag to force UI to start at Frame 0 bypassing pre-processing.
     """
     pipeline_start = time.time()
@@ -83,6 +84,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         pose_config=pose_config,
         auto_prompt_encoding=auto_prompt_encoding,
         sam_enabled=sam_enabled,
+        sam_config=sam_config,
         review_from_start=review_from_start
     )
     if not processor.run():

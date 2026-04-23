@@ -9,7 +9,7 @@ overlap_dir: ./workspace/working_dir/overlap
 pose_estimation:
   class_id: 1
   cotracker:
-    checkpoint: ''
+    checkpoint: 'external/co-tracker/checkpoints/scaled_offline.pth'
     window_len: 60
   enabled: true
   keypoints:
@@ -26,6 +26,8 @@ review_from_start: false
 run_mode: all
 sam:
   enabled: true
+  model_config: 'sam2_hiera_l.yaml'
+  checkpoint: 'external/segment_anything_2/checkpoints/sam2_hiera_large.pt'
 temp_processing_dir: ./workspace/working_dir/temp
 verified_img_dir: ./workspace/working_dir/verified/images
 verified_mask_dir: ./workspace/working_dir/verified/mask
