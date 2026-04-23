@@ -150,10 +150,10 @@ class KeypointProgressPanel(QGroupBox):
 
     def setup_keypoints(self, keypoint_names):
         """Initialize the keypoint list."""
-        # Clear existing
-        for lbl in self._keypoint_labels:
-            self._container_layout.removeWidget(lbl)
-            lbl.deleteLater()
+        # Clear existing — _keypoint_labels holds (row, check, name_lbl, vis_cb) tuples
+        for row, check, name_lbl, vis_cb in self._keypoint_labels:
+            self._container_layout.removeWidget(row)
+            row.deleteLater()
         self._keypoint_labels.clear()
 
         self.progress_bar.setMaximum(max(len(keypoint_names), 1))
