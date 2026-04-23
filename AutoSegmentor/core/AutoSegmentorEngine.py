@@ -407,7 +407,15 @@ class AutoSegmentorEngine(SAM2Model):
             window_len = ct_cfg.get('window_len', 60)
 
             classes = pose_cfg.get('classes', [])
-            keypoints = classes[0].get('keypoints', []) if classes else pose_cfg.get('keypoints', [])
+            # Merge keypoint definitions from ALL classes into one list for tracking
+            keypoints = []
+            for cls in classes:
+                for kp in cls.get('keypoints', []):
+                    qualified = f"cls{cls.get('class_id', 1)}_{kp}"
+                    if qualified not in keypoints:
+                        keypoints.append(qualified)
+            if not keypoints:
+                keypoints = pose_cfg.get('keypoints', [])
             
             tracker = CoTrackerPredictor(
                 keypoint_defs=keypoints,

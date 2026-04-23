@@ -367,10 +367,17 @@ class ModelsPage(QScrollArea):
         self.classes_data = {}
         for cls in classes:
             c_id = cls.get("class_id", 1)
+            num_kp = cls.get("num_keypoints", 0)
+            kp_list = cls.get("keypoints", [])
+            # Auto-expand: if num_keypoints given but keypoints list empty, generate p1..pN
+            if num_kp > 0 and not kp_list:
+                kp_list = [f"p{i+1}" for i in range(num_kp)]
+            elif kp_list and num_kp == 0:
+                num_kp = len(kp_list)
             self.classes_data[c_id] = {
                 "class_id": c_id,
-                "num_keypoints": cls.get("num_keypoints", 0),
-                "keypoints": cls.get("keypoints", [])
+                "num_keypoints": num_kp,
+                "keypoints": kp_list
             }
         
         first_id = classes[0].get("class_id", 1) if classes else 1
@@ -381,36 +388,61 @@ class ModelsPage(QScrollArea):
         self._load_current_class()
         
         self.pose_class_id.valueChanged.connect(self._on_class_changed)
+        self.pose_num_kp.valueChanged.connect(self._on_num_kp_changed)
         
     def _on_class_changed(self, new_id):
         self._save_current_class()
         self.current_class_id = new_id
         self._load_current_class()
 
+    def _on_num_kp_changed(self, n):
+        """When user sets Auto Keypoints spinner, auto-fill the list with p1..pN."""
+        existing = [self.kp_list.item(i).text() for i in range(self.kp_list.count())]
+        if n == 0:
+            return
+        # Rebuild list: keep existing names where possible, append new ones
+        self.kp_list.clear()
+        for i in range(n):
+            name = existing[i] if i < len(existing) else f"p{i+1}"
+            it = QListWidgetItem(name)
+            it.setFlags(it.flags() | Qt.ItemIsEditable)
+            self.kp_list.addItem(it)
+
     def _save_current_class(self):
         c_id = self.current_class_id
         if c_id not in self.classes_data:
             self.classes_data[c_id] = {"class_id": c_id}
-        self.classes_data[c_id]["num_keypoints"] = self.pose_num_kp.value()
-        self.classes_data[c_id]["keypoints"] = [self.kp_list.item(i).text() for i in range(self.kp_list.count())]
+        kps = [self.kp_list.item(i).text() for i in range(self.kp_list.count())]
+        self.classes_data[c_id]["num_keypoints"] = len(kps) if kps else self.pose_num_kp.value()
+        self.classes_data[c_id]["keypoints"] = kps
 
     def _load_current_class(self):
         data = self.classes_data.get(self.current_class_id, {"num_keypoints": 0, "keypoints": []})
+        kps = data.get("keypoints", [])
+        num_kp = data.get("num_keypoints", 0) or len(kps)
         self.pose_num_kp.blockSignals(True)
-        self.pose_num_kp.setValue(data.get("num_keypoints", 0))
+        self.pose_num_kp.setValue(num_kp)
         self.pose_num_kp.blockSignals(False)
         self.kp_list.clear()
-        for k in data.get("keypoints", []):
+        for k in kps:
             it = QListWidgetItem(str(k)); it.setFlags(it.flags() | Qt.ItemIsEditable); self.kp_list.addItem(it)
 
     def collect(self) -> dict:
         self._save_current_class()
         classes_list = []
         for c_id, data in sorted(self.classes_data.items()):
-            if data.get("keypoints") or data.get("num_keypoints", 0) > 0:
+            num_kp = data.get("num_keypoints", 0)
+            kps = data.get("keypoints", [])
+            # Auto-expand num_keypoints -> keypoints if list still empty
+            if num_kp > 0 and not kps:
+                kps = [f"p{i+1}" for i in range(num_kp)]
+                data["keypoints"] = kps
+            elif kps and not num_kp:
+                data["num_keypoints"] = len(kps)
+            if kps or num_kp > 0:
                 classes_list.append(data)
         if not classes_list:
-            classes_list.append(self.classes_data[self.current_class_id])
+            classes_list.append(self.classes_data.get(self.current_class_id, {"class_id": self.current_class_id, "num_keypoints": 0, "keypoints": []}))
             
         return {
             "sam_enabled": self.sam_enabled.isChecked(),

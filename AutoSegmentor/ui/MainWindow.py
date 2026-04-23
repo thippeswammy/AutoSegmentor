@@ -745,6 +745,9 @@ class AnnotationWindow(QDialog):
     def change_class(self, index):
         logger.debug(f"[UI] change_class: combo_index={index}  -> class_id={index + 1}")
         self.handler.change_class_label_pyqt(index + 1)
+        # Rebuild keypoint panel rows for the new class's keypoint list
+        if self.handler.pose_mode:
+            self.sidebar.keypoint_progress.setup_keypoints(self.handler.pose_keypoints)
         self._update_sidebar()
 
     def next_instance(self):

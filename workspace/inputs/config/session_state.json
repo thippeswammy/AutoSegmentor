@@ -36,12 +36,13 @@
       "classes": [
         {
           "class_id": 1,
-          "keypoints": [
-            "p1",
-            "p2",
-            "p3",
-            "p4"
-          ]
+          "num_keypoints": 2,
+          "keypoints": ["p1", "p2"]
+        },
+        {
+          "class_id": 2,
+          "num_keypoints": 4,
+          "keypoints": ["p1", "p2", "p3", "p4"]
         }
       ],
       "cotracker": {
