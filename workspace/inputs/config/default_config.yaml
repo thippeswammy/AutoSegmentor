@@ -46,7 +46,6 @@ models:
       - p2
       - p3
       - p4
-      object_id: 1
     cotracker:
       checkpoint: external/co-tracker/checkpoints/scaled_offline.pth
       window_len: 60

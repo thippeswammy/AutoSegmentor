@@ -54,20 +54,10 @@ def _load_session():
     return _load_yaml(_DEFAULT_CONFIG)
 
 
-def _save_session(data: dict, existing_classes=None):
+def _save_session(data: dict):
     os.makedirs(os.path.dirname(_SESSION_STATE), exist_ok=True)
     
-    classes = existing_classes if existing_classes else [{}]
-    classes[0]["class_id"] = data.get("pose_class_id", 1)
-    classes[0]["object_id"] = data.get("pose_object_id", 1)
-    if data.get("keypoints"):
-        classes[0]["keypoints"] = data.get("keypoints")
-        
-    for cls in classes:
-        num_kp = cls.get("num_keypoints", 0)
-        kp_list = cls.get("keypoints", [])
-        if num_kp > 0 and not kp_list:
-            cls["keypoints"] = [f"p{i+1}" for i in range(num_kp)]
+    classes = data.get("pose_classes", [])
 
     nested = {
         "external_libs": data.get("external_libs", []),
@@ -140,19 +130,7 @@ def _save_defaults(data: dict):
     pose["enabled"] = data.get("pose_enabled", False)
     pose["tracker"] = data.get("tracker", "cotracker")
     pose["radius"]  = data.get("keypoint_radius", 5)
-    classes = pose.get("classes", [{}])
-    classes[0]["class_id"] = data.get("pose_class_id", 1)
-    classes[0]["object_id"] = data.get("pose_object_id", 1)
-    if data.get("keypoints"):
-        classes[0]["keypoints"] = data.get("keypoints")
-        
-    for cls in classes:
-        num_kp = cls.get("num_keypoints", 0)
-        kp_list = cls.get("keypoints", [])
-        if num_kp > 0 and not kp_list:
-            cls["keypoints"] = [f"p{i+1}" for i in range(num_kp)]
-            
-    pose["classes"] = classes
+    pose["classes"] = data.get("pose_classes", [])
     ct = pose.get("cotracker", {})
     ct["checkpoint"] = data.get("cotracker_checkpoint", "")
     ct["window_len"] = data.get("cotracker_window_len", 60)
@@ -341,10 +319,10 @@ class ModelsPage(QScrollArea):
 
         idx_row = QWidget(); idx_hl = QHBoxLayout(idx_row); idx_hl.setContentsMargins(0,0,0,0)
         self.pose_class_id = QSpinBox(); self.pose_class_id.setRange(1,99); self.pose_class_id.setFixedWidth(60)
-        self.pose_obj_id   = QSpinBox(); self.pose_obj_id.setRange(1,99);   self.pose_obj_id.setFixedWidth(60)
+        self.pose_num_kp   = QSpinBox(); self.pose_num_kp.setRange(0,99);   self.pose_num_kp.setFixedWidth(60)
         idx_hl.addWidget(QLabel("Class:")); idx_hl.addWidget(self.pose_class_id)
         idx_hl.addSpacing(20)
-        idx_hl.addWidget(QLabel("Object:")); idx_hl.addWidget(self.pose_obj_id)
+        idx_hl.addWidget(QLabel("Auto Keypoints:")); idx_hl.addWidget(self.pose_num_kp)
         idx_hl.addStretch()
         pose_form.addRow("Target IDs:", idx_row)
 
@@ -384,23 +362,63 @@ class ModelsPage(QScrollArea):
         self.pose_enabled.setChecked(bool(pose.get("enabled", False)))
         self.rb_cotracker.setChecked(str(pose.get("tracker", "cotracker")).lower() == "cotracker")
         self.ct_checkpoint.setText(str(pose.get("cotracker", {}).get("checkpoint", "")))
-        cls = pose.get("classes", [{}])[0] if pose.get("classes") else {}
-        self.pose_class_id.setValue(int(cls.get("class_id", 1)))
-        self.pose_obj_id.setValue(int(cls.get("object_id", 1)))
+        
+        classes = pose.get("classes", [])
+        self.classes_data = {}
+        for cls in classes:
+            c_id = cls.get("class_id", 1)
+            self.classes_data[c_id] = {
+                "class_id": c_id,
+                "num_keypoints": cls.get("num_keypoints", 0),
+                "keypoints": cls.get("keypoints", [])
+            }
+        
+        first_id = classes[0].get("class_id", 1) if classes else 1
+        self.current_class_id = first_id
+        self.pose_class_id.blockSignals(True)
+        self.pose_class_id.setValue(first_id)
+        self.pose_class_id.blockSignals(False)
+        self._load_current_class()
+        
+        self.pose_class_id.valueChanged.connect(self._on_class_changed)
+        
+    def _on_class_changed(self, new_id):
+        self._save_current_class()
+        self.current_class_id = new_id
+        self._load_current_class()
+
+    def _save_current_class(self):
+        c_id = self.current_class_id
+        if c_id not in self.classes_data:
+            self.classes_data[c_id] = {"class_id": c_id}
+        self.classes_data[c_id]["num_keypoints"] = self.pose_num_kp.value()
+        self.classes_data[c_id]["keypoints"] = [self.kp_list.item(i).text() for i in range(self.kp_list.count())]
+
+    def _load_current_class(self):
+        data = self.classes_data.get(self.current_class_id, {"num_keypoints": 0, "keypoints": []})
+        self.pose_num_kp.blockSignals(True)
+        self.pose_num_kp.setValue(data.get("num_keypoints", 0))
+        self.pose_num_kp.blockSignals(False)
         self.kp_list.clear()
-        for k in cls.get("keypoints", []):
+        for k in data.get("keypoints", []):
             it = QListWidgetItem(str(k)); it.setFlags(it.flags() | Qt.ItemIsEditable); self.kp_list.addItem(it)
 
     def collect(self) -> dict:
+        self._save_current_class()
+        classes_list = []
+        for c_id, data in sorted(self.classes_data.items()):
+            if data.get("keypoints") or data.get("num_keypoints", 0) > 0:
+                classes_list.append(data)
+        if not classes_list:
+            classes_list.append(self.classes_data[self.current_class_id])
+            
         return {
             "sam_enabled": self.sam_enabled.isChecked(),
             "auto_prompt_encoding": self.auto_prompt.isChecked(),
             "pose_enabled": self.pose_enabled.isChecked(),
             "tracker": "cotracker" if self.rb_cotracker.isChecked() else "lk",
             "cotracker_checkpoint": self.ct_checkpoint.text(),
-            "pose_class_id": self.pose_class_id.value(),
-            "pose_object_id": self.pose_obj_id.value(),
-            "keypoints": [self.kp_list.item(i).text() for i in range(self.kp_list.count())]
+            "pose_classes": classes_list
         }
 
 
@@ -509,29 +527,14 @@ class SetupDialog(QDialog):
         return d
 
     def _on_start(self):
-        classes = self._session.get("models", {}).get("pose", {}).get("classes", [])
-        _save_session(self._collect(), classes); self.accept()
+        _save_session(self._collect()); self.accept()
 
     def _on_save_defaults(self):
-        data = self._collect()
-        classes = self._session.get("models", {}).get("pose", {}).get("classes", [])
-        _save_session(data, classes); _save_defaults(data)
+        data = self._collect(); _save_session(data); _save_defaults(data)
         self._status.setText("✓ Settings saved to defaults")
 
     def get_config(self) -> dict:
         data = self._collect(); wdir = data["working_dir_name"]
-        classes = self._session.get("models", {}).get("pose", {}).get("classes", [{}])
-        classes[0]["class_id"] = data["pose_class_id"]
-        classes[0]["object_id"] = data["pose_object_id"]
-        if data.get("keypoints"):
-            classes[0]["keypoints"] = data["keypoints"]
-            
-        for cls in classes:
-            num_kp = cls.get("num_keypoints", 0)
-            kp_list = cls.get("keypoints", [])
-            if num_kp > 0 and not kp_list:
-                cls["keypoints"] = [f"p{i+1}" for i in range(num_kp)]
-                
         return {
             "external_libs": self._session.get("external_libs", []),
             "video_inputs": {
@@ -551,7 +554,7 @@ class SetupDialog(QDialog):
                 "sam": { "enabled": data["sam_enabled"], "checkpoint": self._session.get("models",{}).get("sam",{}).get("checkpoint",""), "model_config": "sam2_hiera_l.yaml" },
                 "pose": {
                     "enabled": data["pose_enabled"], "tracker": data["tracker"], "radius": 5,
-                    "classes": classes,
+                    "classes": data["pose_classes"],
                     "cotracker": {"checkpoint": data["cotracker_checkpoint"], "window_len": 60}
                 }
             }
