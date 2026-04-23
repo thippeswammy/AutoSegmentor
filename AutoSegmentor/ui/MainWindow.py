@@ -517,6 +517,15 @@ class AnnotationWindow(QDialog):
                     p_id = len(self.handler.pose_click_coords)
                 else:
                     instance_count = self.handler.get_instance_keypoint_count()
+                    # Auto-advance instance when current one is complete
+                    if instance_count > 0 and instance_count % num_kps == 0:
+                        self.handler.current_instance_id += 1
+                        self.handler._recalc_keypoint_index()
+                        full_label = self.handler.encode_label(
+                            self.handler.current_class_label, self.handler.current_instance_id
+                        )
+                        instance_count = 0
+                        self._update_sidebar()
                     kp_name = self.handler.pose_keypoints[instance_count % num_kps]
                     p_id = len(self.handler.pose_click_coords)
                 pose_click = {
@@ -705,7 +714,8 @@ class AnnotationWindow(QDialog):
             num_kps = len(self.handler.pose_keypoints)
             # Count keypoints for the CURRENT class+instance only
             instance_kp_count = self.handler.get_instance_keypoint_count()
-            current_mod = instance_kp_count % num_kps if num_kps > 0 else 0
+            # Clamp to num_kps so a full set shows N/N, not 0/N
+            current_mod = min(instance_kp_count, num_kps) if num_kps > 0 else 0
             
             # Find pose_coords belonging to current instance for visibility toggles
             target_label = self.handler.encode_label(
