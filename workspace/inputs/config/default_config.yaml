@@ -1,19 +1,35 @@
-auto_prompt_encoding: true
+# ========================================
+# External Libraries
+# ========================================
 external_libs:
 - external/segment_anything_2
 - external/segment_anything_2/sam2
 - external/co-tracker
+
+# ========================================
+# Pipeline & Video
+# ========================================
+auto_prompt_encoding: true
 batch_size: 30
 delete: 'yes'
 final_video_path: ./workspace/outputs
 fps: 23
 images_ending_count: 10
-images_extract_dir: ./workspace/working_dir/images
-overlap_dir: ./workspace/working_dir/overlap
+prefix: Img
+review_from_start: false
+run_mode: all
+video_end: 1
+video_path_template: ./workspace/VideoInputs/Video{}.mp4
+video_start: 6
+working_dir_name: ./workspace/working_dir
+
+# ========================================
+# Models
+# ========================================
 pose_estimation:
   class_id: 1
   cotracker:
-    checkpoint: 'external/co-tracker/checkpoints/scaled_offline.pth'
+    checkpoint: external/co-tracker/checkpoints/scaled_offline.pth
     window_len: 60
   enabled: true
   keypoints:
@@ -24,18 +40,17 @@ pose_estimation:
   object_id: 1
   radius: 5
   tracker: cotracker
-prefix: Img
-rendered_dir: ./workspace/working_dir/render
-review_from_start: false
-run_mode: all
 sam:
+  checkpoint: external/segment_anything_2/checkpoints/sam2_hiera_large.pt
   enabled: true
-  model_config: 'sam2_hiera_l.yaml'
-  checkpoint: 'external/segment_anything_2/checkpoints/sam2_hiera_large.pt'
+  model_config: sam2_hiera_l.yaml
+
+# ========================================
+# Other Configs
+# ========================================
+images_extract_dir: ./workspace/working_dir/images
+overlap_dir: ./workspace/working_dir/overlap
+rendered_dir: ./workspace/working_dir/render
 temp_processing_dir: ./workspace/working_dir/temp
 verified_img_dir: ./workspace/working_dir/verified/images
 verified_mask_dir: ./workspace/working_dir/verified/mask
-video_end: 1
-video_path_template: ./workspace/VideoInputs/Video{}.mp4
-video_start: 6
-working_dir_name: ./workspace/working_dir

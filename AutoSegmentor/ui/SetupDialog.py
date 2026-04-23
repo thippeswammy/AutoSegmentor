@@ -105,8 +105,44 @@ def _save_defaults(data: dict):
     cfg["pose_estimation"] = pose
 
     os.makedirs(os.path.dirname(_DEFAULT_CONFIG), exist_ok=True)
-    with open(_DEFAULT_CONFIG, "w") as f:
-        yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True)
+    _write_config_with_sections(cfg, _DEFAULT_CONFIG)
+
+
+def _write_config_with_sections(cfg, filepath):
+    """Write configuration with logical sections to preserve readability."""
+    sections = {
+        "External Libraries": ["external_libs"],
+        "Pipeline & Video": [
+            "run_mode", "video_start", "video_end", "batch_size", "fps",
+            "images_ending_count", "prefix", "delete", "review_from_start",
+            "auto_prompt_encoding", "working_dir_name", "video_path_template",
+            "final_video_path"
+        ],
+        "Models": ["sam", "pose_estimation"]
+    }
+    
+    # Collect any keys not explicitly grouped
+    grouped_keys = set()
+    for keys in sections.values():
+        grouped_keys.update(keys)
+    other_keys = [k for k in cfg.keys() if k not in grouped_keys]
+    if other_keys:
+        sections["Other Configs"] = other_keys
+
+    lines = []
+    for section_name, keys in sections.items():
+        section_dict = {k: cfg[k] for k in keys if k in cfg}
+        if not section_dict:
+            continue
+            
+        lines.append(f"# {'=' * 40}")
+        lines.append(f"# {section_name}")
+        lines.append(f"# {'=' * 40}")
+        lines.append(yaml.dump(section_dict, default_flow_style=False, allow_unicode=True).strip())
+        lines.append("")
+        
+    with open(filepath, "w") as f:
+        f.write("\n".join(lines))
 
 
 # ─── Styled sub-widgets ───────────────────────────────────────────────────────
