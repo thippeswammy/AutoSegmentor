@@ -26,16 +26,18 @@ flowchart TD
 
     subgraph "Orchestration / Control Plane"
         DRIVER["Main Entry\nrun_demo.py"]:::orch
-        PIPE["Pipeline Orchestrator\n(pipeline.py)\nconnects stages end-to-end"]:::orch
+        SETUP["Setup Dialog\n(SetupDialog.py)"]:::ui
+        PIPE["Pipeline Orchestrator\n(pipeline.py)\ncoordinates extraction+engine"]:::orch
+        ENGINE["AutoSegmentor Engine\n(AutoSegmentorEngine.py)\ncore processing logic"]:::orch
         CFG["Runtime Config\n(default_config.yaml)\nvideo_range, batch, dirs"]:::doc
     end
 
     subgraph "Input / Output Artifacts (Data Plane)"
         VIN[("Video Inputs\nVideo*.mp4")]:::store
         WDIR[("workspace/working_dir/\nimages, masks, overlap")]:::store
-        OUTVID[("outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4\nOverlappedVideo*.mp4")]:::store
+        WOUT[("workspace/outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4")]:::store
+        OUTLOG[("outputs/logs/\nautosegmentor.log")]:::store
         CKPT[("SAM2 Checkpoint\nsam2_hiera_large.pt")]:::store
-        MCFG[("SAM2 Model YAML\nsam2_hiera_*.yaml")]:::doc
     end
 
     subgraph "FileManagement (ETL stages)"
@@ -142,6 +144,7 @@ flowchart TD
     %% =========================================================
     click DRIVER "run_demo.py" "Main Entry"
     click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
+    click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
     click CFG "workspace/inputs/config/default_config.yaml" "Config File"
     click AM "autosegmentor/ui/AnnotationManager.py" "Annotation Manager"
     click UI "autosegmentor/ui/MainWindow.py" "Main UI"
@@ -179,8 +182,9 @@ The core logic is organized into specialized subpackages to maintain a clean sep
 | | `AnnotationCanvas.py` | Handles image rendering, zoom/pan math, and vector drawing for annotations. |
 | | `SidePanel.py` | Reactive property panel for classes, instances, and keypoint visibility. |
 | | `NavigationManager.py` | Implements the **Command Pattern** for a robust Undo/Redo stack. |
-| **Logic Layer** | `pipeline.py` | High-level sequencer that coordinates between data extraction and ML inference. |
-| | `main_app.py` | Bootstraps the application and initializes the global handlers. |
+| **Logic Layer** | `pipeline.py` | Main orchestrator that coordinates extraction, engine initialization, and post-processing. |
+| | `AutoSegmentorEngine.py` | Core processing engine that manages the SAM2 state and UI interaction loops. |
+| | `main_app.py` | Bootstraps the application, launches the SetupDialog, and starts the pipeline. |
 | **Model Layer** | `SAM2Model.py` | Low-level wrapper for loading weights and managing SAM2 GPU inference state. |
 | | `CoTrackerPredictor.py` | Integration for temporal keypoint tracking across frame batches. |
 | | `LKKeypointTracker.py` | Fallback Lucas-Kanade optical flow implementation for simpler scenes. |
@@ -262,7 +266,8 @@ The journey from a raw video file to a verified training dataset follows a struc
  - **`workspace/working_dir/verified/`** (Final):
      - `images/`: Frames explicitly verified by the user.
      - `mask/`: Corresponding verified masks.
- - **`outputs/`**: Reconstructed videos (`OrgVideo`, `MaskVideo`, `OverlappedVideo`).
+ - **`workspace/outputs/`**: Reconstructed videos (`OrgVideo`, `MaskVideo`, `OverlappedVideo`).
+ - **`outputs/logs/`**: System runtime logs (`autosegmentor.log`).
  
  ---
  

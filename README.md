@@ -115,16 +115,18 @@ flowchart TD
 
     subgraph "Orchestration / Control Plane"
         DRIVER["Main Entry\nrun_demo.py"]:::orch
-        PIPE["Pipeline Orchestrator\n(pipeline.py)\nconnects stages end-to-end"]:::orch
+        SETUP["Setup Dialog\n(SetupDialog.py)"]:::ui
+        PIPE["Pipeline Orchestrator\n(pipeline.py)\ncoordinates extraction+engine"]:::orch
+        ENGINE["AutoSegmentor Engine\n(AutoSegmentorEngine.py)\ncore processing logic"]:::orch
         CFG["Runtime Config\n(default_config.yaml)\nvideo_range, batch, dirs"]:::doc
     end
 
     subgraph "Input / Output Artifacts (Data Plane)"
         VIN[("Video Inputs\nVideo*.mp4")]:::store
         WDIR[("workspace/working_dir/\nimages, masks, overlap")]:::store
-        OUTVID[("outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4\nOverlappedVideo*.mp4")]:::store
+        WOUT[("workspace/outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4")]:::store
+        OUTLOG[("outputs/logs/\nautosegmentor.log")]:::store
         CKPT[("SAM2 Checkpoint\nsam2_hiera_large.pt")]:::store
-        MCFG[("SAM2 Model YAML\nsam2_hiera_*.yaml")]:::doc
     end
 
     subgraph "FileManagement (ETL stages)"
@@ -231,6 +233,7 @@ flowchart TD
     %% =========================================================
     click DRIVER "run_demo.py" "Main Entry"
     click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
+    click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
     click CFG "workspace/inputs/config/default_config.yaml" "Config File"
     click AM "autosegmentor/ui/AnnotationManager.py" "Annotation Manager"
     click UI "autosegmentor/ui/MainWindow.py" "Main UI"
@@ -287,7 +290,8 @@ AutoSegmentor/
 ├── workspace/                # PROJECT WORKSPACE
 │   ├── VideoInputs/          # Put your raw videos here
 │   ├── inputs/config/        # Configuration YAMLs
-│   └── working_dir/          # Intermediate files (images, masks)
+│   ├── working_dir/          # Intermediate files (images, masks)
+│   └── outputs/              # Final Video Outputs (.mp4)
 ├── DataStorage/              # Persistent data storage
 ├── external/                 # Third-party libraries (SAM2, CoTracker)
 │   ├── segment_anything_2/checkpoints/ # SAM2 Weights
