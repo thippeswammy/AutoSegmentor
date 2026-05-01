@@ -288,12 +288,14 @@ AutoSegmentor/
 │   ├── VideoInputs/          # Put your raw videos here
 │   ├── inputs/config/        # Configuration YAMLs
 │   └── working_dir/          # Intermediate files (images, masks)
+├── DataStorage/              # Persistent data storage
 ├── external/                 # Third-party libraries (SAM2, CoTracker)
-│   └── segment_anything_2/checkpoints/ # ML Weights
-│   └── co-tracker/checkpoints/ # ML Weights
-├── checkpoints/              # ML Weights
+│   ├── segment_anything_2/checkpoints/ # SAM2 Weights
+│   └── co-tracker/checkpoints/ # CoTracker Weights
+├── checkpoints/              # Project-wide ML Weights
 ├── assets/                   # Media assets for README
 ├── scripts/                  # Utility scripts
+├── outputs/                  # logs outputs
 └── docs/                     # Detailed Technical Documentation
 ```
 
