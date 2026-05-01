@@ -54,8 +54,8 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
     pip install -r requriments_i_used.txt
     ```
 
-4.  **Download Checkpoints**
-    - Place `sam2_hiera_large.pt` in `checkpoints/`.
+4.  **Download Model Checkpoints**
+    - Place `sam2_hiera_large.pt` in `external/segment_anything_2/checkpoints/`.
     - Place `scaled_offline.pth` in `external/co-tracker/checkpoints/`.
 
 ---
@@ -281,28 +281,35 @@ AutoSegmentor/
 │   ├── models/               # SAM2 & Tracker Wrappers
 │   ├── file_management/      # Disk ETL & Data Handling
 │   └── tools/                # App Bootstrap
-├── DatasetManager/           # Dataset Export & Synthesis
+├── DatasetManager/           # Dataset Export & Synthesis (See READMEs below)
 │   ├── SyntheticEngine/      # Advanced Augmentation
 │   └── YolovDatasetManager/  # YOLO Format Creation
 ├── workspace/                # PROJECT WORKSPACE
 │   ├── VideoInputs/          # Put your raw videos here
 │   ├── inputs/config/        # Configuration YAMLs
 │   └── working_dir/          # Intermediate files (images, masks)
-├── checkpoints/              # SAM2 Model Weights
 ├── external/                 # Third-party libraries (SAM2, CoTracker)
-├── assets/                   # Media assets for README/UI
+│   └── segment_anything_2/checkpoints/ # ML Weights
+│   └── co-tracker/checkpoints/ # ML Weights
+├── checkpoints/              # ML Weights
+├── assets/                   # Media assets for README
 ├── scripts/                  # Utility scripts
-├── Aiskills/                 # AI Assistant Instructions
 └── docs/                     # Detailed Technical Documentation
 ```
 
 ---
 
-## 📖 Deep Dive Documentation
+## 📖 Detailed Documentation Index
 
-For exhaustive details on the system design, async threading, and advanced workflows, visit the merged guide:
+For in-depth guides on every part of the AutoSegmentor ecosystem, refer to the following documents:
 
-- **[System Architecture & Workflow Guide](./docs/architecture_and_workflow.md)**
+### 🏛️ Core Architecture
+- **[System Architecture & Workflow Guide](./docs/architecture_and_workflow.md)**: Deep dive into the PyQt5 design, async threading, and technical pipeline.
+
+### 📊 Dataset Management
+- **[Dataset Manager Overview](./DatasetManager/README.md)**: Entry point for post-processing tools.
+- **[YOLO Dataset Creator](./DatasetManager/YolovDatasetManager/README.md)**: Guide for converting verified masks into YOLOv8/v11 training data.
+- **[Synthetic Data Engine](./DatasetManager/SyntheticEngine/README.md)**: Instructions for creating large-scale synthetic datasets using copy-paste augmentation.
 
 ---
 
