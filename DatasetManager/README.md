@@ -1,19 +1,30 @@
 # Dataset Manager
 
-This directory contains tools for managing and converting datasets, specifically focusing on YOLO format creation and basic video-to-image extraction.
+This directory contains specialized tools for managing, converting, and synthesizing datasets for YOLO object detection and pose estimation models. It serves as the post-processing hub after the AutoSegmentor annotation pipeline.
 
 ## 📂 Components
 
 ### 1. YOLO Dataset Manager (`YolovDatasetManager/`)
-A comprehensive toolset for creating YOLO-ready datasets from segmentation masks.
-- **Features**: Data augmentation, train/val/test splitting, `data.yaml` generation.
-- **Documentation**: [Read More](YolovDatasetManager/README.md)
+A comprehensive toolset for creating YOLOv8/v11-ready datasets from raw segmentation masks.
+- **Key Features**: 
+    - Automated train/val/test splitting.
+    - Mask-to-Polygon conversion for instance segmentation.
+    - `data.yaml` generation for seamless training integration.
+- **Documentation**: [Read More](./YolovDatasetManager/README.md)
 
-### 2. Dataset Handler (`DatasetHandler/`)
-Simple utilities for raw data manipulation.
-- **`code/Video2images.py`**: A script to extract frames from video files, useful for preparing raw data before processing.
+### 2. Synthetic Engine (`SyntheticEngine/`)
+An advanced augmentation pipeline that creates massive training datasets from a small set of annotated reference frames.
+- **Key Features**: 
+    - Copy-Paste augmentation with lighting adaptation.
+    - Simulated occlusions and visibility tracking.
+    - Geometric transformations synced across images, masks, and keypoints.
+- **Documentation**: [Read More](./SyntheticEngine/README.md)
+
+### 3. Dataset Handler (`DatasetHandler/`)
+Low-level utilities for raw data manipulation and preprocessing.
+- **`Video2images.py`**: A fast, standalone script for extracting frames from video files.
 
 ---
 
 ## 🔙 Navigation
-[< Back to Root](../README.md)
+[< Back to Project Root](../README.md)

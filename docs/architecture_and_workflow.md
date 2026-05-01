@@ -1,95 +1,6 @@
-# AutoSegmentor
+# AutoSegmentor: Architecture and Workflow Guide
 
-[![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
-[![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
-
-![AutoSegmenter2](./assets/AutoSegmenter_1080.gif)
-
-_AutoSegmentor is a state-of-the-art auto-labeling ecosystem that bridges the gap between raw video footage and structured AI datasets. By integrating Meta AI's **Segment Anything Model 2 (SAM2)** with high-precision tracking like **CoTracker**, it enables users to generate pixel-perfect masks and pose estimation data for long, complex videos with minimal manual interaction._
-
-**Main purpose:**  
-Build an end-to-end auto-labeling pipeline that converts raw videos into structured YOLO-compatible datasets using SAM2, with real-time segmentation enabled by CUDA acceleration, multithreading, and an interactive PyQt5 GUI.
-
----
-
-## ✨ Features
-
-- **Professional Desktop UI**: A fully-featured PyQt5 application with multi-window support, integrated property panels, and real-time visualization.
-- **Automated Frame Extraction**: Robust extraction from any video format, handling long-form content with ease.
-- **Interactive Annotation**: Point and box-based multi-class annotation with a high-fidelity zoom system for precision.
-- **Advanced Tracking (CoTracker)**: Integrated CoTracker support for tracking keypoints across frames with high accuracy—a robust alternative to Optical Flow for complex scenes.
-- **Real-time Mask Propagation**: Propagate annotations across batches of frames using SAM2's temporal memory.
-- **Async Processing Engine**: Background execution of GPU tasks ensures the UI remains responsive even during heavy inference.
-- **YOLO Dataset Creation**: Seamless conversion of verified masks into YOLOv8/v11 formats with integrated data augmentation (blur, noise, color jitter).
-- **Comprehensive Workspace Management**: Smart handling of project lifecycles, from raw input to verified output, with automatic directory cleanup.
-
----
-
-## 🔧 Setup & Installation
-
-### Prerequisites
-- **Python**: 3.10+
-- **GPU**: NVIDIA GPU with CUDA (Required for SAM2/CoTracker performance).
-- **RAM**: 16GB+ recommended.
-
-### Installation Steps
-
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/thippeswammy/AutoSegmentor.git
-    cd AutoSegmentor
-    ```
-
-2.  **Environment Setup**
-    ```bash
-    python -m venv .venv
-    # Windows
-    .\.venv\Scripts\activate
-    # Linux
-    source .venv/bin/activate
-    ```
-
-3.  **Install Dependencies**
-    ```bash
-    pip install -r requriments_i_used.txt
-    ```
-
-4.  **Download Checkpoints**
-    - Place `sam2_hiera_large.pt` in `checkpoints/`.
-    - Place `scaled_offline.pth` in `external/co-tracker/checkpoints/`.
-
----
-
-## 🚀 Usage Guide
-
-### 1. Preparing Workspace
-- Place your videos in `workspace/VideoInputs/`.
-- Ensure your configuration is set in `workspace/inputs/config/default_config.yaml`.
-
-### 2. Launching the App
-```bash
-python run_demo.py
-```
-
-### 3. Annotation Controls (Keyboard & Mouse)
-
-| Action | Control |
-| :--- | :--- |
-| **Foreground Point** | Left Click |
-| **Background Point** | Right Click |
-| **Undo Action** | `Ctrl + Z` or `U` |
-| **Redo Action** | `Ctrl + Y` |
-| **Navigate Frames** | `A` / `D` or `Left` / `Right` |
-| **Turbo Scroll** | `Shift + A` / `Shift + D` |
-| **Batch Navigation** | `[` / `]` |
-| **Change Class (1-10)** | Keys `1` to `0` |
-| **Instance Management** | `Tab` (Next) / `Shift + Tab` (Prev) |
-| **Toggle Mask Overlay** | `M` |
-| **Toggle Corner Zoom** | `Z` |
-| **Reset Frame** | `R` |
-| **Process Batch** | `Enter` / `Return` |
-| **Save Progress** | `Ctrl + S` |
-| **Export Dataset** | `Ctrl + E` |
+This document provides a comprehensive technical overview of the AutoSegmentor system, covering its modular architecture, async threading model, and end-to-end data workflow.
 
 ---
 
@@ -258,71 +169,122 @@ flowchart TD
     classDef external fill:#2b2b2b,stroke:#111111,color:#ffffff,stroke-width:1px
 ```
 
-### High-Level Components
+### 1. Package Structure: `autosegmentor/`
 
-| Component | Responsibility |
-| :--- | :--- |
-| **`MainWindow`** | The primary application hub; manages the event loop and component communication. |
-| **`AnnotationCanvas`** | Handles high-performance rendering of frames, masks, and interactive vector graphics. |
-| **`BatchProcessor`** | Background thread for running SAM2 propagation and CoTracker across frame windows. |
-| **`PreviewThread`** | Lightweight background task for instant SAM2 feedback on the current frame. |
-| **`SAM2Model`** | Managed wrapper for the SAM2 predictor, handling GPU memory and inference state. |
-| **`CoTracker`** | Advanced keypoint tracking engine for robust pose estimation. |
-| **`DatasetManager`** | Post-processing suite for YOLO conversion and synthetic data generation. |
+The core logic is organized into specialized subpackages to maintain a clean separation of concerns:
 
-### ASCII Directory Map
-
-```text
-AutoSegmentor/
-├── run_demo.py               # MAIN ENTRY POINT
-├── autosegmentor/            # CORE APPLICATION PACKAGE
-│   ├── core/                 # Pipeline orchestration
-│   ├── ui/                   # PyQt5 Windows & Widgets
-│   ├── models/               # SAM2 & Tracker Wrappers
-│   ├── file_management/      # Disk ETL & Data Handling
-│   └── tools/                # App Bootstrap
-├── DatasetManager/           # Dataset Export & Synthesis
-│   ├── SyntheticEngine/      # Advanced Augmentation
-│   └── YolovDatasetManager/  # YOLO Format Creation
-├── workspace/                # PROJECT WORKSPACE
-│   ├── VideoInputs/          # Put your raw videos here
-│   ├── inputs/config/        # Configuration YAMLs
-│   └── working_dir/          # Intermediate files (images, masks)
-├── checkpoints/              # SAM2 Model Weights
-├── external/                 # Third-party libraries (SAM2, CoTracker)
-├── assets/                   # Media assets for README/UI
-├── scripts/                  # Utility scripts
-├── Aiskills/                 # AI Assistant Instructions
-└── docs/                     # Detailed Technical Documentation
-```
+| Component Category | Module | Responsibility |
+| :--- | :--- | :--- |
+| **UI Layer** | `MainWindow.py` | Primary PyQt5 hub. Manages toolbar, menus, status bar, and central splitter. |
+| | `AnnotationCanvas.py` | Handles image rendering, zoom/pan math, and vector drawing for annotations. |
+| | `SidePanel.py` | Reactive property panel for classes, instances, and keypoint visibility. |
+| | `NavigationManager.py` | Implements the **Command Pattern** for a robust Undo/Redo stack. |
+| **Logic Layer** | `pipeline.py` | High-level sequencer that coordinates between data extraction and ML inference. |
+| | `main_app.py` | Bootstraps the application and initializes the global handlers. |
+| **Model Layer** | `SAM2Model.py` | Low-level wrapper for loading weights and managing SAM2 GPU inference state. |
+| | `CoTrackerPredictor.py` | Integration for temporal keypoint tracking across frame batches. |
+| | `LKKeypointTracker.py` | Fallback Lucas-Kanade optical flow implementation for simpler scenes. |
+| **Data Layer** | `FileManager.py` | Centralized utility for path resolution and directory lifecycle management. |
+| | `FrameExtractor.py` | Optimized video-to-image extraction using OpenCV. |
+| | `MaskProcessor.py` | Post-processes binary model logits into color-mapped, verifiable PNG masks. |
+| | `VideoCreator.py` | Multi-threaded assembly of processed frames into deliverable MP4 files. |
 
 ---
 
-## 📖 Deep Dive Documentation
+---
 
-For exhaustive details on the system design, async threading, and advanced workflows, visit the merged guide:
+## 🧵 The Async Threading Model
 
-- **[System Architecture & Workflow Guide](./docs/architecture_and_workflow.md)**
+To ensure a smooth user experience, AutoSegmentor utilizes a multi-threaded architecture. Heavy GPU and I/O tasks are offloaded from the Main UI thread using PyQt's `QThread` system.
+
+### `PreviewThread`
+- **Purpose**: Provides real-time visual feedback for the currently edited frame.
+- **Trigger**: Fired 500ms after a user stops navigating or immediately after a point is added/moved.
+- **Operation**: Runs a single-frame SAM2 inference and updates the `AnnotationCanvas` via `pyqtSignal`.
+
+### `BatchProcessorThread`
+- **Purpose**: Handles long-running propagation and tracking tasks.
+- **Trigger**: Fired when the user clicks "Process Batch" (or presses Enter).
+- **Operation**: 
+    1. Propagates the current frame's mask across the entire batch using SAM2.
+    2. Runs CoTracker to track keypoints across the temporal window.
+    3. Persists results to disk and updates the UI state once finished.
 
 ---
 
-## ❓ Troubleshooting
+## 🔄 The End-to-End Workflow
 
-| Issue | Solution |
-| :--- | :--- |
-| **VRAM Out of Memory** | Reduce `batch_size` in the config (e.g., to 8 or 16). |
-| **SAM2 Missing** | Ensure the `external/segment_anything_2` submodule is initialized. |
-| **Slow Preview** | Check if `torch.cuda.is_available()` is True. CPU inference is extremely slow. |
-| **GUI Not Opening** | Verify your PyQt5 installation and display drivers. |
+The journey from a raw video file to a verified training dataset follows a structured lifecycle.
+
+### 1. Project Initialization
+- **Entry Point**: `run_demo.py`.
+- **Config**: Settings are loaded from `workspace/inputs/config/default_config.yaml`.
+- **Setup**: The user selects the target video and configures model parameters in the `SetupDialog`.
+
+### 2. Frame Extraction
+- The system uses `FrameExtractor` to decode the video into high-quality JPEG images.
+- Images are stored in `workspace/working_dir/images/` for random access by the UI.
+
+### 3. Interactive Annotation
+- The user navigates the video using **A/D** (single frame) or **Shift+A/D** (turbo-scroll).
+- **Prompts**: Visual prompts (foreground/background points) are captured by the `AnnotationCanvas`.
+- **Undo/Redo**: Every action is recorded in a `QUndoStack`, allowing for complex correction workflows.
+
+### 4. Background Propagation
+- Once prompts are set for a keyframe, the `BatchProcessorThread` extends the segmentation to surrounding frames.
+- **CoTracker** ensures that even small, fast-moving objects are tracked accurately, providing a robust base for the segmentation model.
+
+### 5. Verification and Export
+- Overlays are generated in real-time or batch mode for visual quality control.
+- **Export Dialog**: The user selects which classes and segments to export.
+- **Dataset Synthesis**: The `DatasetManager` takes over, converting masks into YOLO-format polygons and applying augmentations to generate a training-ready dataset.
 
 ---
 
-## Acknowledgements
-
-- [Meta AI's SAM2](https://github.com/facebookresearch/segment-anything)
-- [CoTracker Team](https://github.com/facebookresearch/co-tracker)
-- All open-source contributors to the PyTorch and PyQt ecosystems.
+## 📦 Output Specifications
+ 
+ The pipeline generates several types of outputs, organized into intermediate working files and final deliverables.
+ 
+ ### 1. File Formats & Naming
+ - **Images**: Standard `.jpg` or `.jpeg` extracted by `FrameExtractor`.
+     - Naming: `{prefix}{video_number}_{frame_index:05d}.jpeg`.
+ - **Masks**: Color-mapped PNGs.
+     - These use a predefined palette to distinguish instances (up to 10 unique IDs).
+     - Generated by `MaskProcessor.binary_mask_2_color_mask`.
+ - **Videos**: High-quality `.mp4` files encoded with the `mp4v` codec.
+ 
+ ### 2. Directory Hierarchy
+ - **`workspace/working_dir/`** (Intermediate):
+     - `images/`: Raw extracted frames.
+     - `render/`: Color segmentation masks.
+     - `overlap/`: Visualization overlays for quality control.
+     - `temp/`: Temporary batch staging area.
+ - **`workspace/working_dir/verified/`** (Final):
+     - `images/`: Frames explicitly verified by the user.
+     - `mask/`: Corresponding verified masks.
+ - **`outputs/`**: Reconstructed videos (`OrgVideo`, `MaskVideo`, `OverlappedVideo`).
+ 
+ ---
+ 
+ ## 🚀 Downstream Integration: Dataset Creation
+ 
+ Once the annotation pipeline is complete, the `DatasetManager` suite takes over to prepare data for model training.
+ 
+ ### `YolovDatasetManager` Workflow
+ 1. **Input**: Consumes verified images and masks from the workspace.
+ 2. **Polygon Extraction**: Converts color masks into precise polygon coordinates normalized for YOLO format (0-1).
+ 3. **Augmentation**: Applies transform operations (brightness, contrast, noise, blur) to multiply the dataset size (e.g., 10x per reference image).
+ 4. **Export**: Generates a structured YOLO dataset with `train`, `valid`, `test` splits and a `data.yaml` configuration file.
 
 ---
 
-**Built with ❤️ for the Computer Vision community.**
+## 🛠️ Key Technical Mechanisms
+
+### Bounding Box Auto-Refinement
+To stabilize segmentation, the system calculates the bounding box of the current SAM2 mask and feeds it back into the model as a new prompt. This "self-correction" loop significantly improves mask consistency across difficult frames.
+
+### Batch-Aware Memory Management
+Instead of loading the entire video into VRAM, AutoSegmentor processes frames in configurable batches (e.g., 24 or 48 frames). This allows it to handle very long videos (minutes or hours) on consumer-grade hardware.
+
+### Keypoint Visibility Logic
+For pose estimation, the system tracks the visibility of each keypoint. If a keypoint is occluded by another object or leaves the frame, the `SyntheticEngine` automatically updates the visibility flags (0=hidden, 1=occluded, 2=visible) to maintain dataset integrity.
