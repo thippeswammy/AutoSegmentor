@@ -68,17 +68,10 @@ def start_application():
     video_path_template  = vi["template"]
 
     final_video_path     = vo["final_path"]
-    working_dir_name     = vo["working_dir"]
+    base_working_dir     = vo["working_dir"]
     prefix               = vo["prefix"]
     delete               = vo["delete_after"]
     
-    images_extract_dir   = vo["images_extract_dir"]
-    temp_processing_dir  = vo["temp_processing_dir"]
-    rendered_dir         = vo["rendered_dir"]
-    overlap_dir          = vo["overlap_dir"]
-    verified_img_dir     = vo["verified_img_dir"]
-    verified_mask_dir    = vo["verified_mask_dir"]
-
     run_mode             = pl["run_mode"]
     batch_size           = pl["batch_size"]
     fps                  = pl["fps"]
@@ -94,6 +87,16 @@ def start_application():
 
     for idx, i in enumerate(range(video_start, video_start + video_end), start=1):
         logger.info(f"{'═' * 20} Video {i} ({idx}/{total_videos}) {'═' * 20}")
+
+        # Dynamic video-specific working directory
+        working_dir_name = os.path.join(base_working_dir, f"video{i}").replace("\\", "/")
+        
+        images_extract_dir   = os.path.join(working_dir_name, "images").replace("\\", "/")
+        temp_processing_dir  = os.path.join(working_dir_name, "temp").replace("\\", "/")
+        rendered_dir         = os.path.join(working_dir_name, "render").replace("\\", "/")
+        overlap_dir          = os.path.join(working_dir_name, "overlap").replace("\\", "/")
+        verified_img_dir     = os.path.join(working_dir_name, "verified", "images").replace("\\", "/")
+        verified_mask_dir    = os.path.join(working_dir_name, "verified", "mask").replace("\\", "/")
 
         if run_mode != "pose_only":
             cleared = _handle_working_dir(

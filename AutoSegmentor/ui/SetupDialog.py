@@ -571,17 +571,27 @@ class SetupDialog(QDialog):
         self._status.setText("✓ Settings saved to defaults")
 
     def get_config(self) -> dict:
-        data = self._collect(); wdir = data["working_dir_name"]
+        data = self._collect()
+        base_wdir = data["working_dir_name"]
+        start_id = data["video_start"]
+        
+        # Calculate video-specific working dir for the first video (for Setup purposes)
+        # Note: main_app.py will handle the actual loop-level directory switching.
+        wdir = os.path.join(base_wdir, f"video{start_id}").replace("\\", "/")
+        
         return {
             "external_libs": self._session.get("external_libs", []),
             "video_inputs": {
                 "template": data["video_path_template"], "start": data["video_start"], "end": data["video_end"], "max_frames": data["images_ending_count"]
             },
             "video_outputs": {
-                "final_path": data["final_video_path"], "working_dir": wdir, "prefix": data["prefix"], "delete_after": data["delete"],
-                "images_extract_dir": os.path.join(wdir, "images"), "temp_processing_dir": os.path.join(wdir, "temp"),
-                "rendered_dir": os.path.join(wdir, "render"), "overlap_dir": os.path.join(wdir, "overlap"),
-                "verified_img_dir": os.path.join(wdir, "verified", "images"), "verified_mask_dir": os.path.join(wdir, "verified", "mask"),
+                "final_path": data["final_video_path"], "working_dir": base_wdir, "prefix": data["prefix"], "delete_after": data["delete"],
+                "images_extract_dir": os.path.join(wdir, "images").replace("\\", "/"), 
+                "temp_processing_dir": os.path.join(wdir, "temp").replace("\\", "/"),
+                "rendered_dir": os.path.join(wdir, "render").replace("\\", "/"), 
+                "overlap_dir": os.path.join(wdir, "overlap").replace("\\", "/"),
+                "verified_img_dir": os.path.join(wdir, "verified", "images").replace("\\", "/"), 
+                "verified_mask_dir": os.path.join(wdir, "verified", "mask").replace("\\", "/"),
             },
             "pipeline": {
                 "run_mode": data["run_mode"], "batch_size": data["batch_size"], "fps": data["fps"],
