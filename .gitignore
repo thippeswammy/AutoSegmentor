@@ -61,7 +61,6 @@ htmlcov/
 # ─── System & Local Data ─────────────────────────────────────────────────────
 NVIDIA/
 brain/
-co-tracker/
 system.md
 *.log
 

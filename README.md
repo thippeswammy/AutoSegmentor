@@ -36,7 +36,7 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
 
 1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/thippeswammy/AutoSegmentor.git
+    git clone --recursive https://github.com/thippeswammy/AutoSegmentor.git
     cd AutoSegmentor
     ```
 
@@ -54,7 +54,11 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
     pip install -r requriments_i_used.txt
     ```
 
-4.  **Download Model Checkpoints**
+    # Ensure submodules are initialized
+    git submodule update --init --recursive
+    ```
+
+5.  **Download Model Checkpoints**
     - Place `sam2_hiera_large.pt` in `external/segment_anything_2/checkpoints/`.
     - Place `scaled_offline.pth` in `external/co-tracker/checkpoints/`.
 
@@ -245,6 +249,8 @@ flowchart TD
     click CT "autosegmentor/models/Tracking/CoTrackerPredictor.py" "CoTracker"
     click S2M "autosegmentor/models/SAM/SAM2Model.py" "SAM2 Model"
     click YDC "DatasetManager/YolovDatasetManager/DatasetCreator.py" "Dataset Creator"
+    click S2LIB "https://github.com/facebookresearch/segment-anything-2" "SAM2 GitHub"
+    click CT_LIB "https://github.com/facebookresearch/co-tracker" "CoTracker GitHub"
 
     %% =========================================================
     %% Styles
@@ -293,7 +299,7 @@ AutoSegmentor/
 │   ├── working_dir/          # Intermediate files (images, masks)
 │   └── outputs/              # Final Video Outputs (.mp4)
 ├── DataStorage/              # Persistent data storage
-├── external/                 # Third-party libraries (SAM2, CoTracker)
+├── external/                 # Third-party libraries ([SAM2](https://github.com/facebookresearch/segment-anything-2), [CoTracker](https://github.com/facebookresearch/co-tracker))
 │   ├── segment_anything_2/checkpoints/ # SAM2 Weights
 │   └── co-tracker/checkpoints/ # CoTracker Weights
 ├── checkpoints/              # Project-wide ML Weights
@@ -332,7 +338,7 @@ For in-depth guides on every part of the AutoSegmentor ecosystem, refer to the f
 
 ## Acknowledgements
 
-- [Meta AI's SAM2](https://github.com/facebookresearch/segment-anything)
+- [Meta AI's SAM2](https://github.com/facebookresearch/segment-anything-2)
 - [CoTracker Team](https://github.com/facebookresearch/co-tracker)
 - All open-source contributors to the PyTorch and PyQt ecosystems.
 

@@ -156,6 +156,8 @@ flowchart TD
     click CT "autosegmentor/models/Tracking/CoTrackerPredictor.py" "CoTracker"
     click S2M "autosegmentor/models/SAM/SAM2Model.py" "SAM2 Model"
     click YDC "DatasetManager/YolovDatasetManager/DatasetCreator.py" "Dataset Creator"
+    click S2LIB "https://github.com/facebookresearch/segment-anything-2" "SAM2 GitHub"
+    click CT_LIB "https://github.com/facebookresearch/co-tracker" "CoTracker GitHub"
 
     %% =========================================================
     %% Styles

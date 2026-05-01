@@ -1,0 +1,3 @@
+[submodule "external/co-tracker"]
+	path = external/co-tracker
+	url = https://github.com/facebookresearch/co-tracker
