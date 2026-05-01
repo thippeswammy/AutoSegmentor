@@ -184,6 +184,7 @@ class NavigationState:
         self.show_zoom = True
         self.mouse_x = 0
         self.mouse_y = 0
+        self.propagate_backward = True
 
     def set_batch_info(self, batch, total_batches, frame_idx, total_frames):
         self.current_batch = batch

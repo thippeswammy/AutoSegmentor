@@ -67,7 +67,7 @@ class CoTrackerPredictor:
     """
 
     def __init__(self, keypoint_defs, initial_coords, frame_paths, checkpoint, window_len=60,
-                 query_frame_idx=0, backward_tracking=False):
+                 query_frame_idx=0, backward_tracking=False, base_frame_idx=0):
         """Initialize and run CoTracker tracking on the batch.
 
         Args:
@@ -78,6 +78,7 @@ class CoTrackerPredictor:
             window_len: Window length for the offline model (default: 60).
             query_frame_idx: Frame index within this batch to use as the query (default: 0).
             backward_tracking: Whether to run backward tracking (default: False).
+            base_frame_idx: Base frame index to add to frame results (default: 0).
         """
         self.keypoint_defs = keypoint_defs
         self.tracked_frames = []
@@ -159,7 +160,7 @@ class CoTrackerPredictor:
                 frame_kps.append(kp_data)
 
             self.tracked_frames.append({
-                "frame_index": t,
+                "frame_index": t + base_frame_idx,
                 "keypoints": frame_kps
             })
 

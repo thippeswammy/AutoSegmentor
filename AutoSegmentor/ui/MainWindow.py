@@ -25,11 +25,12 @@ from .logger_config import logger
 class BatchProcessorThread(QThread):
     finished_batch = pyqtSignal(int)
 
-    def __init__(self, handler, batch, query_frame_idx=None):
+    def __init__(self, handler, batch, query_frame_idx=None, backward_tracking=False):
         super().__init__()
         self.handler = handler
         self.batch = batch
         self.query_frame_idx = query_frame_idx
+        self.backward_tracking = backward_tracking
 
     def run(self):
         """Run SAM2 mask generation + CoTracker in the background thread."""
@@ -55,7 +56,7 @@ class BatchProcessorThread(QThread):
             if (processor.config.pose_config and processor.config.pose_config.get('enabled')
                     and processor.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):
                 logger.debug(f"[BatchThread] Batch {self.batch}: Running CoTracker...")
-                processor._track_batch_inline(self.batch, query_frame_idx=self.query_frame_idx)
+                processor._track_batch_inline(self.batch, query_frame_idx=self.query_frame_idx, backward_tracking=self.backward_tracking)
                 logger.debug(f"[BatchThread] Batch {self.batch}: CoTracker done.")
                 
                 # Persistence: Save tracked keypoints to JSON continuously
@@ -423,6 +424,7 @@ class AnnotationWindow(QDialog):
         self.canvas.point_dragging.connect(self.handle_point_dragging)
         self.canvas.point_deleted.connect(self.handle_point_deleted)
         self.sidebar.keypoint_progress.visibility_toggled.connect(self.handle_visibility_toggled)
+        self.sidebar.live_config.backward_tracking_toggled.connect(self._on_backward_tracking_toggled)
         self.sidebar.export_requested.connect(self._on_export_yolo)
         self.undo_stack.indexChanged.connect(self._on_undo_stack_changed)
 
@@ -830,6 +832,10 @@ class AnnotationWindow(QDialog):
                 logger.warning(f"[UI] jump_to_frame: invalid frame index {val} (total={len(self.handler.frame_paths)})")
         except ValueError:
             logger.debug(f"[UI] jump_to_frame: non-integer input '{text}', ignoring")
+            
+    def _on_backward_tracking_toggled(self, checked):
+        self.nav_state.propagate_backward = checked
+        logger.debug(f"[UI] Propagate backward toggled: {checked}")
 
     # ─── New Action Handlers ──────────────────────────────────────────────────
 
@@ -961,13 +967,13 @@ class AnnotationWindow(QDialog):
         # If we are NOT on the first frame of the batch, it's a refinement (reprocess)
         if current_frame % self.config.batch_size != 0:
             logger.info(f"Refining batch {batch} from anchor frame {current_frame}...")
-            self.start_processing_thread(batch, query_frame_idx=current_frame)
+            self.start_processing_thread(batch, query_frame_idx=current_frame, backward_tracking=self.nav_state.propagate_backward)
         else:
             logger.info(f"Processing full batch {batch}...")
-            self.start_processing_thread(batch)
+            self.start_processing_thread(batch, backward_tracking=self.nav_state.propagate_backward)
 
-    def start_processing_thread(self, batch, query_frame_idx=None):
-        logger.debug(f"[UI] start_processing_thread: batch={batch}  query_frame_idx={query_frame_idx}")
+    def start_processing_thread(self, batch, query_frame_idx=None, backward_tracking=False):
+        logger.debug(f"[UI] start_processing_thread: batch={batch}  query_frame_idx={query_frame_idx} backward_tracking={backward_tracking}")
         self.is_processing = True
         self.processing_batch = batch
         self.btn_process_batch.setEnabled(False)
@@ -977,7 +983,7 @@ class AnnotationWindow(QDialog):
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.show()
 
-        self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx)
+        self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx, backward_tracking=backward_tracking)
         self.processor_thread.finished_batch.connect(self.on_processing_finished)
         self.processor_thread.start()
         logger.debug(f"[UI] BatchProcessorThread started for batch {batch}")

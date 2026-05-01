@@ -315,7 +315,7 @@ class AutoSegmentorEngine(SAM2Model):
         logger.debug(f"[Engine] auto_prompt_encoding: done  {len(points_np)} box(es) added")
         return points_np
 
-    def _track_batch_cotracker(self, batch_number, query_frame_idx=None):
+    def _track_batch_cotracker(self, batch_number, query_frame_idx=None, backward_tracking=True):
         """Run CoTracker on a single batch from a specific query frame."""
         pose_cfg = self.config.pose_config
         if not pose_cfg or not pose_cfg.get('enabled'):
@@ -384,11 +384,22 @@ class AutoSegmentorEngine(SAM2Model):
 
         batch_start = batch_number * self.config.batch_size
         batch_end = min(batch_start + self.config.batch_size + 1, len(self.frame_paths))
-        batch_frame_paths = self.frame_paths[batch_start:batch_end]
+        
+        # If backward_tracking is False and we have a query_frame_idx, we only need frames from there onwards
+        if not backward_tracking and chosen_query_rel_idx > 0:
+             batch_start_sliced = batch_start + chosen_query_rel_idx
+             batch_frame_paths = self.frame_paths[batch_start_sliced:batch_end]
+             query_idx_to_pass = 0
+             base_frame_idx = chosen_query_rel_idx
+        else:
+             batch_frame_paths = self.frame_paths[batch_start:batch_end]
+             query_idx_to_pass = chosen_query_rel_idx
+             base_frame_idx = 0
 
         logger.info(
             f"[CoTracker] Batch {batch_number + 1}: Tracking up to {len(batch_frame_paths)} frames "
-            f"from {batch_start + chosen_query_rel_idx} ({len(batch_kps)} keypoints)"
+            f"from {batch_start + chosen_query_rel_idx} ({len(batch_kps)} keypoints) "
+            f"backward_tracking={backward_tracking}"
         )
 
         try:
@@ -423,12 +434,23 @@ class AutoSegmentorEngine(SAM2Model):
                 frame_paths=batch_frame_paths,
                 checkpoint=checkpoint,
                 window_len=window_len,
-                query_frame_idx=chosen_query_rel_idx,
-                backward_tracking=False
+                query_frame_idx=query_idx_to_pass,
+                backward_tracking=backward_tracking,
+                base_frame_idx=base_frame_idx
             )
             tracked = tracker.get_all_tracked()
             if batch_number < len(self.per_batch_tracked_data):
-                self.per_batch_tracked_data[batch_number] = tracked
+                if not backward_tracking and base_frame_idx > 0:
+                    # Merge: keep old data for frames before base_frame_idx
+                    old_data = self.per_batch_tracked_data[batch_number]
+                    if old_data and len(old_data) >= base_frame_idx:
+                        # Ensure we don't have duplicates or gaps
+                        # tracked has indices starting from base_frame_idx
+                        self.per_batch_tracked_data[batch_number] = old_data[:base_frame_idx] + tracked
+                    else:
+                        self.per_batch_tracked_data[batch_number] = tracked
+                else:
+                    self.per_batch_tracked_data[batch_number] = tracked
             logger.info(f"[CoTracker] Batch {batch_number + 1}: Tracking complete")
         except Exception as e:
             logger.error(f"[CoTracker] Batch {batch_number + 1}: Failed: {e}")
@@ -436,9 +458,9 @@ class AutoSegmentorEngine(SAM2Model):
                 self.per_batch_tracked_data[batch_number] = []
 
     # Keep the old name as an alias for backward compatibility with MainWindow.py
-    def _track_batch_inline(self, batch_number, query_frame_idx=None):
+    def _track_batch_inline(self, batch_number, query_frame_idx=None, backward_tracking=True):
         """Alias for _track_batch_cotracker for backward compatibility."""
-        return self._track_batch_cotracker(batch_number, query_frame_idx=query_frame_idx)
+        return self._track_batch_cotracker(batch_number, query_frame_idx=query_frame_idx, backward_tracking=backward_tracking)
 
     def _mask_generation_consumer(self, total_batches):
         """Generates masks for batches as prompts become available."""

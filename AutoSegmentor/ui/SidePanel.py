@@ -285,6 +285,7 @@ class LiveConfigPanel(QGroupBox):
 
     mask_alpha_changed = pyqtSignal(int)   # 0-100
     point_size_changed = pyqtSignal(int)   # px
+    backward_tracking_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__("Live Config", parent)
@@ -328,6 +329,13 @@ class LiveConfigPanel(QGroupBox):
         pt_hl.addWidget(self.pt_spinbox)
         pt_hl.addStretch()
         layout.addWidget(pt_row)
+
+        # Propagate Backward
+        self.backward_cb = QCheckBox("Propagate Backward")
+        self.backward_cb.setFont(Fonts.body())
+        self.backward_cb.setChecked(True)
+        self.backward_cb.toggled.connect(self.backward_tracking_toggled.emit)
+        layout.addWidget(self.backward_cb)
 
     def _on_alpha_changed(self, val: int):
         self.alpha_value_lbl.setText(f"{val}%")
