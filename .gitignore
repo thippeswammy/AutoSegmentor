@@ -74,3 +74,11 @@ system.md
 .ipynb_checkpoints/
 *-checkpoint.ipynb
 
+# Added by code-review-graph
+.code-review-graph/
+.claude/
+Aiskills/
+.mcp.json
+.opencode.json
+.windsurfrules
+.kiro/
