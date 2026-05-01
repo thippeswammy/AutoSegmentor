@@ -2,6 +2,7 @@
 
 The **SyntheticEngine** is a high-throughput pipeline designed to multiply a small set of real-world reference images into a massive, robust dataset for YOLO pose estimation.
 
+[< Back to Dataset Manager](../README.md)
 ## Key Features
 - **Geometric Sync**: Transforms images, masks, and keypoints in perfect unison using Albumentations.
 - **Copy-Paste Augmentation**: Extracts objects and blends them onto new backgrounds with alpha-softening and histogram matching.
@@ -35,6 +36,3 @@ python utils/visualise.py --dataset outputs/your_dataset_name
 ```
 - **Red Points**: Fully visible.
 - **Cyan Points**: Occluded.
-
----
-[< Back to Dataset Manager](../README.md)

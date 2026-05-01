@@ -2,6 +2,8 @@
 
 This directory contains specialized tools for managing, converting, and synthesizing datasets for YOLO object detection and pose estimation models. It serves as the post-processing hub after the AutoSegmentor annotation pipeline.
 
+[< Back to Project Root](../README.md)
+
 ## 📂 Components
 
 ### 1. YOLO Dataset Manager (`YolovDatasetManager/`)
@@ -23,8 +25,3 @@ An advanced augmentation pipeline that creates massive training datasets from a 
 ### 3. Dataset Handler (`DatasetHandler/`)
 Low-level utilities for raw data manipulation and preprocessing.
 - **`Video2images.py`**: A fast, standalone script for extracting frames from video files.
-
----
-
-## 🔙 Navigation
-[< Back to Project Root](../README.md)
