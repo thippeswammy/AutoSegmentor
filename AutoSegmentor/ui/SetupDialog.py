@@ -96,6 +96,10 @@ def _save_session(data: dict):
                     "window_len": data.get("cotracker_window_len", 60)
                 }
             }
+        },
+        "interaction": {
+            "active_target_models": data.get("active_target_models", ["sam", "pose"]),
+            "auto_shift_enabled": data.get("auto_shift_enabled", True)
         }
     }
     with open(_SESSION_STATE, "w") as f:
@@ -136,6 +140,11 @@ def _save_defaults(data: dict):
     ct["window_len"] = data.get("cotracker_window_len", 60)
     pose["cotracker"] = ct
     cfg["models"] = {"sam": sam, "pose": pose}
+    
+    cfg["interaction"] = {
+        "active_target_models": data.get("active_target_models", ["sam", "pose"]),
+        "auto_shift_enabled": data.get("auto_shift_enabled", True)
+    }
     _write_config_with_sections(cfg, _DEFAULT_CONFIG)
 
 
@@ -145,7 +154,8 @@ def _write_config_with_sections(cfg, filepath):
         ("Video Inputs", ["video_inputs"]),
         ("Video Outputs & Storage", ["video_outputs"]),
         ("Pipeline Settings", ["pipeline"]),
-        ("Models", ["models"])
+        ("Models", ["models"]),
+        ("User Interaction & Routing", ["interaction"])
     ]
     lines = []
     processed_keys = set()
@@ -197,6 +207,7 @@ def _path_row(placeholder="", callback=None):
 class VideoPage(QScrollArea):
     def __init__(self, session, parent=None):
         super().__init__(parent)
+        self.session = session
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.NoFrame)
         container = QWidget()
@@ -282,6 +293,7 @@ class VideoPage(QScrollArea):
 class ModelsPage(QScrollArea):
     def __init__(self, session, parent=None):
         super().__init__(parent)
+        self.session = session
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.NoFrame)
         container = QWidget()
@@ -450,13 +462,16 @@ class ModelsPage(QScrollArea):
             "pose_enabled": self.pose_enabled.isChecked(),
             "tracker": "cotracker" if self.rb_cotracker.isChecked() else "lk",
             "cotracker_checkpoint": self.ct_checkpoint.text(),
-            "pose_classes": classes_list
+            "pose_classes": classes_list,
+            "active_target_models": self.session.get("interaction", {}).get("active_target_models", ["sam", "pose"]),
+            "auto_shift_enabled": self.session.get("interaction", {}).get("auto_shift_enabled", True)
         }
 
 
 class SettingsPage(QScrollArea):
     def __init__(self, session, parent=None):
         super().__init__(parent)
+        self.session = session
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.NoFrame)
         container = QWidget()
@@ -604,6 +619,10 @@ class SetupDialog(QDialog):
                     "classes": data["pose_classes"],
                     "cotracker": {"checkpoint": data["cotracker_checkpoint"], "window_len": 60}
                 }
+            },
+            "interaction": {
+                "active_target_models": data["active_target_models"],
+                "auto_shift_enabled": data["auto_shift_enabled"]
             }
         }
 

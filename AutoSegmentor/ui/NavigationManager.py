@@ -12,17 +12,19 @@ from .logger_config import logger
 class AddPointCommand(QUndoCommand):
     """Undoable command for adding an annotation point."""
 
-    def __init__(self, handler, point, label, pose_click=None, description="Add Point"):
+    def __init__(self, handler, point, label, pose_click=None, target_models=None, description="Add Point"):
         super().__init__(description)
         self.handler = handler
         self.point = point
         self.label = label
         self.pose_click = pose_click  # Optional pose keypoint dict
+        self.target_models = target_models or ["sam", "pose"]
 
     def redo(self):
         logger.debug(f"[CMD:AddPoint] redo  — point={self.point}  label={self.label}  pose={bool(self.pose_click)}")
         self.handler.selected_points.append(self.point)
         self.handler.selected_labels.append(self.label)
+        self.handler.selected_targets.append(self.target_models)
         if self.pose_click:
             self.handler.pose_click_coords.append(self.pose_click)
             if self.pose_click.get("name") != "Negative_Point":
@@ -34,6 +36,7 @@ class AddPointCommand(QUndoCommand):
         if self.handler.selected_points:
             self.handler.selected_points.pop()
             self.handler.selected_labels.pop()
+            self.handler.selected_targets.pop()
         if self.pose_click and self.handler.pose_click_coords:
             self.handler.pose_click_coords.pop()
             if self.pose_click.get("name") != "Negative_Point":
@@ -50,6 +53,7 @@ class ResetPointsCommand(QUndoCommand):
         # Snapshot current state for undo
         self.saved_points = list(handler.selected_points)
         self.saved_labels = list(handler.selected_labels)
+        self.saved_targets = list(handler.selected_targets)
         self.saved_pose_clicks = list(handler.pose_click_coords)
         self.saved_keypoint_index = handler.current_keypoint_index
 
@@ -57,6 +61,7 @@ class ResetPointsCommand(QUndoCommand):
         logger.debug(f"[CMD:ResetPoints] redo  — clearing {len(self.saved_points)} points")
         self.handler.selected_points.clear()
         self.handler.selected_labels.clear()
+        self.handler.selected_targets.clear()
         self.handler.pose_click_coords.clear()
         if self.handler.pose_mode:
             self.handler.current_keypoint_index = 0
@@ -65,6 +70,7 @@ class ResetPointsCommand(QUndoCommand):
         logger.debug(f"[CMD:ResetPoints] undo  — restoring {len(self.saved_points)} points")
         self.handler.selected_points = list(self.saved_points)
         self.handler.selected_labels = list(self.saved_labels)
+        self.handler.selected_targets = list(self.saved_targets)
         self.handler.pose_click_coords = list(self.saved_pose_clicks)
         self.handler.current_keypoint_index = self.saved_keypoint_index
 
@@ -79,12 +85,14 @@ class DeletePointCommand(QUndoCommand):
         # Store state to restore on undo
         self.deleted_point = handler.selected_points[index]
         self.deleted_label = handler.selected_labels[index]
+        self.deleted_targets = handler.selected_targets[index]
         self.deleted_pose_click = handler.pose_click_coords[index] if handler.pose_click_coords and index < len(handler.pose_click_coords) else None
 
     def redo(self):
         logger.debug(f"[CMD:DeletePoint] redo  — index={self.index}  point={self.deleted_point}  label={self.deleted_label}")
         self.handler.selected_points.pop(self.index)
         self.handler.selected_labels.pop(self.index)
+        self.handler.selected_targets.pop(self.index)
         if self.deleted_pose_click:
             self.handler.pose_click_coords.pop(self.index)
             if self.deleted_pose_click.get("name") != "Negative_Point":
@@ -95,6 +103,7 @@ class DeletePointCommand(QUndoCommand):
         logger.debug(f"[CMD:DeletePoint] undo  — reinserting index={self.index}  point={self.deleted_point}")
         self.handler.selected_points.insert(self.index, self.deleted_point)
         self.handler.selected_labels.insert(self.index, self.deleted_label)
+        self.handler.selected_targets.insert(self.index, self.deleted_targets)
         if self.deleted_pose_click:
             self.handler.pose_click_coords.insert(self.index, self.deleted_pose_click)
             if self.deleted_pose_click.get("name") != "Negative_Point":
@@ -155,6 +164,7 @@ class SkipPointCommand(QUndoCommand):
         logger.debug(f"[CMD:SkipPoint] redo  — keypoint={self.pose_click.get('name') if self.pose_click else 'N/A'}")
         self.handler.selected_points.append(self.point)
         self.handler.selected_labels.append(self.label)
+        self.handler.selected_targets.append(["sam", "pose"])
         if self.pose_click:
             self.handler.pose_click_coords.append(self.pose_click)
             self.handler.current_keypoint_index += 1
@@ -164,6 +174,7 @@ class SkipPointCommand(QUndoCommand):
         if self.handler.selected_points:
             self.handler.selected_points.pop()
             self.handler.selected_labels.pop()
+            self.handler.selected_targets.pop()
         if self.pose_click and self.handler.pose_click_coords:
             self.handler.pose_click_coords.pop()
             self.handler.current_keypoint_index = max(0, self.handler.current_keypoint_index - 1)

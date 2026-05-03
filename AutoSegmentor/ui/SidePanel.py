@@ -371,6 +371,78 @@ class LiveConfigPanel(QGroupBox):
         self.point_size_changed.emit(val)
 
 
+class ModelRoutingPanel(QGroupBox):
+    """Controls which models receive new annotation points."""
+
+    routing_changed = pyqtSignal(list)  # list of active model strings
+    auto_shift_toggled = pyqtSignal(bool)
+
+    def __init__(self, parent=None):
+        super().__init__("Model Routing", parent)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(6)
+        layout.setContentsMargins(8, 16, 8, 8)
+
+        # Bulk selection buttons
+        btn_layout = QHBoxLayout()
+        self.btn_all = QPushButton("All")
+        self.btn_all.setFixedHeight(22)
+        self.btn_all.setFont(Fonts.small())
+        self.btn_all.clicked.connect(self._select_all)
+        
+        self.btn_none = QPushButton("None")
+        self.btn_none.setFixedHeight(22)
+        self.btn_none.setFont(Fonts.small())
+        self.btn_none.clicked.connect(self._select_none)
+        
+        btn_layout.addWidget(self.btn_all)
+        btn_layout.addWidget(self.btn_none)
+        layout.addLayout(btn_layout)
+
+        # Checkboxes for models
+        self.model_checks = {}
+        for mid, name in [("sam", "Mask (SAM)"), ("pose", "Pose (CoTracker)")]:
+            cb = QCheckBox(name)
+            cb.setFont(Fonts.body())
+            cb.toggled.connect(self._on_check_toggled)
+            layout.addWidget(cb)
+            self.model_checks[mid] = cb
+
+        layout.addSpacing(4)
+        layout.addWidget(SeparatorLine())
+        layout.addSpacing(4)
+
+        # Auto-shift toggle
+        self.auto_shift_cb = QCheckBox("Auto-Shift Instance")
+        self.auto_shift_cb.setFont(Fonts.body())
+        self.auto_shift_cb.setToolTip("Automatically advance to next instance when Pose is full")
+        self.auto_shift_cb.toggled.connect(self.auto_shift_toggled.emit)
+        layout.addWidget(self.auto_shift_cb)
+
+    def _select_all(self):
+        for cb in self.model_checks.values():
+            cb.setChecked(True)
+
+    def _select_none(self):
+        for cb in self.model_checks.values():
+            cb.setChecked(False)
+
+    def _on_check_toggled(self):
+        active = [mid for mid, cb in self.model_checks.items() if cb.isChecked()]
+        self.routing_changed.emit(active)
+
+    def set_active_models(self, active_list):
+        for mid, cb in self.model_checks.items():
+            cb.blockSignals(True)
+            cb.setChecked(mid in active_list)
+            cb.blockSignals(False)
+
+    def set_auto_shift(self, enabled):
+        self.auto_shift_cb.blockSignals(True)
+        self.auto_shift_cb.setChecked(enabled)
+        self.auto_shift_cb.blockSignals(False)
+
+
 class SidePanel(QScrollArea):
     """Right-side panel containing all info panels.
 
@@ -401,12 +473,14 @@ class SidePanel(QScrollArea):
         self.tool_info = ToolInfoPanel()
         self.annotation_list = AnnotationListPanel()
         self.keypoint_progress = KeypointProgressPanel()
+        self.model_routing = ModelRoutingPanel()
         self.live_config = LiveConfigPanel()
 
         layout.addWidget(self.batch_info)
         layout.addWidget(self.tool_info)
         layout.addWidget(self.annotation_list)
         layout.addWidget(self.keypoint_progress)
+        layout.addWidget(self.model_routing)
         layout.addWidget(self.live_config)
         
         layout.addStretch()

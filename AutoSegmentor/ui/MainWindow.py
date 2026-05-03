@@ -177,6 +177,8 @@ class AnnotationWindow(QDialog):
         self.sidebar = SidePanel(self)
         is_pose = self.handler.pose_mode
         self.sidebar.set_pose_mode(is_pose, self.handler.pose_keypoints if is_pose else None)
+        self.sidebar.model_routing.set_active_models(self.handler.active_target_models)
+        self.sidebar.model_routing.set_auto_shift(self.handler.auto_shift_enabled)
         self.splitter.addWidget(self.sidebar)
         
         self.splitter.setSizes([800, SIDEBAR_WIDTH])
@@ -414,6 +416,12 @@ class AnnotationWindow(QDialog):
         QShortcut(QKeySequence("Ctrl+W"), self, self.close)  # Standard Window Close
         QShortcut(QKeySequence("H"),      self, self._show_help_overlay)
 
+        # Model Routing Shortcuts
+        QShortcut(QKeySequence("Shift+S"), self, self._toggle_sam_routing)
+        QShortcut(QKeySequence("Shift+P"), self, self._toggle_pose_routing)
+        QShortcut(QKeySequence("Shift+A"), self, self.sidebar.model_routing._select_all)
+        QShortcut(QKeySequence("Shift+N"), self, self.sidebar.model_routing._select_none)
+
         # NOTE: A / D / ← / → are handled via keyPressEvent / keyReleaseEvent
         #       below so that holding the key scrolls at 0.1 s rate.
 
@@ -425,6 +433,8 @@ class AnnotationWindow(QDialog):
         self.canvas.point_deleted.connect(self.handle_point_deleted)
         self.sidebar.keypoint_progress.visibility_toggled.connect(self.handle_visibility_toggled)
         self.sidebar.live_config.backward_tracking_toggled.connect(self._on_backward_tracking_toggled)
+        self.sidebar.model_routing.routing_changed.connect(self._on_routing_changed)
+        self.sidebar.model_routing.auto_shift_toggled.connect(self._on_auto_shift_toggled)
         self.sidebar.export_requested.connect(self._on_export_yolo)
         self.undo_stack.indexChanged.connect(self._on_undo_stack_changed)
 
@@ -519,29 +529,57 @@ class AnnotationWindow(QDialog):
                     p_id = len(self.handler.pose_click_coords)
                 else:
                     instance_count = self.handler.get_instance_keypoint_count()
-                    # Auto-advance instance when current one is complete
-                    if instance_count > 0 and instance_count % num_kps == 0:
-                        self.handler.current_instance_id += 1
-                        self.handler._recalc_keypoint_index()
-                        full_label = self.handler.encode_label(
-                            self.handler.current_class_label, self.handler.current_instance_id
-                        )
-                        instance_count = 0
-                        self._update_sidebar()
-                    kp_name = self.handler.pose_keypoints[instance_count % num_kps]
-                    p_id = len(self.handler.pose_click_coords)
-                pose_click = {
-                    "name": kp_name,
-                    "point_id": p_id,
-                    "x": int(x),
-                    "y": int(y),
-                    "visible": True,
-                    "label": full_label
-                }
+                    
+                    # Routing Check: Is 'pose' targeted?
+                    if "pose" in self.handler.active_target_models:
+                        # Auto-advance instance when current one is complete
+                        if instance_count > 0 and instance_count % num_kps == 0:
+                            if self.handler.auto_shift_enabled:
+                                self.handler.current_instance_id += 1
+                                self.handler._recalc_keypoint_index()
+                                full_label = self.handler.encode_label(
+                                    self.handler.current_class_label, self.handler.current_instance_id
+                                )
+                                instance_count = 0
+                                self._update_sidebar()
+                            else:
+                                # Not auto-shifting, but Pose is full. Warn user.
+                                QMessageBox.warning(
+                                    self, "Instance Full",
+                                    f"Instance {self.handler.current_instance_id} already has all {num_kps} keypoints.\n\n"
+                                    "Enable 'Auto-Shift' or manually increment Instance ID to add more pose points."
+                                )
+                                return
+
+                        kp_name = self.handler.pose_keypoints[instance_count % num_kps]
+                        p_id = len(self.handler.pose_click_coords)
+                        pose_click = {
+                            "name": kp_name,
+                            "point_id": p_id,
+                            "x": int(x),
+                            "y": int(y),
+                            "visible": True,
+                            "label": full_label
+                        }
+                    else:
+                        # Pose not targeted, this is a not for pose
+                        pose_click = None
+
                 logger.debug(f"[UI] handle_canvas_click: pose_click={pose_click}")
 
+        # Final Routing Filter: If neither SAM nor Pose is targeted, what are we doing?
+        if not self.handler.active_target_models and full_label > 0:
+             # If user unselected EVERYTHING, we assume they want to at least do SOMETHING.
+             # But following the "Targeted" rule: no models = no point?
+             # Let's show a status message.
+             self.status_bar.showMessage("⚠️ No models selected in Routing!", 3000)
+             return
+
         logger.debug(f"[UI] Pushing AddPointCommand: point=[{x},{y}]  label={full_label}")
-        cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click)
+        # Note: AddPointCommand will now need to handle 'target_models'
+        # I'll update AddPointCommand in NavigationManager.py
+        cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click, 
+                              target_models=list(self.handler.active_target_models))
         self.undo_stack.push(cmd)
 
     def handle_point_deleted(self, index):
@@ -1008,3 +1046,35 @@ class AnnotationWindow(QDialog):
         self.refresh_display()
         self._update_sidebar()
         logger.debug(f"[UI] on_processing_finished: display fully refreshed for batch {batch}")
+
+    # ─── Model Routing Logic ────────────────────────────────────────────────
+    def _on_routing_changed(self, active_list):
+        logger.debug(f"[UI] Model routing changed: {active_list}")
+        self.handler.active_target_models = active_list
+        self.config.active_target_models = active_list
+        self.status_bar.showMessage(f"Target Models: {', '.join(active_list) if active_list else 'None'}", 2000)
+
+    def _on_auto_shift_toggled(self, enabled):
+        logger.debug(f"[UI] Auto-shift toggled: {enabled}")
+        self.handler.auto_shift_enabled = enabled
+        self.config.auto_shift_enabled = enabled
+        self.status_bar.showMessage(f"Auto-Shift: {'Enabled' if enabled else 'Disabled'}", 2000)
+
+    def _toggle_sam_routing(self):
+        active = list(self.handler.active_target_models)
+        if "sam" in active: active.remove("sam")
+        else: active.append("sam")
+        self.sidebar.model_routing.set_active_models(active)
+        self._on_routing_changed(active)
+
+    def _toggle_pose_routing(self):
+        active = list(self.handler.active_target_models)
+        if "pose" in active: active.remove("pose")
+        else: active.append("pose")
+        self.sidebar.model_routing.set_active_models(active)
+        self._on_routing_changed(active)
+
+    def _on_finish_pipeline(self):
+        """Save everything and close with success."""
+        self.handler.save_current_annotation()
+        self.accept()

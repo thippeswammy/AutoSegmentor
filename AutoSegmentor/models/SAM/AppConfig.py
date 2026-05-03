@@ -42,6 +42,11 @@ class AppConfig:
         self.ui_show_grid = kwargs.get('ui_show_grid', False)
         self.sam_enabled = sam_enabled
 
+        # Model Routing Preferences (Persistent)
+        interaction = kwargs.get('interaction', {})
+        self.active_target_models = interaction.get('active_target_models', ['sam', 'pose'])
+        self.auto_shift_enabled = interaction.get('auto_shift_enabled', True)
+
         # Calculate base path up to project root (AutoSegmentor)
         # __file__ is AutoSegmentor/autosegmentor/models/SAM/AppConfig.py
         # root is 3 levels up

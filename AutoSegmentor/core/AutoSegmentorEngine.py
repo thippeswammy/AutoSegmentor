@@ -242,7 +242,19 @@ class AutoSegmentorEngine(SAM2Model):
         else:
             if not self.sam2_predictor:
                 return None
-            prompts = self.annotation_manager.get_batch_prompts(batch_number, self.config.batch_size)
+            
+            # Fetch all prompts for the batch from AnnotationManager
+            prompts_raw = self.annotation_manager.get_batch_prompts(batch_number, self.config.batch_size)
+            prompts = []
+            for p in prompts_raw:
+                f_idx = p["frame_idx"]
+                filtered = self.annotation_manager.get_points_for_model(f_idx, "sam")
+                if filtered and len(filtered["points"]) > 0:
+                    prompts.append({
+                        "frame_idx": f_idx,
+                        "points": filtered["points"],
+                        "labels": filtered["labels"]
+                    })
 
         if not prompts:
             logger.debug(f"[Engine] prompt_encoding: no prompts for batch={batch_number}, returning None")

@@ -16,6 +16,7 @@ class AnnotationManager:
         self.frame_paths = frame_paths
         self.points_collection = []
         self.labels_collection = []
+        self.targets_collection = []  # List of lists of target model strings per frame
         self.frame_indices = []
         self.pose_keypoints_collection = []  # Per-batch pose keypoint coords
         self._all_batches_logged = False  # Dedup flag for check_data_sufficiency
@@ -38,6 +39,8 @@ class AnnotationManager:
             # Convert lists back to numpy arrays (if needed)
             self.points_collection = [np.array(entry["points"], dtype=np.float32) for entry in data]
             self.labels_collection = [np.array(entry["labels"], dtype=np.int32) for entry in data]
+            # Handle legacy data that might not have target_models
+            self.targets_collection = [entry.get("target_models", [["sam", "pose"]] * len(entry["points"])) for entry in data]
             self.frame_indices = [int(entry["frame_idx"]) for entry in data]
             self.pose_keypoints_collection = [entry.get("pose_keypoints", []) for entry in data]
 
@@ -65,10 +68,34 @@ class AnnotationManager:
                     "frame_idx": f_idx,
                     "points": self.points_collection[i],
                     "labels": self.labels_collection[i],
+                    "target_models": self.targets_collection[i],
                     "pose_keypoints": self.pose_keypoints_collection[i] if i < len(self.pose_keypoints_collection) else []
                 })
         logger.debug(f"[AnnotMgr] get_batch_prompts: found {len(results)} prompt(s) for batch {batch_number}")
         return results
+
+    def get_points_for_model(self, frame_idx, model_id):
+        """Get filtered points and labels for a specific model (e.g. 'sam' or 'pose')."""
+        prompt = self.get_prompt_for_frame(frame_idx)
+        if not prompt:
+            return None
+
+        points = prompt["points"]
+        labels = prompt["labels"]
+        targets = prompt["target_models"]
+
+        filtered_pts = []
+        filtered_lbs = []
+
+        for pt, lb, tg in zip(points, labels, targets):
+            if model_id in tg:
+                filtered_pts.append(pt)
+                filtered_lbs.append(lb)
+
+        return {
+            "points": np.array(filtered_pts, dtype=np.float32) if filtered_pts else np.empty((0, 2), dtype=np.float32),
+            "labels": np.array(filtered_lbs, dtype=np.int32) if filtered_lbs else np.empty((0,), dtype=np.int32)
+        }
 
     def get_prompt_for_frame(self, frame_idx):
         """Get the prompt for a specific frame, if any."""
@@ -80,6 +107,7 @@ class AnnotationManager:
                 return {
                     "points": pts,
                     "labels": lbs,
+                    "target_models": self.targets_collection[i],
                     "pose_keypoints": self.pose_keypoints_collection[i] if i < len(self.pose_keypoints_collection) else []
                 }
         logger.debug(f"[AnnotMgr] get_prompt_for_frame({frame_idx}): no prompt found")
@@ -98,6 +126,7 @@ class AnnotationManager:
                         "frame_idx": f_idx,
                         "points": self.points_collection[i],
                         "labels": self.labels_collection[i],
+                        "target_models": self.targets_collection[i],
                         "pose_keypoints": self.pose_keypoints_collection[i] if i < len(self.pose_keypoints_collection) else []
                     }
         if latest_data:
@@ -106,7 +135,7 @@ class AnnotationManager:
             logger.debug(f"[AnnotMgr] get_latest_prompt_before({frame_idx}): none found")
         return latest_data
 
-    def save_points_and_labels(self, frame_idx=None, points=None, labels=None, pose_keypoints=None):
+    def save_points_and_labels(self, frame_idx=None, points=None, labels=None, target_models=None, pose_keypoints=None):
         """Save/Update points and labels. If frame_idx is provided, it updates or appends that specific frame."""
         if frame_idx is not None:
             # Update existing or append new
@@ -115,6 +144,7 @@ class AnnotationManager:
                 if self.frame_indices[i] == frame_idx:
                     self.points_collection[i] = np.array(points, dtype=np.float32) if points is not None else self.points_collection[i]
                     self.labels_collection[i] = np.array(labels, dtype=np.int32) if labels is not None else self.labels_collection[i]
+                    self.targets_collection[i] = target_models if target_models is not None else self.targets_collection[i]
                     if pose_keypoints is not None:
                         while len(self.pose_keypoints_collection) <= i:
                             self.pose_keypoints_collection.append([])
@@ -125,11 +155,12 @@ class AnnotationManager:
                 self.frame_indices.append(frame_idx)
                 self.points_collection.append(np.array(points, dtype=np.float32) if points is not None else np.array([]))
                 self.labels_collection.append(np.array(labels, dtype=np.int32) if labels is not None else np.array([]))
+                self.targets_collection.append(target_models if target_models is not None else [["sam", "pose"]] * len(self.points_collection[-1]))
                 self.pose_keypoints_collection.append(pose_keypoints if pose_keypoints is not None else [])
             
             # Sort by frame_idx to keep file clean
-            combined = sorted(zip(self.frame_indices, self.points_collection, self.labels_collection, self.pose_keypoints_collection), key=lambda x: x[0])
-            self.frame_indices, self.points_collection, self.labels_collection, self.pose_keypoints_collection = map(list, zip(*combined))
+            combined = sorted(zip(self.frame_indices, self.points_collection, self.labels_collection, self.targets_collection, self.pose_keypoints_collection), key=lambda x: x[0])
+            self.frame_indices, self.points_collection, self.labels_collection, self.targets_collection, self.pose_keypoints_collection = map(list, zip(*combined))
 
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
         save_dir = os.path.join(base_path, "workspace", "inputs", "UserPrompts")
@@ -153,6 +184,7 @@ class AnnotationManager:
                 "frame_idx": int(self.frame_indices[i]),
                 "points": safe_convert(self.points_collection[i]),
                 "labels": safe_convert(self.labels_collection[i]),
+                "target_models": self.targets_collection[i],
             }
             if i < len(self.pose_keypoints_collection) and self.pose_keypoints_collection[i]:
                 entry["pose_keypoints"] = self.pose_keypoints_collection[i]
@@ -208,6 +240,7 @@ class AnnotationManager:
                 self.frame_indices.append(f_idx)
                 self.points_collection.append(np.array(pts, dtype=np.float32))
                 self.labels_collection.append(np.array(lbls, dtype=np.int32))
+                self.targets_collection.append([["sam", "pose"]] * len(pts))
                 self.pose_keypoints_collection.append(kps)
 
         # Sort and Save to disk

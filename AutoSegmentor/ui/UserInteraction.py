@@ -25,6 +25,7 @@ class UserInteractionHandler:
         
         self.selected_points = []
         self.selected_labels = []
+        self.selected_targets = []
         self.current_frame = None
         self.current_frame_only_text = None
         self.current_frame_only_with_points = None
@@ -51,6 +52,10 @@ class UserInteractionHandler:
             self.current_class_label = self.pose_class_id
             self.current_instance_id = self.pose_object_id
             self.display_text = f"Click: {self.pose_keypoints[0]}" if self.pose_keypoints else "Pose Mode: No keypoints defined"
+
+        # Model Routing & Auto-Shift
+        self.active_target_models = list(self.config.active_target_models)
+        self.auto_shift_enabled = self.config.auto_shift_enabled
 
     @staticmethod
     def encode_label(class_id, instance_id):
@@ -178,6 +183,7 @@ class UserInteractionHandler:
             frame_idx=self.current_frame_idx,
             points=self.selected_points,
             labels=self.selected_labels,
+            target_models=self.selected_targets,
             pose_keypoints=self.pose_click_coords if self.pose_mode else None
         )
 
@@ -221,6 +227,7 @@ class UserInteractionHandler:
 
         self.selected_points = []
         self.selected_labels = []
+        self.selected_targets = []
         self.pose_click_coords = []
         self.current_keypoint_index = 0
 
@@ -238,6 +245,7 @@ class UserInteractionHandler:
         if manual_prompt:
             self.selected_points = [list(p) for p in manual_prompt["points"]]
             self.selected_labels = [int(l) for l in manual_prompt["labels"]]
+            self.selected_targets = manual_prompt.get("target_models", [["sam", "pose"]] * len(self.selected_points))
             logger.debug(
                 f"[UI] load_frame_for_ui: manual prompt loaded for frame {frame_idx}  "
                 f"pts={len(self.selected_points)}  labels={self.selected_labels}"
@@ -281,6 +289,7 @@ class UserInteractionHandler:
                     if kp.get("visible", 2) > 0:
                         self.selected_points.append([kp["x"], kp["y"]])
                         self.selected_labels.append(full_label)
+                        self.selected_targets.append(["sam", "pose"])
                     self.pose_click_coords.append(kp)
                 self.current_keypoint_index = len(self.pose_click_coords)
                 logger.debug(f"[UI] Tracked data loaded: selected_points={len(self.selected_points)}")
@@ -423,6 +432,7 @@ class UserInteractionHandler:
                     if kp.get("visible", 2) > 0:
                         self.selected_points.append([x, y])
                         self.selected_labels.append(full_label)
+                        self.selected_targets.append(["sam", "pose"])
                     self.pose_click_coords.append({
                         "name": kp["name"], "point_id": kp["point_id"],
                         "x": x, "y": y, "visible": kp.get("visible", True),

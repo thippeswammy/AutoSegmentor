@@ -56,3 +56,12 @@ models:
     checkpoint: external/segment_anything_2/checkpoints/sam2_hiera_large.pt
     enabled: true
     model_config: sam2_hiera_l.yaml
+
+# ========================================
+# User Interaction & Routing
+# ========================================
+interaction:
+  active_target_models:
+  - sam
+  - pose
+  auto_shift_enabled: false
