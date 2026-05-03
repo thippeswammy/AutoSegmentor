@@ -1,5 +1,5 @@
 """
-run_demo.py
+run_main.py
 ===========
 Main entry point for the AutoSegmentor application.
 """
