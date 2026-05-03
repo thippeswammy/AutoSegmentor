@@ -567,17 +567,13 @@ class AnnotationWindow(QDialog):
 
                 logger.debug(f"[UI] handle_canvas_click: pose_click={pose_click}")
 
-        # Final Routing Filter: If neither SAM nor Pose is targeted, what are we doing?
+        # Final Routing Filter: A point should only be added if at least one model is targeted.
         if not self.handler.active_target_models and full_label > 0:
-             # If user unselected EVERYTHING, we assume they want to at least do SOMETHING.
-             # But following the "Targeted" rule: no models = no point?
-             # Let's show a status message.
-             self.status_bar.showMessage("⚠️ No models selected in Routing!", 3000)
+             self.status_bar.showMessage("⚠️ Select at least one model (Mask/Pose) to add a point!", 3000)
              return
 
         logger.debug(f"[UI] Pushing AddPointCommand: point=[{x},{y}]  label={full_label}")
         # Note: AddPointCommand will now need to handle 'target_models'
-        # I'll update AddPointCommand in NavigationManager.py
         cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click, 
                               target_models=list(self.handler.active_target_models))
         self.undo_stack.push(cmd)

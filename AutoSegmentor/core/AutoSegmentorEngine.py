@@ -235,8 +235,17 @@ class AutoSegmentorEngine(SAM2Model):
         """Encode prompts for SAM2 model. Handles multiple prompt frames per batch."""
         logger.debug(f"[Engine] prompt_encoding: batch_number={batch_number}")
         if batch_number == -1:
-            points_list = self.user_interaction.selected_points
-            label_list = self.user_interaction.selected_labels
+            points_all = self.user_interaction.selected_points
+            labels_all = self.user_interaction.selected_labels
+            targets_all = getattr(self.user_interaction, 'selected_targets', [["sam", "pose"]] * len(points_all))
+            
+            points_list = []
+            label_list = []
+            for pt, lb, tg in zip(points_all, labels_all, targets_all):
+                if "sam" in tg:
+                    points_list.append(pt)
+                    label_list.append(lb)
+                    
             frame_idx = 0
             prompts = [{"frame_idx": 0, "points": points_list, "labels": label_list}]
         else:

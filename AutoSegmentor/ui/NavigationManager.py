@@ -164,7 +164,7 @@ class SkipPointCommand(QUndoCommand):
         logger.debug(f"[CMD:SkipPoint] redo  — keypoint={self.pose_click.get('name') if self.pose_click else 'N/A'}")
         self.handler.selected_points.append(self.point)
         self.handler.selected_labels.append(self.label)
-        self.handler.selected_targets.append(["sam", "pose"])
+        self.handler.selected_targets.append(list(self.handler.active_target_models))
         if self.pose_click:
             self.handler.pose_click_coords.append(self.pose_click)
             self.handler.current_keypoint_index += 1
