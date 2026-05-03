@@ -50,7 +50,7 @@ class ExportDialog(QDialog):
         path_form = QFormLayout(path_group)
         
         # Base Directory (The parent folder)
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
         is_demo = "demo" in self.config.working_dir.lower()
         
         if is_demo:
@@ -254,8 +254,8 @@ class ExportDialog(QDialog):
         try:
             import sys
             # Append YolovDatasetManager to path
-            # Up 3 levels: UserUI -> utils -> AutoSegmentor -> Root
-            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+            # Up 2 levels: UserUI -> Root
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
             manager_path = os.path.join(repo_root, 'DatasetManager', 'YolovDatasetManager')
             if manager_path not in sys.path:
                 sys.path.insert(0, manager_path)
