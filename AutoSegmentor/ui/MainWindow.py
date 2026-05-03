@@ -699,9 +699,11 @@ class AnnotationWindow(QDialog):
         )
         
     def _update_sidebar(self):
+        pose_coords = self.handler.pose_click_coords if self.handler.pose_mode else None
         self.sidebar.annotation_list.update_annotations(
             self.handler.selected_points, 
-            self.handler.selected_labels
+            self.handler.selected_labels,
+            pose_coords=pose_coords
         )
         
         mode_str = "Pose" if self.handler.pose_mode else "Segment"

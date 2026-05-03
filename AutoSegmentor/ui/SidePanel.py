@@ -106,23 +106,49 @@ class AnnotationListPanel(QGroupBox):
         layout.addWidget(self.count_label)
         layout.addWidget(self.list_widget)
 
-    def update_annotations(self, points, labels):
+    def update_annotations(self, points, labels, pose_coords=None):
         """Refresh the annotation list."""
         self.list_widget.clear()
-        for idx, (pt, lbl) in enumerate(zip(points, labels)):
-            class_id = abs(lbl) // 1000
-            instance_id = abs(lbl) % 1000
-            is_neg = lbl < 0
-            sign = "−" if is_neg else "+"
-            # Use per-class point color (complement of mask) matching the canvas
-            color = QColor(Colors.ACCENT_RED) if is_neg else get_class_point_color(class_id)
-            text = f" {sign} [{idx + 1}]  C{class_id}:I{instance_id}  ({int(pt[0])}, {int(pt[1])})"
-            item = QListWidgetItem(text)
-            item.setForeground(color)
-            self.list_widget.addItem(item)		
+        
+        if pose_coords is not None:
+            for pc in pose_coords:
+                if not pc.get('visible', True):
+                    continue
+                lbl = pc.get('label', 1001)
+                class_id = abs(lbl) // 1000
+                instance_id = abs(lbl) % 1000
+                is_neg = lbl < 0
+                sign = "−" if is_neg else "+"
+                color = QColor(Colors.ACCENT_RED) if is_neg else get_class_point_color(class_id)
+                
+                pt_name = pc.get('name')
+                if pt_name == 'Negative_Point':
+                    display_name = "Neg"
+                else:
+                    display_name = str(pc.get('point_id', 0) + 1)
+                
+                text = f" {sign} [{display_name}]  C{class_id}:I{instance_id}  ({int(pc['x'])}, {int(pc['y'])})"
+                item = QListWidgetItem(text)
+                item.setForeground(color)
+                self.list_widget.addItem(item)
+            
+            count = sum(1 for pc in pose_coords if pc.get('visible', True))
+            self.count_label.setText(f"{count} point{'s' if count != 1 else ''}")
+        else:
+            for idx, (pt, lbl) in enumerate(zip(points, labels)):
+                class_id = abs(lbl) // 1000
+                instance_id = abs(lbl) % 1000
+                is_neg = lbl < 0
+                sign = "−" if is_neg else "+"
+                # Use per-class point color (complement of mask) matching the canvas
+                color = QColor(Colors.ACCENT_RED) if is_neg else get_class_point_color(class_id)
+                text = f" {sign} [{idx + 1}]  C{class_id}:I{instance_id}  ({int(pt[0])}, {int(pt[1])})"
+                item = QListWidgetItem(text)
+                item.setForeground(color)
+                self.list_widget.addItem(item)		
 
-        count = len(points)
-        self.count_label.setText(f"{count} point{'s' if count != 1 else ''}")
+            count = len(points)
+            self.count_label.setText(f"{count} point{'s' if count != 1 else ''}")
 
 
 class KeypointProgressPanel(QGroupBox):

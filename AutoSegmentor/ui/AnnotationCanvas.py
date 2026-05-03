@@ -43,7 +43,7 @@ def cv2_to_qpixmap(cv_img):
 class DraggablePointItem(QGraphicsEllipseItem):
     """An interactive annotation point that can be dragged."""
 
-    def __init__(self, x, y, r, color, idx, is_negative, canvas):
+    def __init__(self, x, y, r, color, idx, is_negative, canvas, display_text=None):
         super().__init__(-r, -r, r * 2, r * 2)
         self.idx = idx
         self.canvas = canvas
@@ -56,7 +56,8 @@ class DraggablePointItem(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setCursor(QCursor(Qt.SizeAllCursor))
 
-        self.badge = QGraphicsTextItem(str(idx + 1), self)
+        text = display_text if display_text is not None else str(idx + 1)
+        self.badge = QGraphicsTextItem(text, self)
         self.badge.setDefaultTextColor(QColor(Colors.TEXT_BRIGHT))
         font = QFont("Segoe UI", BADGE_FONT_SIZE)
         font.setBold(True)
@@ -270,6 +271,7 @@ class AnnotationCanvas(QGraphicsView):
         self._is_redrawing = True
         try:
             self.clear_annotations()
+            pose_idx = 0
             for idx, (pt, lbl) in enumerate(zip(points, labels)):
                 x, y = pt[0], pt[1]
                 is_negative = lbl < 0
@@ -280,15 +282,24 @@ class AnnotationCanvas(QGraphicsView):
                 if is_negative:
                     color = QColor(Colors.ACCENT_RED)
                     
+                display_text = str(idx + 1)
                 is_visible = True
-                if pose_coords and idx < len(pose_coords):
-                    is_visible = pose_coords[idx].get('visible', True)
-                    
+                
+                if pose_coords:
+                    # Find the next visible point in pose_coords
+                    while pose_idx < len(pose_coords) and not pose_coords[pose_idx].get('visible', True):
+                        pose_idx += 1
+                    if pose_idx < len(pose_coords):
+                        display_text = str(pose_coords[pose_idx].get('point_id', pose_idx) + 1)
+                        if pose_coords[pose_idx].get('name') == 'Negative_Point':
+                            display_text = 'Neg'
+                        pose_idx += 1
+
                 if not is_visible:
                     color.setAlpha(120)
 
                 r = POINT_RADIUS
-                item = DraggablePointItem(x, y, r, color, idx, is_negative, self)
+                item = DraggablePointItem(x, y, r, color, idx, is_negative, self, display_text)
                 if not is_visible:
                     item.setOpacity(0.5)
                 self._scene.addItem(item)
