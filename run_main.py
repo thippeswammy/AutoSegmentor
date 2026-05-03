@@ -1,5 +1,5 @@
 """
-run_demo.py
+run_main.py
 ===========
 Main entry point for the AutoSegmentor application.
 """
@@ -35,6 +35,30 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from autosegmentor.tools.main_app import start_application
+import argparse
+import json
+
+def load_demo_config():
+    demo_cfg_path = os.path.join(ROOT_DIR, "demo", "demo_session_state.json")
+    try:
+        with open(demo_cfg_path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load demo config from {demo_cfg_path}: {e}")
+        return None
 
 if __name__ == "__main__":
-    start_application()
+    parser = argparse.ArgumentParser(description="AutoSegmentor Launcher")
+    parser.add_argument("--demo", action="store_true", help="Run in automated demo mode")
+    args = parser.parse_args()
+
+    if args.demo:
+        logger.info("🚀 Launching Automated Demo Pipeline...")
+        demo_config = load_demo_config()
+        if demo_config:
+            start_application(config_override=demo_config)
+        else:
+            logger.error("Could not start demo: Config missing or invalid.")
+    else:
+        logger.info("🚀 Launching Standard AutoSegmentor Application...")
+        start_application()

@@ -32,7 +32,8 @@ class AutoSegmentorEngine(SAM2Model):
                  prefix="file", video_path_template=None, images_extract_dir=None,
                  rendered_frames_dir=None, temp_processing_dir=None, working_dir=None, is_drawing=False,
                  window_size=None, label_colors=None, memory_bank_size=5, prompt_memory_size=5,
-                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True, sam_config=None, review_from_start=False):
+                 pose_config=None, auto_prompt_encoding=True, sam_enabled=True, sam_config=None, 
+                 review_from_start=False, prompt_save_dir=None):
         self.inference_state = None
         self.review_from_start = review_from_start
         config = AppConfig(
@@ -62,7 +63,7 @@ class AutoSegmentorEngine(SAM2Model):
         self.frame_paths = self.frame_handler.get_frame_files()
         total_batches = (len(self.frame_paths) + config.batch_size - 1) // config.batch_size
         self.per_batch_tracked_data = [[] for _ in range(total_batches)]
-        self.annotation_manager = AnnotationManager(config, self.frame_paths)
+        self.annotation_manager = AnnotationManager(config, self.frame_paths, save_dir=prompt_save_dir)
         self.user_interaction = UserInteractionHandler(config, self.annotation_manager, self)
         self.mask_processor = MaskProcessor(config)
 

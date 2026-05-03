@@ -45,16 +45,20 @@ def _handle_working_dir(working_dir_name: str, delete: str, prompt_msg: str) -> 
     return False
 
 
-def start_application():
+def start_application(config_override: dict = None):
     app = QApplication(sys.argv)
 
-    # ── Show the Setup Dialog ────────────────────────────────────────────────
-    dialog = SetupDialog()
-    if dialog.exec_() != SetupDialog.Accepted:
-        logger.info("Setup cancelled by user. Exiting.")
-        sys.exit(0)
-
-    cfg = dialog.get_config()
+    # ── Configuration Loading ────────────────────────────────────────────────
+    if config_override:
+        cfg = config_override
+        logger.info("Running in Automated Mode with config override.")
+    else:
+        # Show the Setup Dialog for standard interactive mode
+        dialog = SetupDialog()
+        if dialog.exec_() != SetupDialog.Accepted:
+            logger.info("Setup cancelled by user. Exiting.")
+            sys.exit(0)
+        cfg = dialog.get_config()
 
     # ── Extract params ───────────────────────────────────────────────────────
     vi = cfg["video_inputs"]
@@ -64,7 +68,7 @@ def start_application():
 
     video_start          = vi["start"]
     video_end            = vi["end"]
-    images_ending_count  = vi["max_frames"]
+    images_ending_count  = vi.get("max_frames", 0)
     video_path_template  = vi["template"]
 
     final_video_path     = vo["final_path"]
@@ -85,11 +89,18 @@ def start_application():
     total_videos  = video_end
     overall_start = time.time()
 
+    is_demo = (config_override is not None)
+
     for idx, i in enumerate(range(video_start, video_start + video_end), start=1):
         logger.info(f"{'═' * 20} Video {i} ({idx}/{total_videos}) {'═' * 20}")
 
         # Dynamic video-specific working directory
-        working_dir_name = os.path.join(base_working_dir, f"video{i}").replace("\\", "/")
+        # If template is a direct file (like in demo), we use the filename for the working dir
+        if "{}" not in video_path_template:
+            video_name = os.path.splitext(os.path.basename(video_path_template))[0]
+            working_dir_name = os.path.join(base_working_dir, video_name).replace("\\", "/")
+        else:
+            working_dir_name = os.path.join(base_working_dir, f"video{i}").replace("\\", "/")
         
         images_extract_dir   = os.path.join(working_dir_name, "images").replace("\\", "/")
         temp_processing_dir  = os.path.join(working_dir_name, "temp").replace("\\", "/")
@@ -98,10 +109,22 @@ def start_application():
         verified_img_dir     = os.path.join(working_dir_name, "verified", "images").replace("\\", "/")
         verified_mask_dir    = os.path.join(working_dir_name, "verified", "mask").replace("\\", "/")
 
+        if is_demo:
+            # Clean up existing prompt file for this video in demo mode to ensure it starts fresh
+            prompt_file = os.path.join("workspace", "inputs", "UserPrompts", f"points_labels_{prefix}{i}.json")
+            if os.path.exists(prompt_file):
+                try:
+                    os.remove(prompt_file)
+                    logger.info(f"Demo Mode: Removed existing prompt file {prompt_file} to ensure Batch 0 start.")
+                except Exception as e:
+                    logger.warning(f"Demo Mode: Failed to remove {prompt_file}: {e}")
+
         if run_mode != "pose_only":
+            # In demo mode, we always clear the working directory without asking
+            delete_mode = "yes" if is_demo else delete
             cleared = _handle_working_dir(
                 working_dir_name,
-                delete,
+                delete_mode,
                 f"Do you want to clear prev working directory '{working_dir_name}'? (yes/no): ",
             )
             if not cleared:
@@ -128,14 +151,15 @@ def start_application():
             auto_prompt_encoding=auto_prompt_encoding,
             sam_enabled=sam_enabled,
             sam_config=sam_config,
-            review_from_start=review_from_start,
+            review_from_start=review_from_start if not is_demo else True, # Demo always runs from start
         )
 
-        _handle_working_dir(
-            working_dir_name,
-            delete,
-            f"Delete working directory '{working_dir_name}'? (yes/no): ",
-        )
+        if not is_demo:
+            _handle_working_dir(
+                working_dir_name,
+                delete,
+                f"Delete working directory '{working_dir_name}'? (yes/no): ",
+            )
 
         logger.info("═" * 60)
 

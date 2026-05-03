@@ -68,9 +68,14 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         return
 
     # Full pipeline (mode: "all" or "mask_only")
+    from .ui.AnnotationManager import AnnotationManager
+    from .ui.UITheme import ANNOTATION_COLORS_BGR
     from .core.AutoSegmentorEngine import AutoSegmentorEngine
 
     t0 = time.time()
+    # In demo mode, save prompts to the final_video_path (demo/) instead of workspace
+    save_dir = final_video_path if (working_dir and "demo" in working_dir) else None
+    
     processor = AutoSegmentorEngine(
         video_number=video_number,
         prefix=prefix,
@@ -85,7 +90,8 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         auto_prompt_encoding=auto_prompt_encoding,
         sam_enabled=sam_enabled,
         sam_config=sam_config,
-        review_from_start=review_from_start
+        review_from_start=review_from_start,
+        prompt_save_dir=save_dir # Pass the custom save dir
     )
     if not processor.run():
         logger.info("Pipeline terminated: Manual annotation session was discarded or cancelled.")

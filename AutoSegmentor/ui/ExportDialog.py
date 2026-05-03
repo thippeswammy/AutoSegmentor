@@ -50,13 +50,20 @@ class ExportDialog(QDialog):
         path_form = QFormLayout(path_group)
         
         # Base Directory (The parent folder)
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-        self.default_base = os.path.join(repo_root, "DatasetManager")
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        is_demo = "demo" in self.config.working_dir.lower()
+        
+        if is_demo:
+             self.default_base = os.path.join(repo_root, "demo")
+             default_folder = "dataset"
+        else:
+             self.default_base = os.path.join(repo_root, "DatasetManager")
+             default_folder = f"Video{self.config.video_number}_Export"
         
         base_layout = QHBoxLayout()
         self.base_dir_edit = QLineEdit(self.default_base)
         self.base_dir_edit.setReadOnly(True)
-        self.base_dir_edit.setStyleSheet("background-color: #2b2b2b; color: #888;")
+        self.base_dir_edit.setStyleSheet("background-color: #2b2b2b; color: #ccc;")
         
         browse_btn = QPushButton("Browse...")
         browse_btn.setFixedWidth(80)
@@ -67,8 +74,8 @@ class ExportDialog(QDialog):
         path_form.addRow("Base Directory:", base_layout)
         
         # Folder Name (The target dataset name)
-        self.folder_name_edit = QLineEdit(f"Video{self.config.video_number}_Export")
-        self.folder_name_edit.setPlaceholderText("e.g. Video6_Export")
+        self.folder_name_edit = QLineEdit(default_folder)
+        self.folder_name_edit.setPlaceholderText("e.g. dataset")
         path_form.addRow("Folder Name:", self.folder_name_edit)
         
         layout.addWidget(path_group)
@@ -247,8 +254,8 @@ class ExportDialog(QDialog):
         try:
             import sys
             # Append YolovDatasetManager to path
-            # Up 3 levels: UserUI -> utils -> AutoSegmentor -> Root
-            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+            # Up 2 levels: UserUI -> Root
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
             manager_path = os.path.join(repo_root, 'DatasetManager', 'YolovDatasetManager')
             if manager_path not in sys.path:
                 sys.path.insert(0, manager_path)
