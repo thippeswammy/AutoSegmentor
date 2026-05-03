@@ -70,6 +70,7 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     # Full pipeline (mode: "all" or "mask_only")
     from .ui.AnnotationManager import AnnotationManager
     from .ui.UITheme import ANNOTATION_COLORS_BGR
+    from .core.AutoSegmentorEngine import AutoSegmentorEngine
 
     t0 = time.time()
     # In demo mode, save prompts to the final_video_path (demo/) instead of workspace
