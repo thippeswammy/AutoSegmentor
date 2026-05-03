@@ -68,9 +68,13 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         return
 
     # Full pipeline (mode: "all" or "mask_only")
-    from .core.AutoSegmentorEngine import AutoSegmentorEngine
+    from .ui.AnnotationManager import AnnotationManager
+    from .ui.UITheme import ANNOTATION_COLORS_BGR
 
     t0 = time.time()
+    # In demo mode, save prompts to the final_video_path (demo/) instead of workspace
+    save_dir = final_video_path if (working_dir and "demo" in working_dir) else None
+    
     processor = AutoSegmentorEngine(
         video_number=video_number,
         prefix=prefix,
@@ -85,7 +89,8 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
         auto_prompt_encoding=auto_prompt_encoding,
         sam_enabled=sam_enabled,
         sam_config=sam_config,
-        review_from_start=review_from_start
+        review_from_start=review_from_start,
+        prompt_save_dir=save_dir # Pass the custom save dir
     )
     if not processor.run():
         logger.info("Pipeline terminated: Manual annotation session was discarded or cancelled.")
@@ -165,6 +170,52 @@ def run_pipeline(video_number, video_path_template, images_extract_dir, rendered
     )
     video_creator.run()
     logger.info(f"[Pipeline] Video creation completed in {time.time() - t0:.1f}s")
+
+    # ── Automated Dataset Export (Demo Mode Only) ────────────────────────────
+    is_demo = (working_dir and "demo" in working_dir)
+    if is_demo:
+        logger.info("Demo Mode: Triggering automated dataset export to demo/dataset...")
+        try:
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            manager_path = os.path.join(repo_root, 'DatasetManager', 'YolovDatasetManager')
+            if manager_path not in sys.path:
+                sys.path.insert(0, manager_path)
+            from DatasetCreator import YoloProcessor
+            
+            class_names = [f"class_{i}" for i in range(1, 11)]
+            class_to_id = {f"class_{i}": i-1 for i in range(1, 11)}
+            color_to_label = {ANNOTATION_COLORS_BGR[i]: i-1 for i in range(1, 11)}
+
+            export_config = {
+                "dataset_path": working_dir,
+                "SOURCE_mask_folder_name": "render",
+                "SOURCE_original_folder_name": "images",
+                "SOURCE_mask_type_ext": ".png",
+                "SOURCE_img_type_ext": ".jpeg",
+                "augment_times": 1,
+                "test_split": 0.1,
+                "val_split": 0.1,
+                "train_split": 0.8,
+                "Keep_val_dataset_original": True,
+                "enabled_augmentations": ['color', 'gauss_blur'],
+                "num_threads": 4,
+                "class_to_id": class_to_id,
+                "color_to_label": color_to_label,
+                "dataset_saving_working_dir": final_video_path,
+                "folder_name": "dataset",
+                "class_names": class_names,
+                "DESTINATION_img_type_ext": ".jpg",
+                "DESTINATION_label_type_ext": ".txt",
+                "FromDataType": "",
+                "ToDataTypeFormate": "",
+                "annotation_manager": processor.annotation_manager,
+                "export_types": ['box', 'mask', 'pose']
+            }
+            exporter = YoloProcessor(config=export_config)
+            exporter.distribute_files_with_threads()
+            logger.info(f"Demo Mode: Dataset exported to {os.path.join(final_video_path, 'dataset')}")
+        except Exception as e:
+            logger.error(f"Demo Mode: Failed to export dataset: {e}")
 
     logger.info(f"[Pipeline] Total elapsed: {time.time() - pipeline_start:.1f}s")
 

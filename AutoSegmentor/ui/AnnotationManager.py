@@ -11,9 +11,10 @@ from ..ui.logger_config import logger
 class AnnotationManager:
     """Manages annotation data (points, labels, frame indices)."""
 
-    def __init__(self, config, frame_paths):
+    def __init__(self, config, frame_paths, save_dir=None):
         self.config = config
         self.frame_paths = frame_paths
+        self.save_dir = save_dir
         self.points_collection = []
         self.labels_collection = []
         self.frame_indices = []
@@ -23,8 +24,14 @@ class AnnotationManager:
 
     def load_points_and_labels(self):
         """Load points and labels from JSON file."""
-        ensure_directory("./workspace/inputs/UserPrompts")
-        filename = f"./workspace/inputs/UserPrompts/points_labels_{self.config.prefix}{self.config.video_number}.json"
+        if self.save_dir:
+             save_dir = self.save_dir
+        else:
+             base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+             save_dir = os.path.join(base_path, "workspace", "inputs", "UserPrompts")
+        
+        ensure_directory(save_dir)
+        filename = os.path.join(save_dir, f"points_labels_{self.config.prefix}{self.config.video_number}.json")
         logger.debug(f"[AnnotMgr] Loading annotations from: {filename}")
 
         if not exists(filename):
@@ -131,8 +138,12 @@ class AnnotationManager:
             combined = sorted(zip(self.frame_indices, self.points_collection, self.labels_collection, self.pose_keypoints_collection), key=lambda x: x[0])
             self.frame_indices, self.points_collection, self.labels_collection, self.pose_keypoints_collection = map(list, zip(*combined))
 
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
-        save_dir = os.path.join(base_path, "workspace", "inputs", "UserPrompts")
+        if self.save_dir:
+             save_dir = self.save_dir
+        else:
+             base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+             save_dir = os.path.join(base_path, "workspace", "inputs", "UserPrompts")
+        
         ensure_directory(save_dir)
         filename = os.path.join(save_dir, f"points_labels_{self.config.prefix}{self.config.video_number}.json")
 
