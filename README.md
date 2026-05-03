@@ -70,9 +70,18 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
 - Place your videos in `workspace/VideoInputs/`.
 - Ensure your configuration is set in `workspace/inputs/config/default_config.yaml`.
 
-### 2. Launching the App
+### 2. Launching the Application
+
+Start the standard interactive GUI for annotation and project management:
+
 ```bash
-python run_demo.py
+python run_main.py
+```
+
+To run the **Automated Demo Pipeline** on sample video data:
+
+```bash
+python run_main.py --demo
 ```
 
 ### 3. Annotation Controls (Keyboard & Mouse)
