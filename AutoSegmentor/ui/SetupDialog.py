@@ -29,7 +29,7 @@ from .UITheme import DARK_STYLESHEET, Colors, Fonts
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
+_ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
 _WORKSPACE = os.path.join(_ROOT, "workspace")
 _DEFAULT_CONFIG = os.path.join(_WORKSPACE, "inputs", "config", "default_config.yaml")
 _SESSION_STATE  = os.path.join(_WORKSPACE, "inputs", "config", "session_state.json")

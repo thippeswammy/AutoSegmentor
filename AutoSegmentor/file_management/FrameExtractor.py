@@ -38,8 +38,10 @@ class FrameExtractor:
     def run(self):
         """Extract frames from the video to the output directory."""
         if not self.video_path_template or not self.output_dir:
-            raise ValueError("Video path template and output directory must be specified.")
-
+            raise ValueError(f"Video path template and output directory must be specified.\n"
+                             f"Template: {self.video_path_template}\n"
+                             f"Output Dir: {self.output_dir}")
+    
         video_path = self.video_path_template.format(self.video_number)
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found: {video_path}")
