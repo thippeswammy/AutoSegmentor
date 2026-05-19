@@ -5,13 +5,13 @@ debug: true
 
 input:
   # Base directory for source images
-  images_dir: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/images"
+  images_dir: "F:/RunningProjects/AutoSegmentor/workspace/working_dir/video6/images"
   
   # Directory for color-mapped RGB masks (as produced by render stage)
-  masks_dir: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/working_dir/render"
+  masks_dir: "F:/RunningProjects/AutoSegmentor/workspace/working_dir/video6/render"
   
   # Path to verified pose labels (contains keypoint coordinates)
-  pose_labels_json: "F:/RunningProjects/AutoSegmentor/AutoSegmentor/inputs/UserPrompts/points_labels_europlastic_B_videos10.json"
+  pose_labels_json: "F:/RunningProjects/AutoSegmentor/workspace/inputs/UserPrompts/points_labels_Img6.json"
   
   # Directory for background images to paste objects onto
   backgrounds_dir: "F:/RunningProjects/AutoSegmentor/DatasetManager/SyntheticEngine/backgrounds"
@@ -33,24 +33,24 @@ augmentation:
   samples_per_source: 10
   
   # Multiprocessing: -1 for all CPU cores, 1 for single-threaded debug
-  workers: 1
+  workers: -1
 
   geometric:
-    enabled: false
+    enabled: true
     prob: 0.2                  # probability of applying the whole geometric stage
-    rotate_limit: 0            # max rotation degrees (random +/-)
-    h_flip_prob: 0.0            # probability of horizontal flip
+    rotate_limit: 10            # max rotation degrees (random +/-)
+    h_flip_prob: 0.5            # probability of horizontal flip
     v_flip_prob: 0.0            # probability of vertical flip
-    scale_range: [1,1]   # min/max scaling of object before transform
+    scale_range: [0.9, 1.1]   # min/max scaling of object before transform
     perspective_scale: [0.01, 0.1]
     shear_limit: 4
 
   copy_paste:
-    enabled: false
-    prob: 6.0                  # probability of applying copy-paste
+    enabled: true
+    prob: 0.6                  # probability of applying copy-paste
     object_scale_range: [0.3, 1.0]   # simulate distance by scaling object during paste
     alpha_blend_sigma: [3, 8]        # smoothing kernel for mask edges (range for variety)
-    histogram_match: false   # true          # adapt object lighting to background
+    histogram_match: true   # true          # adapt object lighting to background
 
     # Inversion modes
     inversion: #NO problem
@@ -70,16 +70,16 @@ augmentation:
   photometric:
     enabled: true
     prob: 0.8                  # probability of applying photometric stage
-    brightness_range: [-0.1, 0.4]
-    contrast_range: [0.60, 1.40]
-    hue_shift_limit: 8
-    saturation_range: [0.4, 0.9]
-    blur_prob: 0.10
+    brightness_range: [-0.1, 0.7]
+    contrast_range: [0.5, 1.4]
+    hue_shift_limit: 18
+    saturation_range: [0.3, 1.2]
+    blur_prob: 0.01
     noise_prob: 0.05
     jpeg_prob: 0.1
 
   occlusion:
-    enabled: true
+    enabled: false
     prob: 0.3                  # probability of applying occlusion stage
     max_patches: 3
     patch_size_min: 0.05              # relative to object bbox
