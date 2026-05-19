@@ -20,18 +20,22 @@ sys.path.append(str(Path(__file__).resolve().parent))
 from pipeline.synthetic_pipeline import SyntheticPipeline
 
 def setup_logging(level=logging.INFO):
+    script_dir = Path(__file__).resolve().parent
+    log_file = script_dir / "synthetic_engine.log"
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler("synthetic_engine.log")
+            logging.FileHandler(str(log_file))
         ]
     )
 
 def main():
     parser = argparse.ArgumentParser(description="Synthetic Data Generation Engine for YOLO Pose")
-    parser.add_argument("--config", type=str, default="config/default_config.yaml", help="Path to config YAML")
+    script_dir = Path(__file__).resolve().parent
+    default_config = script_dir / "config" / "default_config.yaml"
+    parser.add_argument("--config", type=str, default=str(default_config), help="Path to config YAML")
     parser.add_argument("--samples", type=int, help="Override samples_per_source")
     parser.add_argument("--workers", type=int, help="Override number of workers (-1 for all cores)")
     
@@ -39,8 +43,13 @@ def main():
     
     config_path = Path(args.config)
     if not config_path.exists():
-        print(f"Error: Config file not found: {config_path}")
-        sys.exit(1)
+        # Try relative to the script directory
+        alt_path = script_dir / args.config
+        if alt_path.exists():
+            config_path = alt_path
+        else:
+            print(f"Error: Config file not found: {config_path}")
+            sys.exit(1)
         
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)

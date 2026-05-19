@@ -83,7 +83,9 @@ def load_dataset(
     for entry in entries:
         # 1. Resolve image_id and img_path
         image_id: Optional[str] = entry.get("image_id")
-        frame_idx: Optional[int] = entry.get("frame_idx") or entry.get("frame_index")
+        frame_idx = entry.get("frame_idx")
+        if frame_idx is None:
+            frame_idx = entry.get("frame_index")
 
         img_path: Optional[Path] = None
         if image_id:

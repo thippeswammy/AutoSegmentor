@@ -92,17 +92,14 @@ class SyntheticPipeline:
                         self._generate_and_write(rec, i)
                         pbar.update(1)
         else:
-            # Multiprocessing mode
-            # Note: We need a static method or standalone function for the worker
-            # because 'self' cannot be easily pickled with all its state (cv2 objects, etc.)
-            # Instead, we pass the config and the record.
+            output_path_str = str(self.writer.full_path)
             with ProcessPoolExecutor(max_workers=workers) as executor:
                 futures = []
                 for rec in records:
                     for i in range(samples_per_source):
                         futures.append(executor.submit(
                             SyntheticPipeline.worker_task, 
-                            self.cfg, rec, i
+                            self.cfg, rec, i, output_path_str
                         ))
                 
                 for _ in tqdm(as_completed(futures), total=total_samples, desc="Generating Samples (MP)"):
@@ -142,7 +139,7 @@ class SyntheticPipeline:
         self.writer.write(rec, index)
 
     @staticmethod
-    def worker_task(cfg: Dict[str, Any], record: SampleRecord, index: int):
+    def worker_task(cfg: Dict[str, Any], record: SampleRecord, index: int, output_path: str):
         """
         Standalone worker task for ProcessPoolExecutor.
         Re-initializes necessary modules locally.
@@ -161,7 +158,7 @@ class SyntheticPipeline:
         photo = PhotometricAugmentor(cfg['augmentation']['photometric'], debug=debug)
         cp = CopyPasteEngine(cfg['augmentation']['copy_paste'], debug=debug)
         occ = OcclusionSimulator(cfg['augmentation']['occlusion'], debug=debug)
-        writer = YoloWriter(cfg)
+        writer = YoloWriter(cfg, pre_created_path=Path(output_path))
 
         # Pipeline logic
         import random

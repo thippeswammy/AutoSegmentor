@@ -36,13 +36,15 @@ class YoloWriter:
     Writes SampleRecords to a YOLO-formatted dataset on disk.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], pre_created_path: Path | None = None):
         self.cfg = config
         self.output_dir = Path(config['output']['dataset_dir'])
         self.folder_name = config['output']['folder_name']
         
         # Create folder structure
-        if create_yolo_structure:
+        if pre_created_path is not None:
+            self.full_path = pre_created_path
+        elif create_yolo_structure:
             full_path, _ = create_yolo_structure.create_yolo_folder_structure(
                 folder_name=self.folder_name,
                 main_path=str(self.output_dir),
