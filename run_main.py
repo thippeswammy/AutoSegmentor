@@ -7,6 +7,7 @@ Usage:
     python run_main.py                     # Standard GUI
     python run_main.py --demo              # Default (cat) demo
     python run_main.py --demo cat          # Cat demo
+    python run_main.py --demo road         # Road/dashcam demo
     python run_main.py --demo list         # List available demos
     python run_main.py --version
 """
@@ -67,6 +68,7 @@ def parse_args(argv=None):
                "  python run_main.py                     # Standard GUI\n"
                "  python run_main.py --demo              # Default (cat) demo\n"
                "  python run_main.py --demo cat          # Cat demo\n"
+               "  python run_main.py --demo road         # Road/dashcam demo\n"
                "  python run_main.py --demo list         # List available demos",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -76,7 +78,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--demo", nargs="?", const="__default__",
         help="Run in automated demo mode. Optionally specify a demo name "
-             "(e.g. cat, list).",
+             "(e.g. cat, road, list).",
     )
     return parser.parse_args(argv)
 

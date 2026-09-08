@@ -17,10 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `python run_main.py --version` reports the installed version.
 - **Demo**
   - `--demo cat`: classic segmentation/pose demo on the bundled cat clip.
+  - `--demo road`: segmentation/pose demo on the bundled dashcam road clip.
   - Multi-demo registry (`autosegmentor/tools/demo_registry.py`) and
     `python run_main.py --demo list` to enumerate demos.
-  - Extra sample footage (`demo/videos/road_dashboard.mp4`, a dashcam road
-    scene) is included for testing your own labels — not a bundled demo.
 - **Packaging / distribution**
   - New `pyproject.toml`, `setup.py`, and `MANIFEST` configuration.
   - Clean `requirements-core.txt` (in addition to the frozen

@@ -158,6 +158,7 @@ Run the **Automated Demo Pipeline** on sample video data — list demos then run
 python run_main.py --demo list           # List available demos
 python run_main.py --demo                # Default (cat) demo
 python run_main.py --demo cat            # Cat demo
+python run_main.py --demo road           # Road/dashcam demo
 ```
 
 ---
@@ -172,15 +173,13 @@ tracking → pose export) on a bundled clip — no manual configuration needed.
 python run_main.py --demo list           # List available demos
 python run_main.py --demo                # Default (cat) demo
 python run_main.py --demo cat            # Cat demo
+python run_main.py --demo road           # Road/dashcam demo
 ```
 
-The `cat` demo uses `demo/videos/cat.mp4`. See
-[`demo/README.md`](demo/README.md) for details, and
+The `cat` demo uses `demo/videos/cat.mp4` and the `road` demo uses
+`demo/videos/road_dashboard.mp4` (a road scene recorded from a dashboard
+camera). See [`demo/README.md`](demo/README.md) for details, and
 [`demo/videos/README.md`](demo/videos/README.md) for footage attribution.
-
-Extra sample footage (not part of a demo, but useful for testing your own
-labels) lives in `demo/videos/`, e.g. `road_dashboard.mp4` — a road scene
-recorded from a dashboard camera.
 
 ---
 

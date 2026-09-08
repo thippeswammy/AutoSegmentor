@@ -7,7 +7,7 @@ This directory holds the footage used by the bundled AutoSegmentor demo.
 | File | Source | Description | Resolution | License |
 | :--- | :--- | :--- | :--- | :--- |
 | `cat.mp4` | Original project demo asset | Cat video used for the classic segmentation/pose demo | — | Project asset |
-| `road_dashboard.mp4` | Original project asset | Road scene recorded from a dashboard camera (extra sample footage, not part of a demo) | — | Project asset |
+| `road_dashboard.mp4` | Original project asset | Road scene recorded from a dashboard camera, used for the `road` demo | — | Project asset |
 
 ## Adding your own footage
 

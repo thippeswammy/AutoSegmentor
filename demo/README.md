@@ -15,6 +15,7 @@ python run_main.py --demo
 
 # Run a specific demo
 python run_main.py --demo cat
+python run_main.py --demo road
 ```
 
 ## Available demos
@@ -22,13 +23,7 @@ python run_main.py --demo cat
 | Name | Config file | Footage | What it showcases |
 | :--- | :--- | :--- | :--- |
 | `cat` | `demo_session_state.json` | `videos/cat.mp4` | Classic segmentation + 6-point pose keypoint tracking |
-
-The `cat` demo uses `videos/cat.mp4`.
-
-## Other sample footage
-
-`videos/road_dashboard.mp4` is extra footage **not part of any demo** — a road
-scene recorded from a dashboard camera, useful for testing your own labels.
+| `road` | `road_demo_session_state.json` | `videos/road_dashboard.mp4` | Segmentation/pose demo on a road scene recorded from a dashboard camera |
 
 ## Adding your own footage
 
