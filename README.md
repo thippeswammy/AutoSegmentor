@@ -38,7 +38,8 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
 
 1.  **Clone the Repository**
 
-    Cloning with submodules fetches both SAM2 and CoTracker3 dependencies:
+    Cloning with submodules fetches the vendored CoTracker3 dependency (SAM2
+    is vendored directly in the repo):
 
     ```bash
     git clone --recursive https://github.com/thippeswammy/AutoSegmentor.git
@@ -118,6 +119,12 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
     ```
 
     Verify the checkpoints are present before launching:
+
+    ```bash
+    python scripts/download_checkpoints.py --check
+    ```
+
+    Or confirm your GPU/PyTorch/OpenCL setup is healthy (optional):
 
     ```bash
     python scripts/gpu_diagnostic.py
@@ -250,7 +257,7 @@ flowchart TD
     end
 
     subgraph "Orchestration / Control Plane"
-        DRIVER["Main Entry\nrun_demo.py"]:::orch
+        DRIVER["Main Entry\nrun_main.py"]:::orch
         SETUP["Setup Dialog\n(SetupDialog.py)"]:::ui
         PIPE["Pipeline Orchestrator\n(pipeline.py)\ncoordinates extraction+engine"]:::orch
         ENGINE["AutoSegmentor Engine\n(AutoSegmentorEngine.py)\ncore processing logic"]:::orch
@@ -309,7 +316,7 @@ flowchart TD
     DRIVER -->|"launch"| UI
     UI -->|"orchestrates"| PIPE
 
-    MCFG -->|"model config"| S2CFG
+    CFG -->|"model config"| S2CFG
     CKPT -->|"weights"| S2M
     S2CFG -->|"batch/paths"| PRED
     S2M -->|"predictor init"| PRED
@@ -342,7 +349,7 @@ flowchart TD
     CP -->|"verified subset"| WDIR
 
     WDIR -->|"assembly"| VC
-    VC -->|"mp4 outputs"| OUTVID
+    VC -->|"mp4 outputs"| WOUT
 
     WDIR -->|"verified export"| YDC
     YDC -->|"builds"| YSTRUCT
@@ -367,7 +374,7 @@ flowchart TD
     %% =========================================================
     %% Click Events
     %% =========================================================
-    click DRIVER "run_demo.py" "Main Entry"
+    click DRIVER "run_main.py" "Main Entry"
     click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
     click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
     click CFG "workspace/inputs/config/default_config.yaml" "Config File"
@@ -415,7 +422,7 @@ flowchart TD
 
 ```text
 AutoSegmentor/
-├── run_demo.py               # MAIN ENTRY POINT
+├── run_main.py               # MAIN ENTRY POINT
 ├── autosegmentor/            # CORE APPLICATION PACKAGE
 │   ├── core/                 # Pipeline orchestration
 │   ├── ui/                   # PyQt5 Windows & Widgets
@@ -434,7 +441,6 @@ AutoSegmentor/
 ├── external/                 # Third-party libraries ([SAM2](https://github.com/facebookresearch/segment-anything-2), [CoTracker](https://github.com/facebookresearch/co-tracker))
 │   ├── segment_anything_2/checkpoints/ # SAM2 Weights
 │   └── co-tracker/checkpoints/ # CoTracker Weights
-├── checkpoints/              # Project-wide ML Weights
 ├── assets/                   # Media assets for README
 ├── scripts/                  # Utility scripts
 ├── outputs/                  # logs outputs

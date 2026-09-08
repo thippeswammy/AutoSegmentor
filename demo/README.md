@@ -38,5 +38,5 @@ To demo on your own video:
 
 ## Video licensing
 
-Demo clips are royalty-free (Pexels License / Pixabay Content License). Full
-attribution and licensing details are in [`videos/README.md`](videos/README.md).
+Demo clips are original project assets. Full attribution and licensing details
+are in [`videos/README.md`](videos/README.md).

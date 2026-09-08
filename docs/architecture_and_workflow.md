@@ -25,7 +25,7 @@ flowchart TD
     end
 
     subgraph "Orchestration / Control Plane"
-        DRIVER["Main Entry\nrun_demo.py"]:::orch
+        DRIVER["Main Entry\nrun_main.py"]:::orch
         SETUP["Setup Dialog\n(SetupDialog.py)"]:::ui
         PIPE["Pipeline Orchestrator\n(pipeline.py)\ncoordinates extraction+engine"]:::orch
         ENGINE["AutoSegmentor Engine\n(AutoSegmentorEngine.py)\ncore processing logic"]:::orch
@@ -84,7 +84,7 @@ flowchart TD
     DRIVER -->|"launch"| UI
     UI -->|"orchestrates"| PIPE
 
-    MCFG -->|"model config"| S2CFG
+    CFG -->|"model config"| S2CFG
     CKPT -->|"weights"| S2M
     S2CFG -->|"batch/paths"| PRED
     S2M -->|"predictor init"| PRED
@@ -117,7 +117,7 @@ flowchart TD
     CP -->|"verified subset"| WDIR
 
     WDIR -->|"assembly"| VC
-    VC -->|"mp4 outputs"| OUTVID
+    VC -->|"mp4 outputs"| WOUT
 
     WDIR -->|"verified export"| YDC
     YDC -->|"builds"| YSTRUCT
@@ -142,7 +142,7 @@ flowchart TD
     %% =========================================================
     %% Click Events
     %% =========================================================
-    click DRIVER "run_demo.py" "Main Entry"
+    click DRIVER "run_main.py" "Main Entry"
     click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
     click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
     click CFG "workspace/inputs/config/default_config.yaml" "Config File"
@@ -223,7 +223,7 @@ To ensure a smooth user experience, AutoSegmentor utilizes a multi-threaded arch
 The journey from a raw video file to a verified training dataset follows a structured lifecycle.
 
 ### 1. Project Initialization
-- **Entry Point**: `run_demo.py`.
+- **Entry Point**: `run_main.py`.
 - **Config**: Settings are loaded from `workspace/inputs/config/default_config.yaml`.
 - **Setup**: The user selects the target video and configures model parameters in the `SetupDialog`.
 
