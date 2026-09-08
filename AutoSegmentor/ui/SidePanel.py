@@ -372,14 +372,21 @@ class LiveConfigPanel(QGroupBox):
 
 
 class ProcessingStatusPanel(QGroupBox):
-    """Live SAM2/CoTracker batch-processing stage, timing, and a history log.
+    """Live SAM2/CoTracker batch-processing plan, per-stage timing, and a log.
 
-    Stays on "Idle" between batches; while a batch runs, shows the current
-    stage name, an elapsed timer, a projected ETA (once at least one batch has
-    completed, from a rolling average of past batch durations), and a
-    per-frame progress bar for stages that report real progress (SAM2's
-    propagate_in_video loop) — indeterminate ("busy") otherwise, since
-    CoTracker's inference is a single blocking call with no per-frame hook.
+    Which stages run (and for how many frames) differs per batch — SAM-only,
+    CoTracker-only, both, or a partial refinement from a mid-batch anchor
+    frame — so the panel is driven by an explicit per-batch "plan" (a list of
+    {key, label, frames} the current batch will actually execute) rather than
+    a single flat average. Each stage gets its own row (pending ○ / running ▸
+    / done ✓) showing its frame count and a time estimate; the estimate comes
+    from a rolling per-frame-rate history for that specific stage, so it
+    stays accurate as SAM2 (many frames) and CoTracker (fewer, and no
+    per-frame progress hook — only a single blocking call) diverge over time.
+    The overall progress bar is determinate when the active stage reports
+    real per-frame progress (SAM2's propagate_in_video loop); otherwise it is
+    animated toward the stage's own time estimate so the user still sees
+    something moving instead of a static "busy" spinner.
     """
 
     def __init__(self, parent=None):
@@ -408,15 +415,24 @@ class ProcessingStatusPanel(QGroupBox):
         self.progress_bar.setFixedHeight(14)
         self.progress_bar.setTextVisible(True)
 
+        # Per-stage checklist rows, built fresh for each batch's plan (mirrors
+        # KeypointProgressPanel's row layout for visual consistency).
+        self._stage_rows = {}  # key -> (row_widget, icon_label, text_label, time_label)
+        self._stage_container = QWidget()
+        self._stage_layout = QVBoxLayout(self._stage_container)
+        self._stage_layout.setSpacing(1)
+        self._stage_layout.setContentsMargins(0, 2, 0, 2)
+
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        self.log.setFixedHeight(110)
+        self.log.setFixedHeight(90)
         self.log.setFont(Fonts.mono_small())
         self.log.setStyleSheet(f"background-color: {Colors.BG_DARKEST}; color: {Colors.TEXT_SECONDARY};")
 
         layout.addWidget(self.stage_label)
         layout.addWidget(time_row)
         layout.addWidget(self.progress_bar)
+        layout.addWidget(self._stage_container)
         layout.addWidget(self.log)
 
         self.set_idle()
@@ -428,18 +444,104 @@ class ProcessingStatusPanel(QGroupBox):
         self.progress_bar.setRange(0, 1)
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat("")
+        self._clear_stage_rows()
 
-    def start_stage(self, stage_name):
-        self.stage_label.setText(stage_name)
-        # Default to indeterminate ("busy") until/unless set_frame_progress
-        # reports real per-frame counts for this stage.
-        self.progress_bar.setRange(0, 0)
-        self.progress_bar.setFormat(stage_name)
+    def _clear_stage_rows(self):
+        for row, *_ in self._stage_rows.values():
+            self._stage_layout.removeWidget(row)
+            row.deleteLater()
+        self._stage_rows.clear()
+
+    def set_plan(self, stages):
+        """Rebuild the checklist for the stages this batch will actually run.
+
+        stages: list of {key, label, frames, est_seconds (or None)}.
+        """
+        self._clear_stage_rows()
+        for stage in stages:
+            row = QWidget()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(2, 1, 2, 1)
+            row_layout.setSpacing(6)
+
+            icon = QLabel("○")
+            icon.setFont(Fonts.body())
+            icon.setFixedWidth(16)
+            icon.setStyleSheet(f"color: {Colors.TEXT_MUTED};")
+
+            frame_note = f" ({stage['frames']} frames)" if stage.get('frames') else ""
+            text_lbl = QLabel(f"{stage['label']}{frame_note}")
+            text_lbl.setFont(Fonts.mono_small())
+            text_lbl.setStyleSheet(f"color: {Colors.TEXT_SECONDARY};")
+            text_lbl.setWordWrap(True)
+
+            time_lbl = QLabel(self._format_estimate(stage.get('est_seconds')))
+            time_lbl.setFont(Fonts.small())
+            time_lbl.setStyleSheet(f"color: {Colors.TEXT_MUTED};")
+            time_lbl.setFixedWidth(50)
+            time_lbl.setAlignment(Qt.AlignRight)
+
+            row_layout.addWidget(icon)
+            row_layout.addWidget(text_lbl, 1)
+            row_layout.addWidget(time_lbl)
+
+            self._stage_layout.addWidget(row)
+            self._stage_rows[stage['key']] = (row, icon, text_lbl, time_lbl)
+
+    @staticmethod
+    def _format_estimate(seconds):
+        if seconds is None:
+            return "~?s"
+        return f"~{seconds:.0f}s"
+
+    def mark_stage_running(self, key):
+        if key not in self._stage_rows:
+            return
+        _, icon, text_lbl, _ = self._stage_rows[key]
+        icon.setText("▸")
+        icon.setStyleSheet(f"color: {Colors.ACCENT_ORANGE};")
+        text_lbl.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; font-weight: bold;")
+
+    def mark_stage_frame_count(self, key, done, total):
+        if key not in self._stage_rows:
+            return
+        _, _, _, time_lbl = self._stage_rows[key]
+        time_lbl.setText(f"{done}/{total}")
+
+    def mark_stage_done(self, key, actual_seconds):
+        if key not in self._stage_rows:
+            return
+        _, icon, text_lbl, time_lbl = self._stage_rows[key]
+        icon.setText("✓")
+        icon.setStyleSheet(f"color: {Colors.SUCCESS};")
+        text_lbl.setStyleSheet(f"color: {Colors.TEXT_SECONDARY};")
+        time_lbl.setText(f"{actual_seconds:.1f}s")
+
+    def set_current_stage_label(self, label):
+        self.stage_label.setText(label)
+
+    def start_frame_progress(self, total):
+        """Switch the main bar to determinate mode for a stage with real per-frame progress."""
+        self.progress_bar.setRange(0, max(total, 1))
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat(f"0 / {total} frames")
 
     def set_frame_progress(self, done, total):
         self.progress_bar.setRange(0, max(total, 1))
         self.progress_bar.setValue(done)
         self.progress_bar.setFormat(f"{done} / {total} frames")
+
+    def start_estimated_progress(self, stage_name):
+        """Main bar for a stage with no real per-frame hook (e.g. CoTracker's
+        single blocking inference call) — animated via set_estimated_progress
+        toward the stage's own historical time estimate, so it still visibly
+        moves instead of sitting on a static spinner."""
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat(stage_name)
+
+    def set_estimated_progress(self, fraction):
+        self.progress_bar.setValue(int(max(0.0, min(fraction, 1.0)) * 100))
 
     def set_elapsed(self, seconds):
         self.elapsed_label.setText(f"Elapsed: {seconds:.0f}s")

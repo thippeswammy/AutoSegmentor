@@ -25,12 +25,22 @@ from .ExportDialog import ExportDialog
 from .logger_config import logger
 
 class BatchProcessorThread(QThread):
+    """Runs SAM2 mask generation + CoTracker for one batch in the background.
+
+    Which stages actually run — and how many frames each one processes —
+    differs per batch (SAM-only, CoTracker-only, both, or a partial
+    mid-batch refinement), so the thread first computes an explicit plan and
+    reports it via plan_ready before doing any work. The UI uses that plan to
+    show a full per-stage checklist and a total time estimate that reflects
+    exactly what this batch will do, not a generic flat average.
+    """
+
     finished_batch = pyqtSignal(int)
-    # Emitted at the start/end of each named stage — the UI uses this to drive
-    # the stage label and the timestamped log. No per-frame granularity here;
-    # see frame_progress for the one stage (SAM2) that has real per-frame steps.
-    stage_changed = pyqtSignal(str)
-    frame_progress = pyqtSignal(int, int)  # (frames_done, total_frames) — SAM2 stage only
+    plan_ready = pyqtSignal(list)          # [{"key", "label", "frames"}, ...] — stages that WILL run
+    stage_started = pyqtSignal(str)        # stage key
+    stage_finished = pyqtSignal(str, float)  # stage key, actual duration in seconds
+    frame_progress = pyqtSignal(str, int, int)  # stage key, frames_done, frames_total — SAM2 only today
+    log_message = pyqtSignal(str)          # free-form line for the log panel
 
     def __init__(self, handler, batch, query_frame_idx=None, backward_tracking=False):
         super().__init__()
@@ -39,57 +49,94 @@ class BatchProcessorThread(QThread):
         self.query_frame_idx = query_frame_idx
         self.backward_tracking = backward_tracking
 
+    def _build_plan(self, processor):
+        """Compute which stages will run this batch and how many frames each
+        one covers, mirroring the slicing AutoSegmentorEngine._track_batch_cotracker
+        uses — close enough for display/estimation even though the exact
+        CoTracker frame count can shift slightly with carry-forward fallbacks.
+        """
+        cfg = processor.config
+        total_frames = len(processor.frame_paths)
+        batch_start = self.batch * cfg.batch_size
+
+        copy_frames = max(min(cfg.batch_size, total_frames - batch_start), 0)
+        plan = [{"key": "copy", "label": "Copy frames", "frames": copy_frames}]
+
+        if cfg.sam_enabled:
+            plan.append({"key": "sam2", "label": "SAM2 mask generation", "frames": copy_frames})
+
+        run_cotracker = bool(
+            cfg.pose_config and cfg.pose_config.get('enabled')
+            and cfg.pose_config.get('tracker', 'lk').lower() == 'cotracker'
+        )
+        if run_cotracker:
+            batch_end = min(batch_start + cfg.batch_size + 1, total_frames)
+            query_rel_idx = (self.query_frame_idx - batch_start) if self.query_frame_idx is not None else 0
+            ct_start = batch_start + query_rel_idx if (not self.backward_tracking and query_rel_idx > 0) else batch_start
+            ct_frames = max(batch_end - ct_start, 0)
+            plan.append({"key": "cotracker", "label": "CoTracker point tracking", "frames": ct_frames})
+            plan.append({"key": "save", "label": "Save tracked keypoints", "frames": ct_frames})
+
+        return plan
+
     def run(self):
         """Run SAM2 mask generation + CoTracker in the background thread."""
         try:
             processor = self.handler.pipeline_processor
+            cfg = processor.config
+            batch_index = self.batch * cfg.batch_size
 
-            batch_index = self.batch * processor.config.batch_size
+            plan = self._build_plan(processor)
+            self.plan_ready.emit(plan)
 
-            self.stage_changed.emit("Copying frames...")
+            self.stage_started.emit("copy")
             t0 = time.perf_counter()
-            processor.frame_handler.move_and_copy_frames(batch_index, processor.frame_paths, processor.config.batch_size)
-            self.stage_changed.emit(f"Copied frames ({time.perf_counter() - t0:.1f}s)")
+            processor.frame_handler.move_and_copy_frames(batch_index, processor.frame_paths, cfg.batch_size)
+            self.stage_finished.emit("copy", time.perf_counter() - t0)
 
-            if processor.config.sam_enabled:
+            if cfg.sam_enabled:
                 logger.debug(f"[BatchThread] Batch {self.batch}: Running SAM2 mask generation...")
-                self.stage_changed.emit("Running SAM2 mask generation...")
+                self.stage_started.emit("sam2")
                 t0 = time.perf_counter()
                 processor.mask_processor.generate_mask(
                     batch_number=self.batch,
                     sam2_predictor=processor.sam2_predictor,
-                    temp_directory=processor.config.temp_directory,
+                    temp_directory=cfg.temp_directory,
                     prompt_encoding=processor.prompt_encoding,
                     auto_prompt_encoding=processor.auto_prompt_encoding,
                     predictor_lock=processor._predictor_lock,
                     starting_frame_idx=batch_index,
-                    on_frame_done=lambda done, total: self.frame_progress.emit(done, total)
+                    on_frame_done=lambda done, total: self.frame_progress.emit("sam2", done, total)
                 )
-                self.stage_changed.emit(f"SAM2 mask generation done ({time.perf_counter() - t0:.1f}s)")
+                self.stage_finished.emit("sam2", time.perf_counter() - t0)
                 logger.debug(f"[BatchThread] Batch {self.batch}: SAM2 done.")
 
-            if (processor.config.pose_config and processor.config.pose_config.get('enabled')
-                    and processor.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):
+            run_cotracker = bool(
+                cfg.pose_config and cfg.pose_config.get('enabled')
+                and cfg.pose_config.get('tracker', 'lk').lower() == 'cotracker'
+            )
+            if run_cotracker:
                 logger.debug(f"[BatchThread] Batch {self.batch}: Running CoTracker...")
-                self.stage_changed.emit("Running CoTracker point tracking...")
+                self.stage_started.emit("cotracker")
                 t0 = time.perf_counter()
                 processor._track_batch_inline(self.batch, query_frame_idx=self.query_frame_idx, backward_tracking=self.backward_tracking)
-                self.stage_changed.emit(f"CoTracker tracking done ({time.perf_counter() - t0:.1f}s)")
+                self.stage_finished.emit("cotracker", time.perf_counter() - t0)
                 logger.debug(f"[BatchThread] Batch {self.batch}: CoTracker done.")
 
                 # Persistence: Save tracked keypoints to JSON continuously
                 tracked_data = processor.per_batch_tracked_data[self.batch]
+                self.stage_started.emit("save")
+                t0 = time.perf_counter()
                 if tracked_data:
-                    self.stage_changed.emit("Saving tracked keypoints...")
                     self.handler.annotation_manager.save_tracked_batch(tracked_data, self.batch)
-                    self.stage_changed.emit("Saved.")
+                self.stage_finished.emit("save", time.perf_counter() - t0)
 
             self.finished_batch.emit(self.batch)
         except Exception:
             logger.error(
                 f"[BatchThread] Batch {self.batch} CRASHED:\n{traceback.format_exc()}"
             )
-            self.stage_changed.emit("Failed — see log.")
+            self.log_message.emit("Failed — see log.")
             # Still emit so the UI unlocks
             self.finished_batch.emit(self.batch)
 
@@ -145,9 +192,17 @@ class AnnotationWindow(QDialog):
         self.undo_stack = QUndoStack(self)
         self.undo_stack.setUndoLimit(30)
 
-        # Batch-processing status/timing state (see ProcessingStatusPanel)
+        # Batch-processing status/timing state (see ProcessingStatusPanel).
+        # Rate history is per-stage (seconds/frame), not one flat per-batch
+        # average, since a batch's total time depends on exactly which
+        # stages run (SAM-only, CoTracker-only, both, or a partial refinement)
+        # and each stage scales differently with frame count.
         self._processing_start_time = None
-        self._batch_duration_history = deque(maxlen=5)
+        self._current_plan = []            # this batch's [{"key","label","frames","est_seconds"}, ...]
+        self._stage_rate_history = {}      # stage key -> deque(seconds/frame, maxlen=5)
+        self._active_stage_key = None
+        self._active_stage_t0 = None
+        self._active_stage_has_real_progress = False
         self._elapsed_timer = QTimer(self)
         self._elapsed_timer.setInterval(1000)
         self._elapsed_timer.timeout.connect(self._update_elapsed_display)
@@ -1085,39 +1140,108 @@ class AnnotationWindow(QDialog):
             self.loader_label.show()
 
         self._processing_start_time = time.perf_counter()
+        self._active_stage_key = None
+        self._active_stage_t0 = None
+        self._current_plan = []
         self._elapsed_timer.start()
         self.sidebar.processing_status.append_log(f"Batch {batch + 1}: started")
-        self.sidebar.processing_status.start_stage("Starting...")
-        self.sidebar.processing_status.set_eta(self._estimate_eta(0.0))
+        self.sidebar.processing_status.set_current_stage_label("Starting...")
 
         self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx, backward_tracking=backward_tracking)
         self.processor_thread.finished_batch.connect(self.on_processing_finished)
-        self.processor_thread.stage_changed.connect(self._on_stage_changed)
+        self.processor_thread.plan_ready.connect(self._on_plan_ready)
+        self.processor_thread.stage_started.connect(self._on_stage_started)
+        self.processor_thread.stage_finished.connect(self._on_stage_finished)
         self.processor_thread.frame_progress.connect(self._on_frame_progress)
+        self.processor_thread.log_message.connect(self.sidebar.processing_status.append_log)
         self.processor_thread.start()
         logger.debug(f"[UI] BatchProcessorThread started for batch {batch}")
 
-    def _on_stage_changed(self, stage_name):
-        self.sidebar.processing_status.start_stage(stage_name)
-        self.sidebar.processing_status.append_log(stage_name)
-        self.loader_label.setText(stage_name)
+    def _stage_estimate(self, key, frames):
+        """Seconds estimate for `frames` frames of stage `key`, from its
+        rolling per-frame-rate history — None if we have no samples yet."""
+        rates = self._stage_rate_history.get(key)
+        if not rates or not frames:
+            return None
+        return (sum(rates) / len(rates)) * frames
 
-    def _on_frame_progress(self, done, total):
+    def _on_plan_ready(self, plan):
+        """A batch's stage plan just arrived — show the full checklist and a
+        total ETA that reflects exactly which stages this batch will run."""
+        enriched = [dict(stage, est_seconds=self._stage_estimate(stage["key"], stage["frames"])) for stage in plan]
+        self._current_plan = enriched
+        self.sidebar.processing_status.set_plan(enriched)
+
+        known = [s["est_seconds"] for s in enriched if s["est_seconds"] is not None]
+        if len(known) == len(enriched) and enriched:
+            total = sum(known)
+            self.sidebar.processing_status.set_eta(f"~{total:.0f}s total ({len(enriched)} stage{'s' if len(enriched) != 1 else ''})")
+        else:
+            self.sidebar.processing_status.set_eta(f"Estimating... ({len(enriched)} stage{'s' if len(enriched) != 1 else ''})")
+
+        names = ", ".join(f"{s['label']} ({s['frames']} frames)" for s in enriched)
+        self.sidebar.processing_status.append_log(f"Plan: {names}")
+
+    def _on_stage_started(self, key):
+        self._active_stage_key = key
+        self._active_stage_t0 = time.perf_counter()
+        self._active_stage_has_real_progress = False
+        stage = next((s for s in self._current_plan if s["key"] == key), None)
+        label = stage["label"] if stage else key
+
+        self.sidebar.processing_status.mark_stage_running(key)
+        self.sidebar.processing_status.set_current_stage_label(label)
+        frame_note = f" ({stage['frames']} frames)" if stage and stage["frames"] else ""
+        self.sidebar.processing_status.append_log(f"{label} started{frame_note}")
+        self.loader_label.setText(label)
+
+        if stage and stage["frames"] and key == "sam2":
+            # Only SAM2's propagate_in_video loop reports real per-frame progress.
+            self.sidebar.processing_status.start_frame_progress(stage["frames"])
+        else:
+            self.sidebar.processing_status.start_estimated_progress(label)
+
+    def _on_frame_progress(self, key, done, total):
+        if key != self._active_stage_key:
+            return
+        self._active_stage_has_real_progress = True
         self.sidebar.processing_status.set_frame_progress(done, total)
+        self.sidebar.processing_status.mark_stage_frame_count(key, done, total)
+
+    def _on_stage_finished(self, key, duration):
+        stage = next((s for s in self._current_plan if s["key"] == key), None)
+        frames = stage["frames"] if stage else 0
+        if frames:
+            self._stage_rate_history.setdefault(key, deque(maxlen=5)).append(duration / frames)
+        self.sidebar.processing_status.mark_stage_done(key, duration)
+        label = stage["label"] if stage else key
+        self.sidebar.processing_status.append_log(f"{label} done ({duration:.1f}s)")
+        if key == self._active_stage_key:
+            self._active_stage_key = None
+            self._active_stage_t0 = None
 
     def _update_elapsed_display(self):
         if self._processing_start_time is None:
             return
         elapsed = time.perf_counter() - self._processing_start_time
         self.sidebar.processing_status.set_elapsed(elapsed)
-        self.sidebar.processing_status.set_eta(self._estimate_eta(elapsed))
 
-    def _estimate_eta(self, elapsed):
-        if not self._batch_duration_history:
-            return "Estimating total time..."
-        avg = sum(self._batch_duration_history) / len(self._batch_duration_history)
-        remaining = max(avg - elapsed, 0)
-        return f"~{remaining:.0f}s left (avg batch {avg:.0f}s)"
+        # Animate the active stage's bar toward its own time estimate when it
+        # has no real per-frame progress hook (e.g. CoTracker's single
+        # blocking inference call) — capped short of 100% until it truly ends.
+        if self._active_stage_key and self._active_stage_t0 is not None and not self._active_stage_has_real_progress:
+            stage = next((s for s in self._current_plan if s["key"] == self._active_stage_key), None)
+            if stage and stage.get("est_seconds"):
+                stage_elapsed = time.perf_counter() - self._active_stage_t0
+                self.sidebar.processing_status.set_estimated_progress(min(stage_elapsed / stage["est_seconds"], 0.95))
+
+        # Total ETA = planned total minus however much wall-clock time has
+        # already elapsed this batch, only when every planned stage has a
+        # known rate (otherwise we'd be mixing a real number with a guess).
+        known = [s["est_seconds"] for s in self._current_plan if s["est_seconds"] is not None]
+        if self._current_plan and len(known) == len(self._current_plan):
+            remaining = max(sum(known) - elapsed, 0)
+            self.sidebar.processing_status.set_eta(f"~{remaining:.0f}s left")
 
     def on_processing_finished(self, batch):
         logger.debug(f"[UI] on_processing_finished: batch={batch}  current_frame={self.handler.current_frame_idx}")
@@ -1132,9 +1256,10 @@ class AnnotationWindow(QDialog):
         self._elapsed_timer.stop()
         if self._processing_start_time is not None:
             total_elapsed = time.perf_counter() - self._processing_start_time
-            self._batch_duration_history.append(total_elapsed)
             self.sidebar.processing_status.append_log(f"Batch {batch + 1} complete in {total_elapsed:.1f}s")
             self._processing_start_time = None
+        self._active_stage_key = None
+        self._active_stage_t0 = None
         self.sidebar.processing_status.set_idle()
 
         logger.info(f"Finished processing batch {batch}")
