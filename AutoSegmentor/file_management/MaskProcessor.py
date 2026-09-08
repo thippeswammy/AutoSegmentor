@@ -105,8 +105,13 @@ class MaskProcessor:
             return color_mask_image
         return present_count + 1
 
-    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None, starting_frame_idx=None):
-        """Generate masks for a batch of frames."""
+    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None, starting_frame_idx=None, on_frame_done=None):
+        """Generate masks for a batch of frames.
+
+        on_frame_done, if given, is called as on_frame_done(frames_done, total_frames)
+        once per frame as SAM2's propagate_in_video loop below yields — used by the
+        UI to show real per-frame progress for this stage.
+        """
         logger.debug(f"[MaskProc] generate_mask: batch={batch_number}  temp_dir={temp_directory}  starting_frame_idx={starting_frame_idx}")
         frame_file_names = sorted(
             [p for p in os.listdir(temp_directory) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
@@ -150,12 +155,15 @@ class MaskProcessor:
             video_segments = {}
             # Granular propagation: propagate one frame at a time if possible, or release lock between batches
             # SAM2 propagate_in_video is a generator, we can wrap each step
+            total_frames = len(frame_file_names)
             for out_frame_idx, out_obj_ids, out_mask_logits in sam2_predictor.propagate_in_video(inference_state):
                 with lock:
                     video_segments[out_frame_idx] = {
                         out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                         for i, out_obj_id in enumerate(out_obj_ids)
                     }
+                if on_frame_done:
+                    on_frame_done(len(video_segments), total_frames)
             logger.debug(f"[MaskProc] propagate_in_video done: {len(video_segments)} segment(s) produced")
             
             present_count = starting_frame_idx if starting_frame_idx is not None else self.image_counter

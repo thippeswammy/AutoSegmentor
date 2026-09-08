@@ -79,6 +79,28 @@ class UserInteractionHandler:
         """Recalculate current_keypoint_index for the current class+instance."""
         self.current_keypoint_index = self.get_instance_keypoint_count()
 
+    def _sync_selected_from_pose_coords(self):
+        """Rebuild selected_points/labels/targets (the SAM-prompt projection) from
+        pose_click_coords, keeping only entries currently marked visible.
+
+        pose_click_coords stays the full source of truth (every keypoint, visible
+        or occluded); selected_points/labels/targets must never include an
+        occluded point, since its position isn't trustworthy enough to hand to
+        SAM as a prompt. Call this any time a keypoint's position or visibility
+        changes so the two stay consistent.
+        """
+        self.selected_points = []
+        self.selected_labels = []
+        self.selected_targets = []
+        for kp in self.pose_click_coords:
+            if kp.get("visible", True):
+                full_label = kp.get("label")
+                if full_label is None:
+                    full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
+                self.selected_points.append([kp["x"], kp["y"]])
+                self.selected_labels.append(full_label)
+                self.selected_targets.append(["sam", "pose"])
+
     def change_class_label_pyqt(self, label):
         self.current_class_label = label
         self.current_instance_id = 1
@@ -280,17 +302,8 @@ class UserInteractionHandler:
             if tracked_entry:
                 kps = tracked_entry["keypoints"]
                 logger.debug(f"[UI] Loading {len(kps)} tracked keypoints for frame {frame_idx}")
-                for kp in kps:
-                    if "label" in kp:
-                        full_label = kp["label"]
-                    else:
-                        full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
-                    
-                    if kp.get("visible", 2) > 0:
-                        self.selected_points.append([kp["x"], kp["y"]])
-                        self.selected_labels.append(full_label)
-                        self.selected_targets.append(["sam", "pose"])
-                    self.pose_click_coords.append(kp)
+                self.pose_click_coords = list(kps)
+                self._sync_selected_from_pose_coords()
                 self.current_keypoint_index = len(self.pose_click_coords)
                 logger.debug(f"[UI] Tracked data loaded: selected_points={len(self.selected_points)}")
                 # SAM preview triggered async via debounced PreviewThread
@@ -422,22 +435,17 @@ class UserInteractionHandler:
                         logger.warning(f"CoTracker carry-forward failed: {e}")
 
                 for kp in sorted(tracked_kps, key=lambda k: k["point_id"]):
-                    x, y = kp["x"], kp["y"]
-                    
                     if "label" in kp:
                         full_label = kp["label"]
                     else:
                         full_label = self.encode_label(self.pose_class_id, self.pose_object_id)
-                        
-                    if kp.get("visible", 2) > 0:
-                        self.selected_points.append([x, y])
-                        self.selected_labels.append(full_label)
-                        self.selected_targets.append(["sam", "pose"])
+
                     self.pose_click_coords.append({
                         "name": kp["name"], "point_id": kp["point_id"],
-                        "x": x, "y": y, "visible": kp.get("visible", True),
+                        "x": kp["x"], "y": kp["y"], "visible": kp.get("visible", True),
                         "label": full_label
                     })
+                self._sync_selected_from_pose_coords()
                 self.current_keypoint_index = len(self.pose_click_coords)
                 self.user_prompt_adder_pyqt()
 

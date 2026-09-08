@@ -83,11 +83,14 @@ class LKKeypointTracker:
 
             is_tracked = int(status[i][0]) == 1 and fb_ok
 
+            # Keep the raw optical-flow estimate even when tracking is flagged
+            # unreliable, so a failed point can still be shown/dragged at its
+            # last-known location instead of vanishing.
             frame_kps.append({
                 "name": kp_name,
                 "point_id": i,
-                "x": int(round(new_points[i][0][0])) if is_tracked else -1,
-                "y": int(round(new_points[i][0][1])) if is_tracked else -1,
+                "x": int(round(new_points[i][0][0])),
+                "y": int(round(new_points[i][0][1])),
                 "visible": 2 if is_tracked else 0  # COCO: 2=visible, 0=not labeled
             })
 

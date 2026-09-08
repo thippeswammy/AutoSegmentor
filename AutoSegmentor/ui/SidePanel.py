@@ -8,7 +8,7 @@ from PyQt5.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QGroupBox, QProgressBar, QFrame, QScrollArea,
-    QSizePolicy, QCheckBox, QPushButton
+    QSizePolicy, QCheckBox, QPushButton, QTextEdit
 )
 
 
@@ -371,6 +371,88 @@ class LiveConfigPanel(QGroupBox):
         self.point_size_changed.emit(val)
 
 
+class ProcessingStatusPanel(QGroupBox):
+    """Live SAM2/CoTracker batch-processing stage, timing, and a history log.
+
+    Stays on "Idle" between batches; while a batch runs, shows the current
+    stage name, an elapsed timer, a projected ETA (once at least one batch has
+    completed, from a rolling average of past batch durations), and a
+    per-frame progress bar for stages that report real progress (SAM2's
+    propagate_in_video loop) — indeterminate ("busy") otherwise, since
+    CoTracker's inference is a single blocking call with no per-frame hook.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__("Processing", parent)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(6)
+        layout.setContentsMargins(8, 16, 8, 8)
+
+        self.stage_label = QLabel("Idle")
+        self.stage_label.setFont(Fonts.body())
+        self.stage_label.setWordWrap(True)
+
+        time_row = QWidget()
+        time_layout = QHBoxLayout(time_row)
+        time_layout.setContentsMargins(0, 0, 0, 0)
+        self.elapsed_label = QLabel("")
+        self.elapsed_label.setFont(Fonts.small())
+        self.eta_label = QLabel("")
+        self.eta_label.setFont(Fonts.small())
+        self.eta_label.setStyleSheet(f"color: {Colors.TEXT_SECONDARY};")
+        time_layout.addWidget(self.elapsed_label)
+        time_layout.addStretch()
+        time_layout.addWidget(self.eta_label)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(14)
+        self.progress_bar.setTextVisible(True)
+
+        self.log = QTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setFixedHeight(110)
+        self.log.setFont(Fonts.mono_small())
+        self.log.setStyleSheet(f"background-color: {Colors.BG_DARKEST}; color: {Colors.TEXT_SECONDARY};")
+
+        layout.addWidget(self.stage_label)
+        layout.addWidget(time_row)
+        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.log)
+
+        self.set_idle()
+
+    def set_idle(self):
+        self.stage_label.setText("Idle")
+        self.elapsed_label.setText("")
+        self.eta_label.setText("")
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("")
+
+    def start_stage(self, stage_name):
+        self.stage_label.setText(stage_name)
+        # Default to indeterminate ("busy") until/unless set_frame_progress
+        # reports real per-frame counts for this stage.
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setFormat(stage_name)
+
+    def set_frame_progress(self, done, total):
+        self.progress_bar.setRange(0, max(total, 1))
+        self.progress_bar.setValue(done)
+        self.progress_bar.setFormat(f"{done} / {total} frames")
+
+    def set_elapsed(self, seconds):
+        self.elapsed_label.setText(f"Elapsed: {seconds:.0f}s")
+
+    def set_eta(self, text):
+        self.eta_label.setText(text)
+
+    def append_log(self, text):
+        import datetime
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
+        self.log.append(f"[{ts}] {text}")
+
+
 class ModelRoutingPanel(QGroupBox):
     """Controls which models receive new annotation points."""
 
@@ -475,6 +557,7 @@ class SidePanel(QScrollArea):
         self.keypoint_progress = KeypointProgressPanel()
         self.model_routing = ModelRoutingPanel()
         self.live_config = LiveConfigPanel()
+        self.processing_status = ProcessingStatusPanel()
 
         layout.addWidget(self.batch_info)
         layout.addWidget(self.tool_info)
@@ -482,6 +565,7 @@ class SidePanel(QScrollArea):
         layout.addWidget(self.keypoint_progress)
         layout.addWidget(self.model_routing)
         layout.addWidget(self.live_config)
+        layout.addWidget(self.processing_status)
         
         layout.addStretch()
 

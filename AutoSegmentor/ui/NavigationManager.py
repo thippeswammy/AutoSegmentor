@@ -111,30 +111,79 @@ class DeletePointCommand(QUndoCommand):
 
 
 class DragPointCommand(QUndoCommand):
-    """Undoable command for moving an existing annotation point."""
+    """Undoable command for moving an existing annotation point.
 
-    def __init__(self, handler, index, old_pos, new_pos, description="Move Point"):
+    pose_idx is the item's matching index into handler.pose_click_coords —
+    it can differ from `index` (the selected_points index) whenever an
+    occluded keypoint exists earlier in the frame's keypoint list, so it must
+    be used (not `index`) for the pose_click_coords write.
+    """
+
+    def __init__(self, handler, index, old_pos, new_pos, pose_idx=None, description="Move Point"):
         super().__init__(description)
         self.handler = handler
         self.index = index
         self.old_pos = old_pos
         self.new_pos = new_pos
+        self.pose_idx = pose_idx
+
+    def _apply(self, pos):
+        if self.index < len(self.handler.selected_points):
+            self.handler.selected_points[self.index] = list(pos)
+            if (self.handler.pose_mode and self.handler.pose_click_coords
+                    and self.pose_idx is not None and self.pose_idx < len(self.handler.pose_click_coords)):
+                self.handler.pose_click_coords[self.pose_idx]['x'] = int(pos[0])
+                self.handler.pose_click_coords[self.pose_idx]['y'] = int(pos[1])
 
     def redo(self):
         logger.debug(f"[CMD:DragPoint] redo  — index={self.index}  {self.old_pos} -> {self.new_pos}")
-        if self.index < len(self.handler.selected_points):
-            self.handler.selected_points[self.index] = list(self.new_pos)
-            if self.handler.pose_mode and self.handler.pose_click_coords and self.index < len(self.handler.pose_click_coords):
-                self.handler.pose_click_coords[self.index]['x'] = int(self.new_pos[0])
-                self.handler.pose_click_coords[self.index]['y'] = int(self.new_pos[1])
+        self._apply(self.new_pos)
 
     def undo(self):
         logger.debug(f"[CMD:DragPoint] undo  — index={self.index}  {self.new_pos} -> {self.old_pos}")
-        if self.index < len(self.handler.selected_points):
-            self.handler.selected_points[self.index] = list(self.old_pos)
-            if self.handler.pose_mode and self.handler.pose_click_coords and self.index < len(self.handler.pose_click_coords):
-                self.handler.pose_click_coords[self.index]['x'] = int(self.old_pos[0])
-                self.handler.pose_click_coords[self.index]['y'] = int(self.old_pos[1])
+        self._apply(self.old_pos)
+
+
+class CorrectPosePointCommand(QUndoCommand):
+    """Undoable command for correcting an occluded/failed-tracking pose keypoint.
+
+    Covers both drag-to-correct (new position, auto-marks visible) and the
+    right-click "Mark Occluded" / "Mark Visible" toggle (position unchanged).
+    Always re-syncs selected_points/labels/targets afterwards so the SAM
+    prompt list reflects the corrected visibility.
+    """
+
+    def __init__(self, handler, pose_idx, old_pos, new_pos, old_visible, new_visible,
+                 description="Correct Pose Point"):
+        super().__init__(description)
+        self.handler = handler
+        self.pose_idx = pose_idx
+        self.old_pos = old_pos
+        self.new_pos = new_pos
+        self.old_visible = old_visible
+        self.new_visible = new_visible
+
+    def _apply(self, pos, visible):
+        if self.pose_idx < len(self.handler.pose_click_coords):
+            kp = self.handler.pose_click_coords[self.pose_idx]
+            kp['x'] = int(pos[0])
+            kp['y'] = int(pos[1])
+            kp['visible'] = visible
+            self.handler._sync_selected_from_pose_coords()
+
+    def redo(self):
+        logger.debug(
+            f"[CMD:CorrectPosePoint] redo — pose_idx={self.pose_idx}  "
+            f"{self.old_pos}->{self.new_pos}  visible {self.old_visible}->{self.new_visible}"
+        )
+        self._apply(self.new_pos, self.new_visible)
+
+    def undo(self):
+        logger.debug(
+            f"[CMD:CorrectPosePoint] undo — pose_idx={self.pose_idx}  "
+            f"{self.new_pos}->{self.old_pos}  visible {self.new_visible}->{self.old_visible}"
+        )
+        self._apply(self.old_pos, self.old_visible)
 
 
 class SkipPointCommand(QUndoCommand):

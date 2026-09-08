@@ -187,8 +187,11 @@ class CoTrackerPredictor:
             frame_kps = []
             for i, coord in enumerate(sorted_coords):
                 is_visible = bool(visibility_np[t, i])
-                x = int(round(tracks_np[t, i, 0])) if is_visible else -1
-                y = int(round(tracks_np[t, i, 1])) if is_visible else -1
+                # Keep CoTracker's own regressed position even when occluded, so a
+                # failed point can still be shown (and dragged back into place) at
+                # its last-known/estimated location instead of vanishing.
+                x = int(round(tracks_np[t, i, 0]))
+                y = int(round(tracks_np[t, i, 1]))
 
                 kp_data = {
                     "name": coord["name"],

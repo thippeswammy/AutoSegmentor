@@ -2,7 +2,9 @@
 MainWindow.py - Main PyQt dialog window for the AutoSegmenter annotation UI.
 """
 
+import time
 import traceback
+from collections import deque
 
 import cv2
 import PyQt5.QtCore as QtCore
@@ -18,12 +20,17 @@ from PyQt5.QtWidgets import (
 from .UITheme import DARK_STYLESHEET, SIDEBAR_WIDTH, TOOLBAR_HEIGHT, STATUSBAR_HEIGHT, Colors
 from .AnnotationCanvas import AnnotationCanvas
 from .SidePanel import SidePanel
-from .NavigationManager import AddPointCommand, ResetPointsCommand, DeletePointCommand, SkipPointCommand, DragPointCommand, NavigationState
+from .NavigationManager import AddPointCommand, ResetPointsCommand, DeletePointCommand, SkipPointCommand, DragPointCommand, CorrectPosePointCommand, NavigationState
 from .ExportDialog import ExportDialog
 from .logger_config import logger
 
 class BatchProcessorThread(QThread):
     finished_batch = pyqtSignal(int)
+    # Emitted at the start/end of each named stage — the UI uses this to drive
+    # the stage label and the timestamped log. No per-frame granularity here;
+    # see frame_progress for the one stage (SAM2) that has real per-frame steps.
+    stage_changed = pyqtSignal(str)
+    frame_progress = pyqtSignal(int, int)  # (frames_done, total_frames) — SAM2 stage only
 
     def __init__(self, handler, batch, query_frame_idx=None, backward_tracking=False):
         super().__init__()
@@ -38,10 +45,16 @@ class BatchProcessorThread(QThread):
             processor = self.handler.pipeline_processor
 
             batch_index = self.batch * processor.config.batch_size
+
+            self.stage_changed.emit("Copying frames...")
+            t0 = time.perf_counter()
             processor.frame_handler.move_and_copy_frames(batch_index, processor.frame_paths, processor.config.batch_size)
+            self.stage_changed.emit(f"Copied frames ({time.perf_counter() - t0:.1f}s)")
 
             if processor.config.sam_enabled:
                 logger.debug(f"[BatchThread] Batch {self.batch}: Running SAM2 mask generation...")
+                self.stage_changed.emit("Running SAM2 mask generation...")
+                t0 = time.perf_counter()
                 processor.mask_processor.generate_mask(
                     batch_number=self.batch,
                     sam2_predictor=processor.sam2_predictor,
@@ -49,26 +62,34 @@ class BatchProcessorThread(QThread):
                     prompt_encoding=processor.prompt_encoding,
                     auto_prompt_encoding=processor.auto_prompt_encoding,
                     predictor_lock=processor._predictor_lock,
-                    starting_frame_idx=batch_index
+                    starting_frame_idx=batch_index,
+                    on_frame_done=lambda done, total: self.frame_progress.emit(done, total)
                 )
+                self.stage_changed.emit(f"SAM2 mask generation done ({time.perf_counter() - t0:.1f}s)")
                 logger.debug(f"[BatchThread] Batch {self.batch}: SAM2 done.")
 
             if (processor.config.pose_config and processor.config.pose_config.get('enabled')
                     and processor.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'):
                 logger.debug(f"[BatchThread] Batch {self.batch}: Running CoTracker...")
+                self.stage_changed.emit("Running CoTracker point tracking...")
+                t0 = time.perf_counter()
                 processor._track_batch_inline(self.batch, query_frame_idx=self.query_frame_idx, backward_tracking=self.backward_tracking)
+                self.stage_changed.emit(f"CoTracker tracking done ({time.perf_counter() - t0:.1f}s)")
                 logger.debug(f"[BatchThread] Batch {self.batch}: CoTracker done.")
-                
+
                 # Persistence: Save tracked keypoints to JSON continuously
                 tracked_data = processor.per_batch_tracked_data[self.batch]
                 if tracked_data:
+                    self.stage_changed.emit("Saving tracked keypoints...")
                     self.handler.annotation_manager.save_tracked_batch(tracked_data, self.batch)
+                    self.stage_changed.emit("Saved.")
 
             self.finished_batch.emit(self.batch)
         except Exception:
             logger.error(
                 f"[BatchThread] Batch {self.batch} CRASHED:\n{traceback.format_exc()}"
             )
+            self.stage_changed.emit("Failed — see log.")
             # Still emit so the UI unlocks
             self.finished_batch.emit(self.batch)
 
@@ -123,7 +144,14 @@ class AnnotationWindow(QDialog):
         self.nav_state.show_grid = getattr(self.config, 'ui_show_grid', False)
         self.undo_stack = QUndoStack(self)
         self.undo_stack.setUndoLimit(30)
-        
+
+        # Batch-processing status/timing state (see ProcessingStatusPanel)
+        self._processing_start_time = None
+        self._batch_duration_history = deque(maxlen=5)
+        self._elapsed_timer = QTimer(self)
+        self._elapsed_timer.setInterval(1000)
+        self._elapsed_timer.timeout.connect(self._update_elapsed_display)
+
         self._init_ui()
         self._setup_shortcuts()
         self._connect_signals()
@@ -432,6 +460,8 @@ class AnnotationWindow(QDialog):
         self.canvas.point_moved.connect(self.handle_point_moved)
         self.canvas.point_dragging.connect(self.handle_point_dragging)
         self.canvas.point_deleted.connect(self.handle_point_deleted)
+        self.canvas.ghost_point_moved.connect(self.handle_ghost_point_moved)
+        self.canvas.pose_visibility_toggled.connect(self.handle_pose_visibility_toggled)
         self.sidebar.keypoint_progress.visibility_toggled.connect(self.handle_visibility_toggled)
         self.sidebar.live_config.backward_tracking_toggled.connect(self._on_backward_tracking_toggled)
         self.sidebar.model_routing.routing_changed.connect(self._on_routing_changed)
@@ -595,22 +625,22 @@ class AnnotationWindow(QDialog):
         self.nav_state.update_mouse(int(x), int(y))
         self.coord_label.setText(f" 📍 ({int(x)}, {int(y)})")
 
-    def handle_point_moved(self, index, old_x, old_y, new_x, new_y):
+    def handle_point_moved(self, index, old_x, old_y, new_x, new_y, pose_idx=None):
         if index < len(self.handler.selected_points):
             logger.debug(f"[UI] handle_point_moved: index={index}  ({old_x},{old_y}) -> ({new_x},{new_y})")
-            cmd = DragPointCommand(self.handler, index, [old_x, old_y], [new_x, new_y])
+            cmd = DragPointCommand(self.handler, index, [old_x, old_y], [new_x, new_y], pose_idx=pose_idx)
             self.undo_stack.push(cmd)
             logger.debug(f"[UI] handle_point_moved: DragPointCommand pushed, triggering SAM preview")
             self._trigger_prompt_update()
 
-    def handle_point_dragging(self, index, x, y):
+    def handle_point_dragging(self, index, x, y, pose_idx=None):
         if index < len(self.handler.selected_points):
             logger.debug(f"[UI] handle_point_dragging: index={index}  pos=({x},{y})")
             self.handler.selected_points[index] = [x, y]
             if self.handler.pose_mode and self.handler.pose_click_coords:
-                if index < len(self.handler.pose_click_coords):
-                    self.handler.pose_click_coords[index]['x'] = int(x)
-                    self.handler.pose_click_coords[index]['y'] = int(y)
+                if pose_idx is not None and pose_idx < len(self.handler.pose_click_coords):
+                    self.handler.pose_click_coords[pose_idx]['x'] = int(x)
+                    self.handler.pose_click_coords[pose_idx]['y'] = int(y)
             self.canvas.update_skeleton(
                 self.handler.selected_points,
                 labels=self.handler.selected_labels,
@@ -623,7 +653,41 @@ class AnnotationWindow(QDialog):
             if index < len(self.handler.pose_click_coords):
                 logger.debug(f"[UI] handle_visibility_toggled: index={index}  visible={is_visible}")
                 self.handler.pose_click_coords[index]['visible'] = is_visible
+                self.handler._sync_selected_from_pose_coords()
                 self._trigger_prompt_update()
+
+    def handle_ghost_point_moved(self, pose_idx, old_x, old_y, new_x, new_y):
+        """Shift+drag correction of an occluded/failed-tracking keypoint.
+
+        Moving it to the right spot is treated as confirming it's visible
+        again — the common case per user feedback: a manual correction almost
+        always means "yes, it's here and visible now".
+        """
+        pose_idx = int(pose_idx)
+        if pose_idx < len(self.handler.pose_click_coords):
+            was_visible = self.handler.pose_click_coords[pose_idx].get('visible', True)
+            logger.debug(
+                f"[UI] handle_ghost_point_moved: pose_idx={pose_idx}  ({old_x},{old_y}) -> ({new_x},{new_y})"
+            )
+            cmd = CorrectPosePointCommand(
+                self.handler, pose_idx, [old_x, old_y], [new_x, new_y], was_visible, True
+            )
+            self.undo_stack.push(cmd)
+            self._trigger_prompt_update()
+
+    def handle_pose_visibility_toggled(self, pose_idx, new_visible):
+        """Right-click menu 'Mark Occluded' / 'Mark Visible' — position unchanged."""
+        pose_idx = int(pose_idx)
+        if pose_idx < len(self.handler.pose_click_coords):
+            kp = self.handler.pose_click_coords[pose_idx]
+            pos = [kp['x'], kp['y']]
+            was_visible = kp.get('visible', True)
+            logger.debug(
+                f"[UI] handle_pose_visibility_toggled: pose_idx={pose_idx}  {was_visible} -> {new_visible}"
+            )
+            cmd = CorrectPosePointCommand(self.handler, pose_idx, pos, pos, was_visible, new_visible)
+            self.undo_stack.push(cmd)
+            self._trigger_prompt_update()
 
     # ─── Frame Updates ───────────────────────────────────────────────────────
     def refresh_display(self):
@@ -929,7 +993,7 @@ class AnnotationWindow(QDialog):
   <tr class='sec'><td colspan='2'>✏️ Annotation</td></tr>
   <tr><td>Add foreground point</td><td><span class='key'>Ctrl+LClick</span></td></tr>
   <tr><td>Add background point</td><td><span class='key'>Ctrl+RClick</span></td></tr>
-  <tr><td>Delete point</td>       <td><span class='key'>RClick</span> on point</td></tr>
+  <tr><td>Delete / Toggle Visible</td> <td><span class='key'>RClick</span> on point → menu</td></tr>
   <tr><td>Move point</td>         <td><span class='key'>Shift+LClick</span> drag</td></tr>
   <tr><td>Undo</td>               <td><span class='key'>Ctrl+Z</span> / <span class='key'>U</span></td></tr>
   <tr><td>Redo</td>               <td><span class='key'>Ctrl+Y</span></td></tr>
@@ -1020,11 +1084,41 @@ class AnnotationWindow(QDialog):
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.show()
 
+        self._processing_start_time = time.perf_counter()
+        self._elapsed_timer.start()
+        self.sidebar.processing_status.append_log(f"Batch {batch + 1}: started")
+        self.sidebar.processing_status.start_stage("Starting...")
+        self.sidebar.processing_status.set_eta(self._estimate_eta(0.0))
+
         self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx, backward_tracking=backward_tracking)
         self.processor_thread.finished_batch.connect(self.on_processing_finished)
+        self.processor_thread.stage_changed.connect(self._on_stage_changed)
+        self.processor_thread.frame_progress.connect(self._on_frame_progress)
         self.processor_thread.start()
         logger.debug(f"[UI] BatchProcessorThread started for batch {batch}")
-        
+
+    def _on_stage_changed(self, stage_name):
+        self.sidebar.processing_status.start_stage(stage_name)
+        self.sidebar.processing_status.append_log(stage_name)
+        self.loader_label.setText(stage_name)
+
+    def _on_frame_progress(self, done, total):
+        self.sidebar.processing_status.set_frame_progress(done, total)
+
+    def _update_elapsed_display(self):
+        if self._processing_start_time is None:
+            return
+        elapsed = time.perf_counter() - self._processing_start_time
+        self.sidebar.processing_status.set_elapsed(elapsed)
+        self.sidebar.processing_status.set_eta(self._estimate_eta(elapsed))
+
+    def _estimate_eta(self, elapsed):
+        if not self._batch_duration_history:
+            return "Estimating total time..."
+        avg = sum(self._batch_duration_history) / len(self._batch_duration_history)
+        remaining = max(avg - elapsed, 0)
+        return f"~{remaining:.0f}s left (avg batch {avg:.0f}s)"
+
     def on_processing_finished(self, batch):
         logger.debug(f"[UI] on_processing_finished: batch={batch}  current_frame={self.handler.current_frame_idx}")
         self.is_processing = False
@@ -1033,6 +1127,15 @@ class AnnotationWindow(QDialog):
 
         if self.handler.current_frame_idx // self.config.batch_size == batch:
             self.loader_label.hide()
+        self.loader_label.setText("Processing...")
+
+        self._elapsed_timer.stop()
+        if self._processing_start_time is not None:
+            total_elapsed = time.perf_counter() - self._processing_start_time
+            self._batch_duration_history.append(total_elapsed)
+            self.sidebar.processing_status.append_log(f"Batch {batch + 1} complete in {total_elapsed:.1f}s")
+            self._processing_start_time = None
+        self.sidebar.processing_status.set_idle()
 
         logger.info(f"Finished processing batch {batch}")
 

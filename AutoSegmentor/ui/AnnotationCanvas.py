@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsTextItem,
     QGraphicsLineItem, QWidget, QVBoxLayout, QLabel, QFrame,
-    QGraphicsItem
+    QGraphicsItem, QMenu
 )
 
 from .UITheme import (
@@ -41,11 +41,22 @@ def cv2_to_qpixmap(cv_img):
 
 
 class DraggablePointItem(QGraphicsEllipseItem):
-    """An interactive annotation point that can be dragged."""
+    """An interactive annotation point that can be dragged.
 
-    def __init__(self, x, y, r, color, idx, is_negative, canvas, display_text=None):
+    kind distinguishes two addressing schemes:
+    - "sam": idx indexes into handler.selected_points/labels (the SAM-prompt
+      list). pose_idx (set by the caller after construction), when not None,
+      is the matching index into handler.pose_click_coords for a pose keypoint
+      that is currently visible.
+    - "pose_ghost": idx indexes directly into handler.pose_click_coords for an
+      occluded/failed-tracking keypoint that isn't in selected_points at all.
+    """
+
+    def __init__(self, x, y, r, color, idx, is_negative, canvas, display_text=None, kind="sam"):
         super().__init__(-r, -r, r * 2, r * 2)
         self.idx = idx
+        self.kind = kind
+        self.pose_idx = None
         self.canvas = canvas
 
         self.setBrush(QBrush(color))
@@ -86,8 +97,11 @@ class DraggablePointItem(QGraphicsEllipseItem):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionHasChanged and hasattr(self, 'idx'):
-            if not self.canvas._is_redrawing:
-                self.canvas.point_dragging.emit(self.idx, value.x(), value.y())
+            # Ghost points don't live in selected_points, so they have no live
+            # drag preview — only their final drop position matters (handled
+            # in mouseReleaseEvent via ghost_point_moved).
+            if not self.canvas._is_redrawing and self.kind == "sam":
+                self.canvas.point_dragging.emit(self.idx, value.x(), value.y(), self.pose_idx)
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
@@ -95,8 +109,9 @@ class DraggablePointItem(QGraphicsEllipseItem):
         button = event.button()
 
         if button == Qt.RightButton and not (modifiers & Qt.ControlModifier):
-            # Delete on plain Right Click
-            self.canvas.point_deleted.emit(self.idx)
+            # Right Click opens a small menu (Delete / Toggle Visible) instead
+            # of acting immediately, so it can't collide with any shortcut.
+            self.canvas._show_point_menu(self, event.screenPos().toPoint())
             event.accept()
         elif button == Qt.LeftButton and modifiers & Qt.ShiftModifier:
             # Move on Shift + Left Click
@@ -110,13 +125,14 @@ class DraggablePointItem(QGraphicsEllipseItem):
         super().mouseReleaseEvent(event)
         if event.button() != Qt.RightButton and hasattr(self, '_drag_start_pos') and self.pos() != self._drag_start_pos:
             pos = self.pos()
-            self.canvas.point_moved.emit(
-                self.idx, 
-                self._drag_start_pos.x(), 
-                self._drag_start_pos.y(), 
-                pos.x(), 
-                pos.y()
-            )
+            if self.kind == "pose_ghost":
+                self.canvas.ghost_point_moved.emit(
+                    self.idx, self._drag_start_pos.x(), self._drag_start_pos.y(), pos.x(), pos.y()
+                )
+            else:
+                self.canvas.point_moved.emit(
+                    self.idx, self._drag_start_pos.x(), self._drag_start_pos.y(), pos.x(), pos.y(), self.pose_idx
+                )
 
 
 
@@ -187,9 +203,15 @@ class AnnotationCanvas(QGraphicsView):
 
     point_clicked = pyqtSignal(float, float, int)
     mouse_moved = pyqtSignal(float, float)
-    point_moved = pyqtSignal(int, float, float, float, float)
-    point_dragging = pyqtSignal(int, float, float)
+    # pose_idx (last arg, may be None) is the matching index into
+    # handler.pose_click_coords for a "sam"-kind item that is a pose keypoint —
+    # it can differ from idx (the selected_points index) whenever an occluded
+    # keypoint exists earlier in the frame's keypoint list.
+    point_moved = pyqtSignal(int, float, float, float, float, object)
+    point_dragging = pyqtSignal(int, float, float, object)
     point_deleted = pyqtSignal(int)
+    ghost_point_moved = pyqtSignal(int, float, float, float, float)
+    pose_visibility_toggled = pyqtSignal(int, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -267,7 +289,13 @@ class AnnotationCanvas(QGraphicsView):
         self._clear_skeleton()
 
     def draw_annotations(self, points, labels, pose_keypoints=None, pose_coords=None, pose_config=None):
-        """Draw annotation points with numbered badges and per-instance colors."""
+        """Draw annotation points with numbered badges and per-instance colors.
+
+        In pose mode, points/labels only contain currently-visible keypoints
+        (see UserInteractionHandler._sync_selected_from_pose_coords); occluded
+        keypoints are drawn separately below as draggable "ghost" markers so a
+        failed track can still be seen and corrected.
+        """
         self._is_redrawing = True
         try:
             self.clear_annotations()
@@ -276,34 +304,54 @@ class AnnotationCanvas(QGraphicsView):
                 x, y = pt[0], pt[1]
                 is_negative = lbl < 0
                 class_id = abs(lbl) // 1000
-                
+
                 # Color by CLASS (complement of mask color) — instances separated by skeleton grouping
                 color = get_class_point_color(class_id)
                 if is_negative:
                     color = QColor(Colors.ACCENT_RED)
-                    
+
                 display_text = str(idx + 1)
-                is_visible = True
-                
+                matched_pose_idx = None
+
                 if pose_coords:
-                    # Find the next visible point in pose_coords
+                    # Find the next visible point in pose_coords — this walk stays
+                    # in lockstep with `points` because both are built from the
+                    # same visible-filtered projection of pose_coords.
                     while pose_idx < len(pose_coords) and not pose_coords[pose_idx].get('visible', True):
                         pose_idx += 1
                     if pose_idx < len(pose_coords):
+                        matched_pose_idx = pose_idx
                         display_text = str(pose_coords[pose_idx].get('point_id', pose_idx) + 1)
                         if pose_coords[pose_idx].get('name') == 'Negative_Point':
                             display_text = 'Neg'
                         pose_idx += 1
 
-                if not is_visible:
-                    color.setAlpha(120)
-
                 r = POINT_RADIUS
                 item = DraggablePointItem(x, y, r, color, idx, is_negative, self, display_text)
-                if not is_visible:
-                    item.setOpacity(0.5)
+                item.pose_idx = matched_pose_idx
                 self._scene.addItem(item)
                 self._overlay_items.append(item)
+
+            # Ghost markers: occluded/failed-tracking keypoints, shown at their
+            # last-known position in a distinct color so they can be Shift+dragged
+            # back into place (which also marks them visible again).
+            if pose_coords:
+                for pidx, pc in enumerate(pose_coords):
+                    if pc.get('visible', True):
+                        continue
+                    gx, gy = pc.get('x', -1), pc.get('y', -1)
+                    # (-1,-1) and (0,0) are placeholder "no known position"
+                    # values (e.g. a manually-skipped keypoint) — nothing to show.
+                    if (gx, gy) in ((-1, -1), (0, 0)):
+                        continue
+                    display_text = 'Neg' if pc.get('name') == 'Negative_Point' else str(pc.get('point_id', pidx) + 1)
+                    ghost_item = DraggablePointItem(
+                        gx, gy, POINT_RADIUS, QColor(Colors.ACCENT_ORANGE), pidx, False, self,
+                        display_text, kind="pose_ghost"
+                    )
+                    ghost_item.setOpacity(0.75)
+                    self._scene.addItem(ghost_item)
+                    self._overlay_items.append(ghost_item)
 
             # Draw skeleton connecting lines between consecutive annotation points.
             # Always shown when 2+ points exist so the user can see the structure.
@@ -311,6 +359,34 @@ class AnnotationCanvas(QGraphicsView):
                 self._draw_skeleton(points, labels, pose_coords)
         finally:
             self._is_redrawing = False
+
+    def _show_point_menu(self, item, global_pos):
+        """Right-click menu for a point: toggle visible/occluded and/or delete.
+
+        Replaces the old instant-delete-on-right-click so the same gesture can
+        also flip a pose keypoint's visibility without a shortcut collision.
+        """
+        menu = QMenu(self)
+        action_vis = None
+        if item.kind == "pose_ghost":
+            action_vis = menu.addAction("Mark Visible")
+        elif item.pose_idx is not None:
+            action_vis = menu.addAction("Mark Occluded")
+
+        action_delete = menu.addAction("Delete Point") if item.kind == "sam" else None
+
+        if action_vis is None and action_delete is None:
+            return
+        chosen = menu.exec_(global_pos)
+        if chosen is None:
+            return
+        if chosen is action_vis:
+            if item.kind == "pose_ghost":
+                self.pose_visibility_toggled.emit(item.idx, True)
+            else:
+                self.pose_visibility_toggled.emit(item.pose_idx, False)
+        elif chosen is action_delete:
+            self.point_deleted.emit(item.idx)
 
     def update_skeleton(self, points, labels=None, pose_coords=None):
         """Optimized skeleton update that doesn't clear points."""
@@ -573,7 +649,7 @@ class AnnotationCanvas(QGraphicsView):
         painter.setPen(QColor(Colors.TEXT_SECONDARY))
         painter.drawText(hud_rect.adjusted(10, 30, -10, -8), Qt.AlignTop | Qt.AlignLeft, 
                          "• [Ctrl+Click]  Add Point\n"
-                         "• [RightClick] Delete\n"
+                         "• [RightClick] Delete / Toggle Visible\n"
                          "• [Shift+Drag] Move Point\n"
                          "• [A / D]       Next/Prev Frame\n"
                          "• [Ctrl+S]      Save Session")
