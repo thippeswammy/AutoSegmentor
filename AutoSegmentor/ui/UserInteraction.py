@@ -325,8 +325,16 @@ class UserInteractionHandler:
             self.window.refresh_display()
             self.window._update_sidebar()
         
-    def has_data_for_frame(self, frame_idx):
-        """Check if a frame has manual prompts, tracking results, or a rendered mask."""
+    def has_data_for_frame(self, frame_idx, include_preview=True):
+        """Check if a frame has manual prompts, tracking results, or a rendered mask.
+
+        `include_preview` controls whether the "Plus-One Preview" carried
+        forward from the *previous* batch's overflow tracking counts as data.
+        That preview is only a tentative estimate for the next frame, not a
+        real per-frame result — callers that need to know whether THIS
+        frame's own batch has actually been processed (e.g. deciding whether
+        to auto-trigger processing for it) should pass include_preview=False.
+        """
         # 1. Manual prompt check
         if self.annotation_manager.get_prompt_for_frame(frame_idx):
             logger.debug(f"[UI] has_data_for_frame({frame_idx}): manual prompt found")
@@ -351,7 +359,7 @@ class UserInteractionHandler:
                     return True
 
             # Previous batch overflow (Plus-One Preview)
-            if batch > 0 and batch - 1 < len(self.pipeline_processor.per_batch_tracked_data):
+            if include_preview and batch > 0 and batch - 1 < len(self.pipeline_processor.per_batch_tracked_data):
                 prev_batch_tracked = self.pipeline_processor.per_batch_tracked_data[batch-1]
                 if prev_batch_tracked and len(prev_batch_tracked) > self.config.batch_size:
                     if frame_idx == batch * self.config.batch_size:

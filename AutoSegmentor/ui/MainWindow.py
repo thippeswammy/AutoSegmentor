@@ -629,9 +629,13 @@ class AnnotationWindow(QDialog):
         # and let Right directly process an unprocessed frame, then advance
         # to the next one once processing finishes. Covers both fresh manual
         # points and a frame that only has carried-forward tracking data.
+        # include_preview=False: the "Plus-One Preview" carried forward from
+        # the previous frame's overflow tracking is just a tentative estimate,
+        # not this frame's own real result — it must not be mistaken for
+        # "already processed" or every later frame would skip auto-processing.
         batch = self.handler.current_frame_idx // self.config.batch_size
         if (self.config.batch_size == 1 and not self.is_processing
-                and not self._frame_is_processed()
+                and not self.handler.has_data_for_frame(self.handler.current_frame_idx, include_preview=False)
                 and self._batch_has_processable_data(batch)):
             logger.debug("[Nav] next_image: batch_size=1, unprocessed frame with data to process -> auto-processing before advance")
             self._pending_auto_advance = True

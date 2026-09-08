@@ -47,6 +47,8 @@ class MockConfig:
     ui_show_crosshair = True
     ui_show_grid = False
     sam_enabled = False  # No SAM2 for UI tests
+    active_target_models = ["sam"]
+    auto_shift_enabled = False
 
 
 class MockAnnotationManager:
@@ -321,4 +323,70 @@ class TestHoldToScrollNavigation:
         assert window._nav_direction == 1
         window._nav_timer.stop()
         window._nav_direction = 0
+
+
+class TestBatchSizeOneAutoProcessOnRightKey:
+    """batch_size=1: Right on an unprocessed frame should trigger processing
+    directly (no Enter needed), including frames that only have a carried-
+    forward tracking *preview* from the previous frame — not yet a real
+    per-frame result. Regression coverage for the bug where such preview-only
+    frames were mistaken for "already processed" and silently skipped.
+    """
+
+    def _make_batch_size_one(self, handler, window):
+        window.config.batch_size = 1
+        handler.config.batch_size = 1
+
+    def test_preview_only_frame_is_not_actually_processed(self, handler_and_window):
+        """has_data_for_frame(include_preview=False) must ignore the Plus-One
+        Preview carried forward from the previous batch's overflow tracking."""
+        handler, window = handler_and_window
+        self._make_batch_size_one(handler, window)
+        # Batch 0 (frame 0) was processed and tracked "up to 2 frames" —
+        # its own result plus a preview of frame 1.
+        handler.pipeline_processor.per_batch_tracked_data = [
+            [{"keypoints": []}, {"keypoints": []}],
+        ]
+        # Preview WAS carried forward (legacy/other callers still see "data").
+        assert handler.has_data_for_frame(1, include_preview=True) is True
+        # But frame 1's own batch has never actually been processed.
+        assert handler.has_data_for_frame(1, include_preview=False) is False
+
+    def test_right_key_processes_preview_only_frame(self, handler_and_window):
+        """Right on frame 1 (preview only, no real result yet) must trigger
+        processing instead of silently advancing past it."""
+        handler, window = handler_and_window
+        self._make_batch_size_one(handler, window)
+        handler.pipeline_processor.per_batch_tracked_data = [
+            [{"keypoints": []}, {"keypoints": []}],
+        ]
+        handler.current_frame_idx = 1
+        handler.selected_points = []  # no fresh manual points, relying on the preview
+
+        triggered = []
+        window.process_current_batch = lambda: triggered.append(handler.current_frame_idx)
+
+        window.next_image()
+
+        assert triggered == [1]
+
+    def test_right_key_advances_normally_once_actually_processed(self, handler_and_window):
+        """Once frame 1 has its OWN tracked result, Right must not re-trigger
+        processing and should just navigate forward."""
+        handler, window = handler_and_window
+        self._make_batch_size_one(handler, window)
+        handler.pipeline_processor.per_batch_tracked_data = [
+            [{"keypoints": []}, {"keypoints": []}],  # batch 0
+            [{"keypoints": []}],                     # batch 1 (frame 1) — actually processed
+        ]
+        handler.current_frame_idx = 1
+        handler.selected_points = []
+
+        triggered = []
+        window.process_current_batch = lambda: triggered.append(handler.current_frame_idx)
+
+        window.next_image()
+
+        assert triggered == []
+        assert handler.current_frame_idx == 2
 
