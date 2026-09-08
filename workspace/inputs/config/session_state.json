@@ -14,7 +14,7 @@
     "final_path": "./workspace/outputs",
     "working_dir": "./workspace/working_dir",
     "prefix": "Img",
-    "delete_after": "yes"
+    "delete_after": true
   },
   "pipeline": {
     "run_mode": "all",
@@ -37,12 +37,20 @@
         {
           "class_id": 1,
           "num_keypoints": 2,
-          "keypoints": ["p1", "p2"]
+          "keypoints": [
+            "p1",
+            "p2"
+          ]
         },
         {
           "class_id": 2,
           "num_keypoints": 4,
-          "keypoints": ["p1", "p2", "p3", "p4"]
+          "keypoints": [
+            "p1",
+            "p2",
+            "p3",
+            "p4"
+          ]
         }
       ],
       "cotracker": {
@@ -50,5 +58,12 @@
         "window_len": 60
       }
     }
+  },
+  "interaction": {
+    "active_target_models": [
+      "sam",
+      "pose"
+    ],
+    "auto_shift_enabled": true
   }
 }
