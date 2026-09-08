@@ -138,7 +138,8 @@ class AnnotationWindow(QDialog):
 
     def _init_ui(self):
         """Initialize main layout and widgets."""
-        self.setWindowTitle("AutoSegmenter Annotation Tool")
+        from .. import __version__
+        self.setWindowTitle(f"AutoSegmenter Annotation Tool v{__version__}")
         self.setMinimumSize(1024, 768)
         self.setStyleSheet(DARK_STYLESHEET)
         

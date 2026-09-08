@@ -51,6 +51,9 @@ htmlcov/
 !assets/**/*.png
 !assets/**/*.jpg
 
+# Allow bundled demo videos (royalty-free clips included with the release)
+!demo/videos/*.mp4
+
 # ─── AutoSegmentor runtime / working dirs ────────────────────────────────────
 **/working_dir/
 **/outputs/

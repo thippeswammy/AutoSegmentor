@@ -521,7 +521,8 @@ class SettingsPage(QScrollArea):
 class SetupDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("AutoSegmentor Launchpad")
+        from .. import __version__
+        self.setWindowTitle(f"AutoSegmentor Launchpad v{__version__}")
         self.setFixedSize(850, 620)
         self.setStyleSheet(DARK_STYLESHEET)
         self._session = _load_session()

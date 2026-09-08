@@ -1,8 +1,8 @@
 {
   "demo": {
-    "name": "cat",
-    "description": "Classic segmentation/pose demo using the bundled cat video.",
-    "license": "Project asset"
+    "name": "industrial-warehouse",
+    "description": "Material handling auto-labeling demo: detect/track pallets and forklift in warehouse footage using SAM2 + CoTracker3.",
+    "license": "Pexels License (free to use)"
   },
   "external_libs": [
     "external/segment_anything_2",
@@ -10,7 +10,7 @@
     "external/co-tracker"
   ],
   "video_inputs": {
-    "template": "demo/videos/cat.mp4",
+    "template": "demo/videos/forklift_pallets_warehouse.mp4",
     "start": 1,
     "end": 1,
     "max_frames": 0
@@ -18,7 +18,7 @@
   "video_outputs": {
     "final_path": "demo",
     "working_dir": "demo/working_dir",
-    "prefix": "cat_demo",
+    "prefix": "industrial_pallet",
     "delete_after": "yes"
   },
   "pipeline": {
@@ -43,12 +43,21 @@
           "class_id": 1,
           "num_keypoints": 6,
           "keypoints": [
-            "p1",
-            "p2",
-            "p3",
-            "p4",
-            "p5",
-            "p6"
+            "pallet_corner_1",
+            "pallet_corner_2",
+            "pallet_corner_3",
+            "pallet_corner_4",
+            "pallet_center",
+            "pallet_top_center"
+          ]
+        },
+        {
+          "class_id": 2,
+          "num_keypoints": 3,
+          "keypoints": [
+            "forklift_forks",
+            "forklift_mast",
+            "forklift_top"
           ]
         }
       ],
@@ -57,5 +66,9 @@
         "window_len": 60
       }
     }
+  },
+  "interaction": {
+    "active_target_models": ["sam", "pose"],
+    "auto_shift_enabled": true
   }
 }

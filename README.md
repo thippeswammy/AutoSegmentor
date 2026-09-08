@@ -78,11 +78,67 @@ Start the standard interactive GUI for annotation and project management:
 python run_main.py
 ```
 
-To run the **Automated Demo Pipeline** on sample video data:
+Check the version:
 
 ```bash
-python run_main.py --demo
+python run_main.py --version
 ```
+
+Run the **Automated Demo Pipeline** on sample video data — list demos then run one:
+
+```bash
+python run_main.py --demo list           # List available demos
+python run_main.py --demo                # Default (cat) demo
+python run_main.py --demo cat            # Cat demo
+python run_main.py --demo industrial-warehouse
+```
+
+---
+
+## 🏭 Material Handling & Industrial Automation
+
+AutoSegmentor is built and tested for **warehouse / logistics automation** —
+detecting and tracking industrial objects (pallets, forklifts, boxes) so you can
+train custom **pose estimation** models from video with almost no manual labeling.
+
+### Bundled industrial demos
+
+```bash
+python run_main.py --demo list                  # List all demos
+python run_main.py --demo industrial-warehouse  # Moving forklift + pallets
+python run_main.py --demo pallet-closeup        # Static wooden pallet close-up
+```
+
+- **`industrial-warehouse`** — processes real forklift + pallet footage and fully
+  auto-labels it with SAM2 segmentation and CoTracker3 keypoint tracking,
+  producing pallet masks, 6-point pallet pose keypoints, 3-point forklift
+  keypoints, and a YOLO-compatible pose export.
+- **`pallet-closeup`** — a static, clearly visible wooden pallet stack. This is
+  the recommended clip for **creating your own labels** from scratch: annotate
+  each pallet's corners and let CoTracker3 propagate them, then train your own
+  pallet pose model.
+
+### Training your own industrial objects
+
+The same workflow works for any object — pallets, stillage, boxes, rolls, EPAL
+(euro-pallets), forklifts, etc.:
+
+1. Drop your warehouse / production-line video into `demo/videos/`.
+2. Make a copy of a demo session-state JSON in `demo/` and point
+   `video_inputs.template` at your file.
+3. Edit `pose.classes` → add your class ids and keypoint names (e.g. the 8
+   corners of a euro-pallet, or box corners for pick-and-place).
+4. Register the demo by giving it a unique `demo.name`:
+   ```bash
+   python run_main.py --demo <your_name>
+   ```
+5. Launch the app in that demo, label the first object instance, let
+   SAM2 + CoTracker3 auto-propagate, then export the pose labels and train with
+   `DatasetManager/` (or `ultralytics` YOLO-Pose) to get an inference model for
+   your picking / placement / inspection automation.
+
+Source footage in the demos is royalty-free; see
+[`demo/videos/README.md`](demo/videos/README.md) for attribution and licensing.
 
 ### 3. Annotation Controls (Keyboard & Mouse)
 
