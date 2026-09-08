@@ -34,6 +34,40 @@ class TestEnsureDirectory:
         assert target.exists()
 
 
+class TestFrameHandlerMoveAndCopyFrames:
+    """FrameHandler.move_and_copy_frames' "+1 lookahead" frame is what lets
+    SAM2/CoTracker render a bonus next-frame preview per batch. That's useful
+    for a normal multi-frame batch, but with batch_size=1 (frame-by-frame
+    review) it means every other frame silently rides along on the previous
+    frame's processing call instead of getting its own — so it must not
+    apply when batch_size is 1.
+    """
+
+    def _make_handler(self, tmp_path, n_frames=5):
+        from autosegmentor.file_management.FrameHandler import FrameHandler
+        frames_dir = tmp_path / "images"
+        temp_dir = tmp_path / "temp"
+        frames_dir.mkdir()
+        frame_paths = []
+        for i in range(n_frames):
+            p = frames_dir / f"Img1_{i:05d}.jpg"
+            p.write_bytes(b"\xff\xd8\xff")
+            frame_paths.append(str(p))
+        return FrameHandler(str(frames_dir), str(temp_dir)), frame_paths
+
+    def test_batch_size_one_copies_exactly_one_frame(self, tmp_path):
+        handler, frame_paths = self._make_handler(tmp_path)
+        handler.move_and_copy_frames(batch_index=2, frame_paths=frame_paths, batch_size=1)
+        copied = [f for f in os.listdir(handler.temp_directory) if f.endswith(".jpg")]
+        assert len(copied) == 1
+
+    def test_batch_size_greater_than_one_keeps_lookahead_frame(self, tmp_path):
+        handler, frame_paths = self._make_handler(tmp_path)
+        handler.move_and_copy_frames(batch_index=0, frame_paths=frame_paths, batch_size=2)
+        copied = [f for f in os.listdir(handler.temp_directory) if f.endswith(".jpg")]
+        assert len(copied) == 3  # batch_size (2) + 1 lookahead
+
+
 class TestAnnotationManagerIO:
     """Test annotation save/load roundtrip."""
 

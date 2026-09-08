@@ -70,7 +70,8 @@ class BatchProcessorThread(QThread):
             and cfg.pose_config.get('tracker', 'lk').lower() == 'cotracker'
         )
         if run_cotracker:
-            batch_end = min(batch_start + cfg.batch_size + 1, total_frames)
+            overflow = 1 if cfg.batch_size > 1 else 0
+            batch_end = min(batch_start + cfg.batch_size + overflow, total_frames)
             query_rel_idx = (self.query_frame_idx - batch_start) if self.query_frame_idx is not None else 0
             ct_start = batch_start + query_rel_idx if (not self.backward_tracking and query_rel_idx > 0) else batch_start
             ct_frames = max(batch_end - ct_start, 0)
@@ -174,7 +175,6 @@ class AnnotationWindow(QDialog):
         self.handler = handler
         self.config = config
         self.is_processing = False
-        self._pending_auto_advance = False  # Right-key auto-process (batch_size=1) should advance once done
         self._preview_thread = None  # Background SAM2 preview thread
         self._preview_pending = False # Queue flag for high-responsiveness
 
@@ -624,30 +624,42 @@ class AnnotationWindow(QDialog):
         logger.debug(f"[Nav] prev_image: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
 
-    def next_image(self):
-        # With batch_size=1 each frame is its own batch: skip the Enter step
-        # and let Right directly process an unprocessed frame, then advance
-        # to the next one once processing finishes. Covers both fresh manual
-        # points and a frame that only has carried-forward tracking data.
-        # include_preview=False: the "Plus-One Preview" carried forward from
-        # the previous frame's overflow tracking is just a tentative estimate,
-        # not this frame's own real result — it must not be mistaken for
-        # "already processed" or every later frame would skip auto-processing.
+    def _auto_process_current_frame_if_needed(self) -> bool:
+        """batch_size=1: if the CURRENT frame has no real result yet but has
+        something to process (fresh points or carry-forward tracking),
+        process it in place. Returns True if a process was triggered.
+
+        Right never auto-advances past the frame it just processed — the
+        result must actually be visible before the user decides to move on,
+        rather than being skipped past mid-chain.
+        """
+        if self.config.batch_size != 1 or self.is_processing:
+            return False
         batch = self.handler.current_frame_idx // self.config.batch_size
-        if (self.config.batch_size == 1 and not self.is_processing
-                and not self.handler.has_data_for_frame(self.handler.current_frame_idx, include_preview=False)
+        if (not self.handler.has_data_for_frame(self.handler.current_frame_idx, include_preview=False)
                 and self._batch_has_processable_data(batch)):
-            logger.debug("[Nav] next_image: batch_size=1, unprocessed frame with data to process -> auto-processing before advance")
-            self._pending_auto_advance = True
+            logger.debug(f"[Nav] auto-processing frame {self.handler.current_frame_idx} in place")
             self.process_current_batch()
-            if not self.is_processing:
-                # process_current_batch bailed out (e.g. user dismissed the
-                # "No Prompts Found" dialog) — nothing will clear the flag.
-                self._pending_auto_advance = False
+            return True
+        return False
+
+    def next_image(self):
+        # Case 1: we're sitting on a frame that hasn't been processed yet
+        # (e.g. just annotated) — process it here first. Stop; don't also
+        # navigate in the same key press, so its result is what the user
+        # actually sees.
+        if self._auto_process_current_frame_if_needed():
             return
+
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + 1)
         logger.debug(f"[Nav] next_image: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
+
+        # Case 2: the frame we just landed on has no result either (relying
+        # purely on carry-forward tracking from the one we left) — process
+        # it too, then stop here. Another Right press is what continues the
+        # chain, not an automatic follow-up navigation.
+        self._auto_process_current_frame_if_needed()
 
     def prev_batch(self):
         idx = max(0, self.handler.current_frame_idx - self.config.batch_size)
@@ -1147,15 +1159,27 @@ class AnnotationWindow(QDialog):
         dlg.exec_()
 
     def _batch_has_processable_data(self, batch) -> bool:
-        """True if `batch` has manual prompts or carried-forward tracking data."""
+        """True if `batch` has manual prompts, or any earlier batch has tracked
+        data to chain forward from.
+
+        Mirrors AutoSegmentorEngine._track_batch_cotracker's own fallback: when
+        a batch has no prompt of its own, it walks backward through
+        per_batch_tracked_data for the nearest earlier batch with keypoints
+        and bridges the gap with CoTracker — it isn't limited to the
+        immediately preceding batch. Checking only batch-1 here (as opposed to
+        walking back) would block a purely tracked, click-free chain
+        (frame0->1->2->3->...) the moment one batch's own slot is empty, even
+        though the engine can still continue from further back.
+        """
         batch_prompts = self.handler.annotation_manager.get_batch_prompts(batch, self.config.batch_size)
-        has_prev_tracked = (
-            batch > 0
-            and hasattr(self.handler.pipeline_processor, 'per_batch_tracked_data')
-            and batch - 1 < len(self.handler.pipeline_processor.per_batch_tracked_data)
-            and bool(self.handler.pipeline_processor.per_batch_tracked_data[batch - 1])
-        )
-        return bool(batch_prompts) or has_prev_tracked
+        if batch_prompts:
+            return True
+        tracked_data = getattr(self.handler.pipeline_processor, 'per_batch_tracked_data', None)
+        if tracked_data:
+            for b in range(batch - 1, -1, -1):
+                if b < len(tracked_data) and tracked_data[b]:
+                    return True
+        return False
 
     def process_current_batch(self):
         """Intelligently process or reprocess the current batch."""
@@ -1164,7 +1188,18 @@ class AnnotationWindow(QDialog):
             return
 
         logger.debug(f"[UI] process_current_batch: frame={self.handler.current_frame_idx}")
-        self.handler.save_current_annotation()
+        if self.handler.selected_points or self.handler.pose_click_coords:
+            self.handler.save_current_annotation()
+        else:
+            # Nothing on this frame to save — a blank frame relying purely on
+            # carried-forward tracking. Saving an empty prompt here would
+            # make get_batch_prompts() return a truthy-but-useless entry for
+            # it forever after, which both fools has_data_for_frame() into
+            # thinking the frame is annotated and makes
+            # AutoSegmentorEngine._track_batch_cotracker take the "use this
+            # batch's own (empty) prompt" branch instead of falling back to
+            # the real tracked data from an earlier batch.
+            logger.debug("[UI] process_current_batch: no points/keypoints on this frame — skipping save to avoid persisting an empty prompt")
         batch = self.handler.current_frame_idx // self.config.batch_size
         current_frame = self.handler.current_frame_idx
         logger.debug(f"[UI] process_current_batch: batch={batch}  current_frame={current_frame}")
@@ -1336,11 +1371,6 @@ class AnnotationWindow(QDialog):
         self.refresh_display()
         self._update_sidebar()
         logger.debug(f"[UI] on_processing_finished: display fully refreshed for batch {batch}")
-
-        if self._pending_auto_advance:
-            self._pending_auto_advance = False
-            logger.debug("[Nav] on_processing_finished: auto-advancing to next frame after Right-key triggered process")
-            self.next_image()
 
     # ─── Model Routing Logic ────────────────────────────────────────────────
     def _on_routing_changed(self, active_list):

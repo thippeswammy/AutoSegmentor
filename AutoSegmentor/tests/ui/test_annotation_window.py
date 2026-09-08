@@ -371,13 +371,15 @@ class TestBatchSizeOneAutoProcessOnRightKey:
         assert triggered == [1]
 
     def test_right_key_advances_normally_once_actually_processed(self, handler_and_window):
-        """Once frame 1 has its OWN tracked result, Right must not re-trigger
-        processing and should just navigate forward."""
+        """If both the current frame AND the one Right lands on already have
+        their own real result, Right must not (re-)trigger processing for
+        either — just navigate forward and stop there."""
         handler, window = handler_and_window
         self._make_batch_size_one(handler, window)
         handler.pipeline_processor.per_batch_tracked_data = [
-            [{"keypoints": []}, {"keypoints": []}],  # batch 0
-            [{"keypoints": []}],                     # batch 1 (frame 1) — actually processed
+            [{"keypoints": []}],  # batch 0 (frame 0) — processed
+            [{"keypoints": []}],  # batch 1 (frame 1) — processed
+            [{"keypoints": []}],  # batch 2 (frame 2) — processed
         ]
         handler.current_frame_idx = 1
         handler.selected_points = []
@@ -389,4 +391,84 @@ class TestBatchSizeOneAutoProcessOnRightKey:
 
         assert triggered == []
         assert handler.current_frame_idx == 2
+
+    def test_right_key_navigates_then_processes_landed_frame_without_double_advance(self, handler_and_window):
+        """Right from an already-processed frame should navigate to the next
+        one, process IT if it's blank (using carry-forward), and then stop —
+        not silently skip past it to a third frame. The processed frame must
+        be what the user actually lands on and sees, per feedback that
+        auto-advancing past it defeated the point of showing the result.
+        """
+        handler, window = handler_and_window
+        self._make_batch_size_one(handler, window)
+        handler.pipeline_processor.per_batch_tracked_data = [
+            [{"keypoints": []}],  # batch 0 (frame 0) — processed
+            [],                    # batch 1 (frame 1) — blank, relies on carry-forward
+        ]
+        handler.current_frame_idx = 0
+        handler.selected_points = []
+
+        triggered = []
+        window.process_current_batch = lambda: triggered.append(handler.current_frame_idx)
+
+        window.next_image()
+
+        assert handler.current_frame_idx == 1
+        assert triggered == [1]
+
+    def test_right_key_chains_forward_past_an_unprocessed_gap_batch(self, handler_and_window):
+        """A click-free chain (frame0->1->2->3->...) must not stall the moment
+        one intermediate batch's own slot is empty: batch 1 was never
+        processed on its own (only frame 1 benefited from batch 0's "+1"
+        lookahead), so frame 2 has to fall back past it to batch 0's tracked
+        data — matching AutoSegmentorEngine._track_batch_cotracker's own
+        backward search, which isn't limited to the immediately prior batch.
+        """
+        handler, window = handler_and_window
+        self._make_batch_size_one(handler, window)
+        handler.pipeline_processor.per_batch_tracked_data = [
+            [{"keypoints": []}, {"keypoints": []}],  # batch 0: frames 0,1
+            [],                                       # batch 1: never processed on its own
+        ]
+        handler.current_frame_idx = 2
+        handler.selected_points = []
+
+        triggered = []
+        window.process_current_batch = lambda: triggered.append(handler.current_frame_idx)
+
+        window.next_image()
+
+        assert triggered == [2]
+
+    def test_process_current_batch_skips_save_when_frame_is_blank(self, handler_and_window):
+        """A blank frame (no points, no pose keypoints) relying purely on
+        carried-forward tracking must not persist an empty annotation.
+        Regression coverage: save_current_annotation() used to run
+        unconditionally, so processing a blank frame saved a 0-point prompt
+        for it. That made get_batch_prompts() return a truthy-but-useless
+        entry for the frame forever after — which both fools
+        has_data_for_frame() into thinking it's already annotated and makes
+        AutoSegmentorEngine._track_batch_cotracker take the "use this
+        batch's own (empty) prompt" branch instead of falling back to the
+        real tracked data from an earlier batch (observed live as CoTracker
+        logging "No keypoints available, skipping" on a frame that should
+        have chained forward from batch 0's tracking).
+        """
+        handler, window = handler_and_window
+        self._make_batch_size_one(handler, window)
+        handler.pipeline_processor.per_batch_tracked_data = [
+            [{"keypoints": []}, {"keypoints": []}],  # batch 0
+            [],                                       # batch 1: unprocessed gap
+        ]
+        handler.current_frame_idx = 2
+        handler.selected_points = []
+        handler.pose_click_coords = []
+
+        save_calls = []
+        handler.save_current_annotation = lambda: save_calls.append(handler.current_frame_idx)
+        window.start_processing_thread = lambda *a, **kw: None
+
+        window.process_current_batch()
+
+        assert save_calls == []
 

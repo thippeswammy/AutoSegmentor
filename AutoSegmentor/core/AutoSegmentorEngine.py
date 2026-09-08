@@ -363,10 +363,18 @@ class AutoSegmentorEngine(SAM2Model):
             elif hasattr(self, 'per_batch_tracked_data'):
                 for b in range(batch_number - 1, -1, -1):
                     if b < len(self.per_batch_tracked_data) and self.per_batch_tracked_data[b]:
-                        last_entry = self.per_batch_tracked_data[b][-1]
+                        tracked_b = self.per_batch_tracked_data[b]
+                        last_entry = tracked_b[-1]
                         kps_prev = last_entry.get("keypoints", [])
                         if kps_prev:
-                            prev_idx = (b + 1) * self.config.batch_size - 1
+                            # tracked_b[-1] is whatever frame batch b's tracking
+                            # run actually stopped at — batch_size-1 frames in
+                            # if it was clipped, batch_size frames in if it
+                            # carried its usual "+1 lookahead" overflow. Derive
+                            # it from the data's own length rather than
+                            # assuming no overflow, or kps_prev ends up paired
+                            # with the wrong source frame image below.
+                            prev_idx = b * self.config.batch_size + len(tracked_b) - 1
                             curr_idx = batch_number * self.config.batch_size
 
                             try:
@@ -405,7 +413,11 @@ class AutoSegmentorEngine(SAM2Model):
             return
 
         batch_start = batch_number * self.config.batch_size
-        batch_end = min(batch_start + self.config.batch_size + 1, len(self.frame_paths))
+        # See FrameHandler.move_and_copy_frames: the "+1" lookahead frame only
+        # applies when batch_size > 1, so every frame gets its own explicit
+        # tracking pass when reviewing frame-by-frame (batch_size=1).
+        overflow = 1 if self.config.batch_size > 1 else 0
+        batch_end = min(batch_start + self.config.batch_size + overflow, len(self.frame_paths))
         
         # If backward_tracking is False and we have a query_frame_idx, we only need frames from there onwards
         if not backward_tracking and chosen_query_rel_idx > 0:

@@ -30,9 +30,15 @@ class FrameHandler:
                       key=lambda p: int(re.search(r'_(\d+)\.(?:jpg|jpeg|png)$', p, re.IGNORECASE).group(1)))
 
     def move_and_copy_frames(self, batch_index, frame_paths, batch_size):
-        """Copy frames for the current batch to temp directory, plus one extra for next batch preview."""
-        # Include one extra frame if possible to allow "landing" preview for the user
-        end_idx = min(batch_index + batch_size + 1, len(frame_paths))
+        """Copy frames for the current batch to temp directory, plus one extra for next batch preview.
+
+        The "+1" lookahead frame only applies when batch_size > 1 — with
+        batch_size=1 (frame-by-frame review), it would mean every other
+        frame silently rides along on the previous frame's SAM/CoTracker
+        call instead of getting its own explicit processing pass.
+        """
+        overflow = 1 if batch_size > 1 else 0
+        end_idx = min(batch_index + batch_size + overflow, len(frame_paths))
         frames_to_copy = frame_paths[batch_index:end_idx]
         clear_directory(self.temp_directory)
         ensure_directory(self.temp_directory)
