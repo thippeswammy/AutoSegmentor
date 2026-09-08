@@ -1,5 +1,7 @@
 import os
 from ...file_management.FileManager import get_resource_path, ensure_directory
+from ...ui.logger_config import logger
+from ..model_info import missing_model_message
 
 
 class AppConfig:
@@ -56,4 +58,11 @@ class AppConfig:
         checkpoint_raw = self.sam_config.get("checkpoint") or "external/segment_anything_2/checkpoints/sam2_hiera_large.pt"
         self.checkpoint_path = os.path.normpath(os.path.join(base_path, checkpoint_raw))
         if not os.path.exists(self.checkpoint_path):
-            self.checkpoint_path = get_resource_path(checkpoint_raw)
+            fallback = get_resource_path(checkpoint_raw)
+            logger.warning(f"SAM2 checkpoint not found at {self.checkpoint_path}; trying fallback {fallback}")
+            self.checkpoint_path = fallback
+            if not os.path.exists(self.checkpoint_path):
+                logger.error(missing_model_message(
+                    "SAM2",
+                    [os.path.normpath(os.path.join(base_path, checkpoint_raw)), fallback],
+                ))

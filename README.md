@@ -28,39 +28,107 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
 ## 🔧 Setup & Installation
 
 ### Prerequisites
-- **Python**: 3.10+
-- **GPU**: NVIDIA GPU with CUDA (Required for SAM2/CoTracker performance).
-- **RAM**: 16GB+ recommended.
+
+- **Python**: 3.10+ (3.10 recommended)
+- **GPU**: NVIDIA GPU with CUDA 12.x (required for SAM2/CoTracker performance)
+- **RAM**: 16GB+ recommended
+- **Git**: with `git LFS` support (for large media) or sufficient disk space (~20GB)
 
 ### Installation Steps
 
 1.  **Clone the Repository**
+
+    Cloning with submodules fetches both SAM2 and CoTracker3 dependencies:
+
     ```bash
     git clone --recursive https://github.com/thippeswammy/AutoSegmentor.git
     cd AutoSegmentor
+
+    # If you cloned without --recursive, initialize submodules manually:
+    # git submodule update --init --recursive
     ```
 
 2.  **Environment Setup**
+
     ```bash
     python -m venv .venv
-    # Windows
-    .\.venv\Scripts\activate
+    # Windows (PowerShell)
+    .\.venv\Scripts\Activate.ps1
+    # Windows (cmd)
+    .\.venv\Scripts\activate.bat
     # Linux
     source .venv/bin/activate
     ```
 
-3.  **Install Dependencies**
+3.  **Install Python Dependencies**
+
     ```bash
-    pip install -r requriments_i_used.txt
+    python -m pip install --upgrade pip
+    pip install -r requirements-core.txt
     ```
 
-    # Ensure submodules are initialized
-    git submodule update --init --recursive
+    > **Note on CoTracker3**: `requirements-core.txt` installs the `cotracker`
+    > package from the pinned fork that this project is tested against. The same
+    > source is also vendored under `external/co-tracker/` (git submodule) and is
+    > automatically added to `sys.path` at launch, so the app works even if the
+    > editable install fails due to network restrictions.
+    >
+    > A fully frozen environment (exact versions used during development) is in
+    > `requriments_i_used.txt`.
+
+4.  **Configure the Vendored SAM2 Library**
+
+    SAM2 is bundled under `external/segment_anything_2/`. It does **not** need a
+    separate `pip install`: at launch `run_main.py` reads `external_libs` from
+    `workspace/inputs/config/default_config.yaml` and auto-adds
+    `external/segment_anything_2`, `external/segment_anything_2/sam2`, and
+    `external/co-tracker` to `sys.path`, so `sam2` imports resolve at runtime.
+    Just make sure the submodule/folder is present (the clone step fetches it).
+
+5.  **Install AutoSegmentor (optional)**
+
+    ```bash
+    pip install -e .
     ```
 
-5.  **Download Model Checkpoints**
-    - Place `sam2_hiera_large.pt` in `external/segment_anything_2/checkpoints/`.
-    - Place `scaled_offline.pth` in `external/co-tracker/checkpoints/`.
+    This registers the `autosegmentor` package and the `autosegmentor` /
+    `autosegmentor-demo` console entry points.
+
+6.  **Download Model Checkpoints**
+
+    The app needs two weight files at runtime (they are **not** bundled in the
+    repo for size reasons):
+
+    | Model | Checkpoint | Download from (original source) |
+    | :--- | :--- | :--- |
+    | SAM2 | `sam2_hiera_large.pt` | https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2_hiera_large.pt (repo: [facebookresearch/segment-anything-2](https://github.com/facebookresearch/segment-anything-2)) |
+    | CoTracker3 | `scaled_offline.pth` | https://huggingface.co/facebook/cotracker3/resolve/main/scaled_offline.pth (repo: [facebookresearch/co-tracker](https://github.com/facebookresearch/co-tracker)) |
+
+    Place them at:
+
+    ```bash
+    external/segment_anything_2/checkpoints/sam2_hiera_large.pt
+    external/co-tracker/checkpoints/scaled_offline.pth
+    ```
+
+    Or run the helper script (creates the folders and downloads both files):
+
+    ```bash
+    python scripts/download_checkpoints.py
+    ```
+
+    Verify the checkpoints are present before launching:
+
+    ```bash
+    python scripts/gpu_diagnostic.py
+    ```
+
+7.  **Verify the installation**
+
+    ```bash
+    python run_main.py --version     # prints: AutoSegmentor 3.0.0
+    python run_main.py --demo list   # lists the bundled demos
+    ```
 
 ---
 
@@ -395,7 +463,7 @@ For in-depth guides on every part of the AutoSegmentor ecosystem, refer to the f
 | Issue | Solution |
 | :--- | :--- |
 | **VRAM Out of Memory** | Reduce `batch_size` in the config (e.g., to 8 or 16). |
-| **SAM2 Missing** | Ensure the `external/segment_anything_2` submodule is initialized. |
+| **SAM2 Missing** | Ensure `external/segment_anything_2/` exists (it is vendored in the repo, not a submodule) and `external_libs` in `workspace/inputs/config/default_config.yaml` lists it. |
 | **Slow Preview** | Check if `torch.cuda.is_available()` is True. CPU inference is extremely slow. |
 | **GUI Not Opening** | Verify your PyQt5 installation and display drivers. |
 

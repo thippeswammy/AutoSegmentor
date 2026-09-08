@@ -25,6 +25,45 @@ _cotracker_model = None
 _cotracker_checkpoint = None
 
 
+def _project_root():
+    """Absolute path to the AutoSegmentor project root."""
+    # __file__ = autosegmentor/models/Tracking/CoTrackerPredictor.py -> ../../../ = root
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+
+def _candidate_checkpoints(checkpoint):
+    """Return a list of plausible checkpoint locations for CoTracker weights.
+
+    The canonical location bundled with the app is the CoTracker3 checkout
+    (``external/co-tracker/checkpoints/``), but the vendored SAM2 bundle also
+    carries a copy (``external/segment_anything_2/checkpoints/``). Try them all
+    so runtime does not depend on which folder a user placed the weights in.
+    """
+    root = _project_root()
+    raw = os.path.basename(checkpoint) or 'scaled_offline.pth'
+    candidates = []
+    for candidate in (checkpoint,):
+        if candidate and os.path.isabs(candidate):
+            candidates.append(candidate)
+    candidates.append(os.path.normpath(os.path.join(
+        root, 'external', 'co-tracker', 'checkpoints', raw)))
+    candidates.append(os.path.normpath(os.path.join(
+        root, 'external', 'segment_anything_2', 'checkpoints', raw)))
+    return candidates
+
+
+def resolve_cotracker_checkpoint(checkpoint):
+    """Resolve a CoTracker checkpoint path to the first existing candidate.
+
+    Returns the path of the first existing checkpoint among the configured path
+    and known bundle locations, or None if none exist.
+    """
+    for candidate in _candidate_checkpoints(checkpoint):
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
 def _get_cotracker_model(checkpoint, window_len=60):
     """Load or return cached CoTracker model (singleton)."""
     global _cotracker_model, _cotracker_checkpoint
@@ -34,10 +73,13 @@ def _get_cotracker_model(checkpoint, window_len=60):
 
     from cotracker.predictor import CoTrackerPredictor
 
-    abs_checkpoint = os.path.abspath(checkpoint)
-    if not os.path.exists(abs_checkpoint):
-        logger.error(f"CoTracker checkpoint not found: {abs_checkpoint}")
-        raise FileNotFoundError(f"CoTracker checkpoint not found: {abs_checkpoint}")
+    abs_checkpoint = resolve_cotracker_checkpoint(checkpoint)
+    if abs_checkpoint is None:
+        tried = _candidate_checkpoints(checkpoint)
+        from ..model_info import missing_model_message
+        msg = missing_model_message("CoTracker3", tried)
+        logger.error(msg)
+        raise FileNotFoundError(msg)
 
     logger.info(f"Loading CoTracker model from {abs_checkpoint} (window_len={window_len})")
     model = CoTrackerPredictor(

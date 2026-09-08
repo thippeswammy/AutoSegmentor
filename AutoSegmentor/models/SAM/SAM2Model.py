@@ -1,6 +1,8 @@
+import os
 import torch
 import GPUtil
 from ...ui.logger_config import logger
+from ..model_info import missing_model_message
 from sam2.build_sam import build_sam2_video_predictor
 
 
@@ -27,9 +29,14 @@ class SAM2Model:
         """Build and return the SAM2 video predictor."""
         logger.debug(f"[SAM2Model] build_predictor: cfg={self.config.model_config_path}  ckpt={self.config.checkpoint_path}")
         logger.debug(f"[SAM2Model] build_predictor: memory_bank_size={self.config.memory_bank_size}  prompt_memory_size={self.config.prompt_memory_size}")
+        checkpoint_path = self.config.checkpoint_path
+        if not os.path.exists(checkpoint_path):
+            msg = missing_model_message("SAM2", [checkpoint_path])
+            logger.error(msg)
+            raise FileNotFoundError(msg)
         return build_sam2_video_predictor(
             self.config.model_config_path,
-            self.config.checkpoint_path,
+            checkpoint_path,
             device=self.device,
             memory_bank_size=self.config.memory_bank_size,
             prompt_memory_size=self.config.prompt_memory_size
