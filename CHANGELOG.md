@@ -15,15 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `autosegmentor/_version.py` as the single source of truth.
   - `autosegmentor.__version__` exposed via `autosegmentor/__init__.py`.
   - `python run_main.py --version` reports the installed version.
-- **Industrial / material-handling demos** (flagship release focus)
-  - `--demo industrial-warehouse`: moving forklift + pallet footage processed
-    with SAM2 + CoTracker3 (pallet masks, 6-point pallet pose, 3-point forklift
-    pose, YOLO pose export).
-  - `--demo pallet-closeup`: a static, clearly visible wooden pallet stack
-    ideal for **creating your own pallet labels** and training a pallet pose
-    model.
+- **Demo**
+  - `--demo cat`: classic segmentation/pose demo on the bundled cat clip.
   - Multi-demo registry (`autosegmentor/tools/demo_registry.py`) and
     `python run_main.py --demo list` to enumerate demos.
+  - Extra sample footage (`demo/videos/road_dashboard.mp4`, a dashcam road
+    scene) is included for testing your own labels — not a bundled demo.
 - **Packaging / distribution**
   - New `pyproject.toml`, `setup.py`, and `MANIFEST` configuration.
   - Clean `requirements-core.txt` (in addition to the frozen
@@ -33,7 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `autosegmentor` and `autosegmentor-demo` console entry points.
 - **Documentation**
   - `CHANGELOG.md`.
-  - `README.md` "Material Handling & Industrial Automation" section.
+  - `README.md` "Automated Demo" and "Material Handling & Industrial
+    Automation" sections.
   - `demo/README.md` and `demo/videos/README.md` with footage attribution.
 
 ### Changed

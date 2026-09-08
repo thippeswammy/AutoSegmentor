@@ -38,7 +38,6 @@ Build output is written to `build/AutoSegmentor/`.
 ```
 AutoSegmentor.exe                # Standard GUI
 AutoSegmentor.exe --demo         # Default (cat) demo
-AutoSegmentor.exe --demo industrial-warehouse
 AutoSegmentor.exe --demo list
 AutoSegmentor.exe --version
 ```
