@@ -174,6 +174,7 @@ class AnnotationWindow(QDialog):
         self.handler = handler
         self.config = config
         self.is_processing = False
+        self._pending_auto_advance = False  # Right-key auto-process (batch_size=1) should advance once done
         self._preview_thread = None  # Background SAM2 preview thread
         self._preview_pending = False # Queue flag for high-responsiveness
 
@@ -624,6 +625,22 @@ class AnnotationWindow(QDialog):
         self.handler.load_frame_for_ui(idx)
 
     def next_image(self):
+        # With batch_size=1 each frame is its own batch: skip the Enter step
+        # and let Right directly process an unprocessed frame, then advance
+        # to the next one once processing finishes. Covers both fresh manual
+        # points and a frame that only has carried-forward tracking data.
+        batch = self.handler.current_frame_idx // self.config.batch_size
+        if (self.config.batch_size == 1 and not self.is_processing
+                and not self._frame_is_processed()
+                and self._batch_has_processable_data(batch)):
+            logger.debug("[Nav] next_image: batch_size=1, unprocessed frame with data to process -> auto-processing before advance")
+            self._pending_auto_advance = True
+            self.process_current_batch()
+            if not self.is_processing:
+                # process_current_batch bailed out (e.g. user dismissed the
+                # "No Prompts Found" dialog) — nothing will clear the flag.
+                self._pending_auto_advance = False
+            return
         idx = min(len(self.handler.frame_paths) - 1, self.handler.current_frame_idx + 1)
         logger.debug(f"[Nav] next_image: {self.handler.current_frame_idx} -> {idx}")
         self.handler.load_frame_for_ui(idx)
@@ -1125,6 +1142,17 @@ class AnnotationWindow(QDialog):
         layout.addWidget(bb)
         dlg.exec_()
 
+    def _batch_has_processable_data(self, batch) -> bool:
+        """True if `batch` has manual prompts or carried-forward tracking data."""
+        batch_prompts = self.handler.annotation_manager.get_batch_prompts(batch, self.config.batch_size)
+        has_prev_tracked = (
+            batch > 0
+            and hasattr(self.handler.pipeline_processor, 'per_batch_tracked_data')
+            and batch - 1 < len(self.handler.pipeline_processor.per_batch_tracked_data)
+            and bool(self.handler.pipeline_processor.per_batch_tracked_data[batch - 1])
+        )
+        return bool(batch_prompts) or has_prev_tracked
+
     def process_current_batch(self):
         """Intelligently process or reprocess the current batch."""
         if self.is_processing:
@@ -1137,16 +1165,7 @@ class AnnotationWindow(QDialog):
         current_frame = self.handler.current_frame_idx
         logger.debug(f"[UI] process_current_batch: batch={batch}  current_frame={current_frame}")
 
-        # Check if the batch has any prompts (manual or tracked carry-forward)
-        batch_prompts = self.handler.annotation_manager.get_batch_prompts(batch, self.config.batch_size)
-        has_prev_tracked = (
-            batch > 0
-            and hasattr(self.handler.pipeline_processor, 'per_batch_tracked_data')
-            and batch - 1 < len(self.handler.pipeline_processor.per_batch_tracked_data)
-            and bool(self.handler.pipeline_processor.per_batch_tracked_data[batch - 1])
-        )
-
-        if not batch_prompts and not has_prev_tracked:
+        if not self._batch_has_processable_data(batch):
             msg = QMessageBox(self)
             msg.setWindowTitle("No Prompts Found")
             msg.setIcon(QMessageBox.Warning)
@@ -1313,6 +1332,11 @@ class AnnotationWindow(QDialog):
         self.refresh_display()
         self._update_sidebar()
         logger.debug(f"[UI] on_processing_finished: display fully refreshed for batch {batch}")
+
+        if self._pending_auto_advance:
+            self._pending_auto_advance = False
+            logger.debug("[Nav] on_processing_finished: auto-advancing to next frame after Right-key triggered process")
+            self.next_image()
 
     # ─── Model Routing Logic ────────────────────────────────────────────────
     def _on_routing_changed(self, active_list):
