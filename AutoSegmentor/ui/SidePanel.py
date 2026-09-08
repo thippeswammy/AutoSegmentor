@@ -371,8 +371,12 @@ class LiveConfigPanel(QGroupBox):
         self.point_size_changed.emit(val)
 
 
-class ProcessingStatusPanel(QGroupBox):
-    """Live SAM2/CoTracker batch-processing plan, per-stage timing, and a log.
+class ProcessingStagePanel(QWidget):
+    """Live SAM2/CoTracker batch-processing plan and per-stage timing.
+
+    Lives in its own dock (see MainWindow._init_ui) rather than the right-hand
+    Annotation sidebar, so it can be moved/floated independently — no
+    QGroupBox chrome here since the dock's own title bar already labels it.
 
     Which stages run (and for how many frames) differs per batch — SAM-only,
     CoTracker-only, both, or a partial refinement from a mid-batch anchor
@@ -390,10 +394,10 @@ class ProcessingStatusPanel(QGroupBox):
     """
 
     def __init__(self, parent=None):
-        super().__init__("Processing", parent)
+        super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setSpacing(6)
-        layout.setContentsMargins(8, 16, 8, 8)
+        layout.setContentsMargins(8, 8, 8, 8)
 
         self.stage_label = QLabel("Idle")
         self.stage_label.setFont(Fonts.body())
@@ -423,17 +427,11 @@ class ProcessingStatusPanel(QGroupBox):
         self._stage_layout.setSpacing(1)
         self._stage_layout.setContentsMargins(0, 2, 0, 2)
 
-        self.log = QTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setFixedHeight(90)
-        self.log.setFont(Fonts.mono_small())
-        self.log.setStyleSheet(f"background-color: {Colors.BG_DARKEST}; color: {Colors.TEXT_SECONDARY};")
-
         layout.addWidget(self.stage_label)
         layout.addWidget(time_row)
         layout.addWidget(self.progress_bar)
         layout.addWidget(self._stage_container)
-        layout.addWidget(self.log)
+        layout.addStretch()
 
         self.set_idle()
 
@@ -549,6 +547,26 @@ class ProcessingStatusPanel(QGroupBox):
     def set_eta(self, text):
         self.eta_label.setText(text)
 
+
+class LogPanel(QWidget):
+    """Timestamped processing log — its own dock, VSCode Output-panel style.
+
+    Kept separate from ProcessingStagePanel so it can default to a short
+    strip at the bottom of the window instead of competing for space in a
+    side panel. History accumulates across batches (not cleared on idle).
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        self.log = QTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setFont(Fonts.mono_small())
+        self.log.setStyleSheet(f"background-color: {Colors.BG_DARKEST}; color: {Colors.TEXT_SECONDARY}; border: none;")
+        layout.addWidget(self.log)
+
     def append_log(self, text):
         import datetime
         ts = datetime.datetime.now().strftime("%H:%M:%S")
@@ -628,10 +646,14 @@ class ModelRoutingPanel(QGroupBox):
 
 
 class SidePanel(QScrollArea):
-    """Right-side panel containing all info panels.
+    """Annotation/dataset-label panel — lives in its own dock (see
+    MainWindow._init_ui), defaulting to the right edge like before, but now
+    freely resizable/movable/floatable rather than a fixed-width splitter pane.
 
     Combines BatchInfoPanel, ToolInfoPanel, AnnotationListPanel,
-    KeypointProgressPanel, and LiveConfigPanel into a scrollable sidebar.
+    KeypointProgressPanel, ModelRoutingPanel and LiveConfigPanel. Processing
+    status/timing and the log live in their own separate docks (see
+    ProcessingStagePanel / LogPanel) so they can be positioned independently.
     """
 
     export_requested = pyqtSignal()
@@ -639,7 +661,7 @@ class SidePanel(QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWidgetResizable(True)
-        self.setFixedWidth(SIDEBAR_WIDTH)
+        self.setMinimumWidth(SIDEBAR_WIDTH)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setStyleSheet(f"""
             QScrollArea {{
@@ -659,7 +681,6 @@ class SidePanel(QScrollArea):
         self.keypoint_progress = KeypointProgressPanel()
         self.model_routing = ModelRoutingPanel()
         self.live_config = LiveConfigPanel()
-        self.processing_status = ProcessingStatusPanel()
 
         layout.addWidget(self.batch_info)
         layout.addWidget(self.tool_info)
@@ -667,8 +688,7 @@ class SidePanel(QScrollArea):
         layout.addWidget(self.keypoint_progress)
         layout.addWidget(self.model_routing)
         layout.addWidget(self.live_config)
-        layout.addWidget(self.processing_status)
-        
+
         layout.addStretch()
 
         # Export Button at the very bottom

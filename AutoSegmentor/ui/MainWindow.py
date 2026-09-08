@@ -8,10 +8,10 @@ from collections import deque
 
 import cv2
 import PyQt5.QtCore as QtCore
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QSettings
 from PyQt5.QtGui import QIcon, QKeySequence, QFont
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar, QMenu,
+    QDialog, QVBoxLayout, QHBoxLayout, QMainWindow, QDockWidget, QMenuBar, QMenu,
     QToolBar, QAction, QStatusBar, QLabel, QPushButton, QComboBox,
     QUndoStack, QShortcut, QWidget, QSizePolicy, QTextEdit, QDialogButtonBox,
     QMessageBox
@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
 
 from .UITheme import DARK_STYLESHEET, SIDEBAR_WIDTH, TOOLBAR_HEIGHT, STATUSBAR_HEIGHT, Colors
 from .AnnotationCanvas import AnnotationCanvas
-from .SidePanel import SidePanel
+from .SidePanel import SidePanel, ProcessingStagePanel, LogPanel
 from .NavigationManager import AddPointCommand, ResetPointsCommand, DeletePointCommand, SkipPointCommand, DragPointCommand, CorrectPosePointCommand, NavigationState
 from .ExportDialog import ExportDialog
 from .logger_config import logger
@@ -242,12 +242,21 @@ class AnnotationWindow(QDialog):
         self._build_toolbar()
         main_layout.addWidget(self.tool_bar)
         
-        self.splitter = QSplitter(Qt.Horizontal, self)
-        
+        # Embedded QMainWindow: AnnotationWindow must stay a QDialog (it runs
+        # modally via exec_() and start_ui_loop reads Accepted/Rejected), but
+        # QDockWidget docking is a QMainWindow-only feature. Hosting one as a
+        # plain child widget here gives real dock/float/tab behavior — a
+        # floated dock still becomes its own top-level window, which is
+        # exactly the "move it anywhere" behavior being asked for — without
+        # ever showing dock_host itself as a separate top-level window.
+        self.dock_host = QMainWindow()
+        self.dock_host.setDockNestingEnabled(True)
+
         self.canvas = AnnotationCanvas(self)
         self.canvas.set_show_crosshair(self.nav_state.show_crosshair)
         self.canvas.set_show_grid(self.nav_state.show_grid)
-        
+        self.dock_host.setCentralWidget(self.canvas)
+
         # Loader label
         self.loader_label = QLabel("Processing...", self.canvas)
         self.loader_label.setStyleSheet("QLabel { background-color: rgba(0, 0, 0, 180); color: white; font-size: 24px; padding: 20px; border-radius: 10px; }")
@@ -255,25 +264,52 @@ class AnnotationWindow(QDialog):
         self.loader_label.resize(400, 100)
         self.loader_label.move(self.canvas.width() // 2 - 200, self.canvas.height() // 2 - 50)
         self.loader_label.hide()
-        
-        self.splitter.addWidget(self.canvas)
-        
-        self.sidebar = SidePanel(self)
+
+        self.sidebar = SidePanel(self.dock_host)
         is_pose = self.handler.pose_mode
         self.sidebar.set_pose_mode(is_pose, self.handler.pose_keypoints if is_pose else None)
         self.sidebar.model_routing.set_active_models(self.handler.active_target_models)
         self.sidebar.model_routing.set_auto_shift(self.handler.auto_shift_enabled)
-        self.splitter.addWidget(self.sidebar)
-        
-        self.splitter.setSizes([800, SIDEBAR_WIDTH])
-        self.splitter.setCollapsible(0, False)
-        self.splitter.setCollapsible(1, False)
-        main_layout.addWidget(self.splitter, 1)
-        
+        self.annotation_dock = self._make_dock("Annotation", "dock_annotation", self.sidebar, Qt.RightDockWidgetArea)
+
+        self.processing_panel = ProcessingStagePanel(self.dock_host)
+        self.processing_dock = self._make_dock("Processing", "dock_processing", self.processing_panel, Qt.LeftDockWidgetArea)
+
+        self.log_panel = LogPanel(self.dock_host)
+        self.log_dock = self._make_dock("Log", "dock_log", self.log_panel, Qt.BottomDockWidgetArea)
+        self.dock_host.resizeDocks([self.log_dock], [90], Qt.Vertical)
+
+        # Each dock's own toggleViewAction is a ready-made checkable QAction
+        # that shows/hides it — this is how a closed dock (Qt's equivalent of
+        # "collapsed") gets reopened.
+        panels_menu = self.view_menu.addMenu("&Panels")
+        for dock in (self.annotation_dock, self.processing_dock, self.log_dock):
+            panels_menu.addAction(dock.toggleViewAction())
+
+        main_layout.addWidget(self.dock_host, 1)
+
         self.status_bar = QStatusBar(self)
         self.status_bar.setFixedHeight(STATUSBAR_HEIGHT)
         self._build_statusbar()
         main_layout.addWidget(self.status_bar)
+
+        # Restore the user's last dock arrangement, if any (see closeEvent).
+        self._qsettings = QSettings("AutoSegmentor", "AnnotationWindow")
+        saved_state = self._qsettings.value("dock_state")
+        if saved_state is not None:
+            self.dock_host.restoreState(saved_state)
+
+    def _make_dock(self, title, object_name, widget, default_area):
+        """Create a QDockWidget that can be moved to any edge, floated, or
+        closed/reopened (Qt's native equivalent of "collapsible") — see
+        View → Panels for reopening a closed one."""
+        dock = QDockWidget(title, self.dock_host)
+        dock.setObjectName(object_name)
+        dock.setWidget(widget)
+        dock.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetClosable)
+        dock.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.dock_host.addDockWidget(default_area, dock)
+        return dock
 
     def _build_menu(self):
         file_menu = self.menu_bar.addMenu("&File")
@@ -319,7 +355,8 @@ class AnnotationWindow(QDialog):
         reset_action.triggered.connect(self.reset_points)
         edit_menu.addAction(reset_action)
 
-        view_menu = self.menu_bar.addMenu("&View")
+        self.view_menu = self.menu_bar.addMenu("&View")
+        view_menu = self.view_menu
         self.crosshair_action = QAction("Toggle &Crosshair", self, checkable=True)
         self.crosshair_action.setChecked(self.nav_state.show_crosshair)
         self.crosshair_action.setShortcut("C")
@@ -344,6 +381,11 @@ class AnnotationWindow(QDialog):
 
     def closeEvent(self, event):
         """Intercept window close to prevent accidental data loss and orphan threads."""
+        # Remember the dock arrangement regardless of how this close resolves
+        # below — it's just layout, not annotation data, so there's no harm
+        # in persisting it even if the user ends up cancelling the close.
+        self._qsettings.setValue("dock_state", self.dock_host.saveState())
+
         if self.is_processing:
             reply = QMessageBox.question(
                 self, 'Background Task Running',
@@ -1144,8 +1186,8 @@ class AnnotationWindow(QDialog):
         self._active_stage_t0 = None
         self._current_plan = []
         self._elapsed_timer.start()
-        self.sidebar.processing_status.append_log(f"Batch {batch + 1}: started")
-        self.sidebar.processing_status.set_current_stage_label("Starting...")
+        self.log_panel.append_log(f"Batch {batch + 1}: started")
+        self.processing_panel.set_current_stage_label("Starting...")
 
         self.processor_thread = BatchProcessorThread(self.handler, batch, query_frame_idx=query_frame_idx, backward_tracking=backward_tracking)
         self.processor_thread.finished_batch.connect(self.on_processing_finished)
@@ -1153,7 +1195,7 @@ class AnnotationWindow(QDialog):
         self.processor_thread.stage_started.connect(self._on_stage_started)
         self.processor_thread.stage_finished.connect(self._on_stage_finished)
         self.processor_thread.frame_progress.connect(self._on_frame_progress)
-        self.processor_thread.log_message.connect(self.sidebar.processing_status.append_log)
+        self.processor_thread.log_message.connect(self.log_panel.append_log)
         self.processor_thread.start()
         logger.debug(f"[UI] BatchProcessorThread started for batch {batch}")
 
@@ -1170,17 +1212,17 @@ class AnnotationWindow(QDialog):
         total ETA that reflects exactly which stages this batch will run."""
         enriched = [dict(stage, est_seconds=self._stage_estimate(stage["key"], stage["frames"])) for stage in plan]
         self._current_plan = enriched
-        self.sidebar.processing_status.set_plan(enriched)
+        self.processing_panel.set_plan(enriched)
 
         known = [s["est_seconds"] for s in enriched if s["est_seconds"] is not None]
         if len(known) == len(enriched) and enriched:
             total = sum(known)
-            self.sidebar.processing_status.set_eta(f"~{total:.0f}s total ({len(enriched)} stage{'s' if len(enriched) != 1 else ''})")
+            self.processing_panel.set_eta(f"~{total:.0f}s total ({len(enriched)} stage{'s' if len(enriched) != 1 else ''})")
         else:
-            self.sidebar.processing_status.set_eta(f"Estimating... ({len(enriched)} stage{'s' if len(enriched) != 1 else ''})")
+            self.processing_panel.set_eta(f"Estimating... ({len(enriched)} stage{'s' if len(enriched) != 1 else ''})")
 
         names = ", ".join(f"{s['label']} ({s['frames']} frames)" for s in enriched)
-        self.sidebar.processing_status.append_log(f"Plan: {names}")
+        self.log_panel.append_log(f"Plan: {names}")
 
     def _on_stage_started(self, key):
         self._active_stage_key = key
@@ -1189,33 +1231,33 @@ class AnnotationWindow(QDialog):
         stage = next((s for s in self._current_plan if s["key"] == key), None)
         label = stage["label"] if stage else key
 
-        self.sidebar.processing_status.mark_stage_running(key)
-        self.sidebar.processing_status.set_current_stage_label(label)
+        self.processing_panel.mark_stage_running(key)
+        self.processing_panel.set_current_stage_label(label)
         frame_note = f" ({stage['frames']} frames)" if stage and stage["frames"] else ""
-        self.sidebar.processing_status.append_log(f"{label} started{frame_note}")
+        self.log_panel.append_log(f"{label} started{frame_note}")
         self.loader_label.setText(label)
 
         if stage and stage["frames"] and key == "sam2":
             # Only SAM2's propagate_in_video loop reports real per-frame progress.
-            self.sidebar.processing_status.start_frame_progress(stage["frames"])
+            self.processing_panel.start_frame_progress(stage["frames"])
         else:
-            self.sidebar.processing_status.start_estimated_progress(label)
+            self.processing_panel.start_estimated_progress(label)
 
     def _on_frame_progress(self, key, done, total):
         if key != self._active_stage_key:
             return
         self._active_stage_has_real_progress = True
-        self.sidebar.processing_status.set_frame_progress(done, total)
-        self.sidebar.processing_status.mark_stage_frame_count(key, done, total)
+        self.processing_panel.set_frame_progress(done, total)
+        self.processing_panel.mark_stage_frame_count(key, done, total)
 
     def _on_stage_finished(self, key, duration):
         stage = next((s for s in self._current_plan if s["key"] == key), None)
         frames = stage["frames"] if stage else 0
         if frames:
             self._stage_rate_history.setdefault(key, deque(maxlen=5)).append(duration / frames)
-        self.sidebar.processing_status.mark_stage_done(key, duration)
+        self.processing_panel.mark_stage_done(key, duration)
         label = stage["label"] if stage else key
-        self.sidebar.processing_status.append_log(f"{label} done ({duration:.1f}s)")
+        self.log_panel.append_log(f"{label} done ({duration:.1f}s)")
         if key == self._active_stage_key:
             self._active_stage_key = None
             self._active_stage_t0 = None
@@ -1224,7 +1266,7 @@ class AnnotationWindow(QDialog):
         if self._processing_start_time is None:
             return
         elapsed = time.perf_counter() - self._processing_start_time
-        self.sidebar.processing_status.set_elapsed(elapsed)
+        self.processing_panel.set_elapsed(elapsed)
 
         # Animate the active stage's bar toward its own time estimate when it
         # has no real per-frame progress hook (e.g. CoTracker's single
@@ -1233,7 +1275,7 @@ class AnnotationWindow(QDialog):
             stage = next((s for s in self._current_plan if s["key"] == self._active_stage_key), None)
             if stage and stage.get("est_seconds"):
                 stage_elapsed = time.perf_counter() - self._active_stage_t0
-                self.sidebar.processing_status.set_estimated_progress(min(stage_elapsed / stage["est_seconds"], 0.95))
+                self.processing_panel.set_estimated_progress(min(stage_elapsed / stage["est_seconds"], 0.95))
 
         # Total ETA = planned total minus however much wall-clock time has
         # already elapsed this batch, only when every planned stage has a
@@ -1241,7 +1283,7 @@ class AnnotationWindow(QDialog):
         known = [s["est_seconds"] for s in self._current_plan if s["est_seconds"] is not None]
         if self._current_plan and len(known) == len(self._current_plan):
             remaining = max(sum(known) - elapsed, 0)
-            self.sidebar.processing_status.set_eta(f"~{remaining:.0f}s left")
+            self.processing_panel.set_eta(f"~{remaining:.0f}s left")
 
     def on_processing_finished(self, batch):
         logger.debug(f"[UI] on_processing_finished: batch={batch}  current_frame={self.handler.current_frame_idx}")
@@ -1256,11 +1298,11 @@ class AnnotationWindow(QDialog):
         self._elapsed_timer.stop()
         if self._processing_start_time is not None:
             total_elapsed = time.perf_counter() - self._processing_start_time
-            self.sidebar.processing_status.append_log(f"Batch {batch + 1} complete in {total_elapsed:.1f}s")
+            self.log_panel.append_log(f"Batch {batch + 1} complete in {total_elapsed:.1f}s")
             self._processing_start_time = None
         self._active_stage_key = None
         self._active_stage_t0 = None
-        self.sidebar.processing_status.set_idle()
+        self.processing_panel.set_idle()
 
         logger.info(f"Finished processing batch {batch}")
 
