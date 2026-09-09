@@ -437,6 +437,15 @@ class AnnotationWindow(QDialog):
                                    self.canvas.height() // 2 - self.loader_label.height() // 2)
 
     def _build_toolbar(self):
+        # Shortcuts cheatsheet — kept first so it's always reachable regardless
+        # of window width / toolbar wrapping.
+        self.btn_shortcuts = QPushButton("⌨ Shortcuts (H)")
+        self.btn_shortcuts.setObjectName("shortcutsButton")
+        self.btn_shortcuts.clicked.connect(self._show_help_overlay)
+        self.tool_bar.addWidget(self.btn_shortcuts)
+
+        self.tool_bar.addSeparator()
+
         # Navigation
         self.btn_prev_batch = QPushButton("<< Prev Batch")
         self.btn_prev_batch.clicked.connect(self.prev_batch)
@@ -509,7 +518,7 @@ class AnnotationWindow(QDialog):
         self._save_status_label.setStyleSheet(f"color: {Colors.ACCENT_GREEN}; font-size: 8pt;")
         self.status_bar.addWidget(self._save_status_label)
         self.status_bar.addPermanentWidget(
-            QLabel(" A/←: Prev  D/→: Next  [/]: Batch  R: Reset  M: Mask  H: Help  Ctrl+S: Save  Ctrl+E: Export  +/-: Zoom")
+            QLabel(" A/←: Prev  D/→: Next  [/]: Batch  R: Reset  M: Mask  H: Help  Ctrl+S: Save  Ctrl+E: Export  +/-: Zoom  Shift+S/P: Routing")
         )
 
     def _setup_shortcuts(self):
@@ -1121,8 +1130,8 @@ class AnnotationWindow(QDialog):
   <tr><td>Next batch</td>         <td><span class='key'>]</span></td></tr>
   <tr><td>Jump to frame</td>      <td>Type in Jump box + <span class='key'>Enter</span></td></tr>
   <tr class='sec'><td colspan='2'>✏️ Annotation</td></tr>
-  <tr><td>Add foreground point</td><td><span class='key'>Ctrl+LClick</span></td></tr>
-  <tr><td>Add background point</td><td><span class='key'>Ctrl+RClick</span></td></tr>
+  <tr><td>Add positive (foreground) point</td><td><span class='key'>Ctrl+LClick</span></td></tr>
+  <tr><td>Add negative (background) point</td><td><span class='key'>Ctrl+RClick</span></td></tr>
   <tr><td>Delete / Toggle Visible</td> <td><span class='key'>RClick</span> on point → menu</td></tr>
   <tr><td>Move point</td>         <td><span class='key'>Shift+LClick</span> drag</td></tr>
   <tr><td>Undo</td>               <td><span class='key'>Ctrl+Z</span> / <span class='key'>U</span></td></tr>
@@ -1132,18 +1141,25 @@ class AnnotationWindow(QDialog):
   <tr><td>Next instance</td>      <td><span class='key'>Tab</span></td></tr>
   <tr><td>Prev instance</td>      <td><span class='key'>Shift+Tab</span></td></tr>
   <tr><td>Set class 1–9</td>      <td><span class='key'>1</span>–<span class='key'>9</span></td></tr>
+  <tr class='sec'><td colspan='2'>🎯 Model Routing</td></tr>
+  <tr><td>Toggle SAM routing</td> <td><span class='key'>Shift+S</span></td></tr>
+  <tr><td>Toggle Pose routing</td><td><span class='key'>Shift+P</span></td></tr>
+  <tr><td>Select all models</td>  <td><span class='key'>Shift+A</span></td></tr>
+  <tr><td>Select no models</td>   <td><span class='key'>Shift+N</span></td></tr>
   <tr class='sec'><td colspan='2'>⚙️ Processing</td></tr>
   <tr><td>Process current batch</td><td><span class='key'>Enter</span></td></tr>
   <tr><td>Save progress</td>      <td><span class='key'>Ctrl+S</span></td></tr>
   <tr><td>Export YOLO dataset</td><td><span class='key'>Ctrl+E</span></td></tr>
+  <tr><td>Finish pipeline</td>    <td><span class='key'>Ctrl+Return</span></td></tr>
   <tr class='sec'><td colspan='2'>👁 View</td></tr>
   <tr><td>Toggle mask overlay</td><td><span class='key'>M</span></td></tr>
   <tr><td>Toggle crosshair</td>   <td><span class='key'>C</span></td></tr>
   <tr><td>Toggle grid</td>        <td><span class='key'>G</span></td></tr>
   <tr><td>Toggle corner zoom</td> <td><span class='key'>Z</span></td></tr>
-  <tr><td>Zoom in / out</td>      <td><span class='key'>+</span> / <span class='key'>-</span></td></tr>
-  <tr><td>Pan canvas</td>         <td><span class='key'>LClick</span> drag</td></tr>
+  <tr><td>Zoom in / out</td>      <td><span class='key'>+</span> / <span class='key'>-</span> / <span class='key'>Scroll</span></td></tr>
+  <tr><td>Pan canvas</td>         <td><span class='key'>LClick</span> drag / <span class='key'>MClick</span> drag</td></tr>
   <tr><td>Show shortcuts</td>     <td><span class='key'>H</span></td></tr>
+  <tr><td>Close window</td>       <td><span class='key'>Ctrl+W</span></td></tr>
   <tr><td>Exit without saving</td><td><span class='key'>Ctrl+Q</span></td></tr>
 </table>
 """
