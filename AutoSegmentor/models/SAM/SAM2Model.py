@@ -34,13 +34,19 @@ class SAM2Model:
             msg = missing_model_message("SAM2", [checkpoint_path])
             logger.error(msg)
             raise FileNotFoundError(msg)
-        return build_sam2_video_predictor(
+        predictor = build_sam2_video_predictor(
             self.config.model_config_path,
             checkpoint_path,
             device=self.device,
             memory_bank_size=self.config.memory_bank_size,
             prompt_memory_size=self.config.prompt_memory_size
         )
+        # Correction clicks (esp. negative points) added on a frame after tracking
+        # has begun leave stale pre-correction memory on neighboring frames unless
+        # this is enabled — see sam2_video_predictor.py's own docstring on the flag.
+        predictor.clear_non_cond_mem_around_input = True
+        predictor.clear_non_cond_mem_for_multi_obj = True  # AutoSegmentor tracks multiple obj_ids per video
+        return predictor
 
     def gpu_memory_usage(self, ind=0):
         """Get GPU memory usage for the specified GPU index."""

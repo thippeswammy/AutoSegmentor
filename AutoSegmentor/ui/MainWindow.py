@@ -563,6 +563,7 @@ class AnnotationWindow(QDialog):
 
     def _connect_signals(self):
         self.canvas.point_clicked.connect(self.handle_canvas_click)
+        self.canvas.mask_point_clicked.connect(self.handle_mask_point_click)
         self.canvas.mouse_moved.connect(self.handle_mouse_move)
         self.canvas.point_moved.connect(self.handle_point_moved)
         self.canvas.point_dragging.connect(self.handle_point_dragging)
@@ -744,9 +745,27 @@ class AnnotationWindow(QDialog):
 
         logger.debug(f"[UI] Pushing AddPointCommand: point=[{x},{y}]  label={full_label}")
         # Note: AddPointCommand will now need to handle 'target_models'
-        cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click, 
+        cmd = AddPointCommand(self.handler, [x, y], full_label, pose_click,
                               target_models=list(self.handler.active_target_models))
         self.undo_stack.push(cmd)
+
+    def handle_mask_point_click(self, x, y, button):
+        """Ctrl+Shift+Click: add a point straight to the current instance's
+        mask. Skips the pose keypoint naming/instance-advance logic in
+        handle_canvas_click entirely, so points-only mask prompting isn't
+        capped at len(pose_keypoints) positive clicks per instance."""
+        full_label = self.handler.encode_label(self.handler.current_class_label, self.handler.current_instance_id)
+        if button == Qt.RightButton:
+            full_label *= -1
+        logger.debug(f"[UI] handle_mask_point_click: ({x},{y})  label={full_label}  instance={self.handler.current_instance_id}")
+
+        cmd = AddPointCommand(self.handler, [x, y], full_label, None, target_models=["sam"])
+        self.undo_stack.push(cmd)
+
+        sign = "+" if full_label > 0 else "-"
+        self.status_bar.showMessage(
+            f"Added {sign} mask point → Instance {self.handler.current_instance_id}", 2000
+        )
 
     def handle_point_deleted(self, index):
         if index < len(self.handler.selected_points):
@@ -1132,6 +1151,7 @@ class AnnotationWindow(QDialog):
   <tr class='sec'><td colspan='2'>✏️ Annotation</td></tr>
   <tr><td>Add positive (foreground) point</td><td><span class='key'>Ctrl+LClick</span></td></tr>
   <tr><td>Add negative (background) point</td><td><span class='key'>Ctrl+RClick</span></td></tr>
+  <tr><td>Add point straight to mask (skip pose/skeleton)</td><td><span class='key'>Ctrl+Shift+LClick</span> / <span class='key'>Ctrl+Shift+RClick</span></td></tr>
   <tr><td>Delete / Toggle Visible</td> <td><span class='key'>RClick</span> on point → menu</td></tr>
   <tr><td>Move point</td>         <td><span class='key'>Shift+LClick</span> drag</td></tr>
   <tr><td>Undo</td>               <td><span class='key'>Ctrl+Z</span> / <span class='key'>U</span></td></tr>

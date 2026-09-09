@@ -198,10 +198,15 @@ class AnnotationCanvas(QGraphicsView):
     Signals:
         point_clicked(float, float, int): Emitted on left/right click with
             (x, y, button) where button is Qt.LeftButton or Qt.RightButton.
+        mask_point_clicked(float, float, int): Emitted on Ctrl+Shift+click —
+            adds the point straight to the current instance's mask, skipping
+            pose keypoint naming/instance-advance so plain point-to-mask
+            prompting isn't capped by the pose keypoint count.
         mouse_moved(float, float): Emitted on mouse move with image coordinates.
     """
 
     point_clicked = pyqtSignal(float, float, int)
+    mask_point_clicked = pyqtSignal(float, float, int)
     mouse_moved = pyqtSignal(float, float)
     # pose_idx (last arg, may be None) is the matching index into
     # handler.pose_click_coords for a "sam"-kind item that is a pose keypoint —
@@ -471,9 +476,10 @@ class AnnotationCanvas(QGraphicsView):
         button = event.button()
         scene_pos = self.mapToScene(event.pos())
 
-        # 1. Search for nearest point if Shift is held (50px threshold)
+        # 1. Search for nearest point if Shift (but not Ctrl+Shift, reserved
+        #    for the mask-only point add below) is held (50px threshold)
         target_item = None
-        if modifiers & Qt.ShiftModifier and button == Qt.LeftButton:
+        if modifiers & Qt.ShiftModifier and not (modifiers & Qt.ControlModifier) and button == Qt.LeftButton:
             min_dist = 50.0  # Threshold in pixels
             for item in self._overlay_items:
                 dist = (item.pos() - scene_pos).manhattanLength() # Fast check
@@ -505,12 +511,16 @@ class AnnotationCanvas(QGraphicsView):
                 event.accept()
                 return
 
-            # 2. Add Point (Ctrl + Click)
+            # 2. Add Point (Ctrl + Click), or add straight to the mask
+            #    (Ctrl + Shift + Click), bypassing pose keypoint routing
             if modifiers & Qt.ControlModifier:
                 img_rect = self._image_item.boundingRect()
                 if img_rect.contains(scene_pos):
                     if button in (Qt.LeftButton, Qt.RightButton):
-                        self.point_clicked.emit(scene_pos.x(), scene_pos.y(), int(button))
+                        if modifiers & Qt.ShiftModifier:
+                            self.mask_point_clicked.emit(scene_pos.x(), scene_pos.y(), int(button))
+                        else:
+                            self.point_clicked.emit(scene_pos.x(), scene_pos.y(), int(button))
                         event.accept()
                         return
         else:
@@ -648,7 +658,7 @@ class AnnotationCanvas(QGraphicsView):
         painter.setFont(font)
         painter.setPen(QColor(Colors.TEXT_SECONDARY))
         painter.drawText(hud_rect.adjusted(10, 30, -10, -8), Qt.AlignTop | Qt.AlignLeft, 
-                         "• [Ctrl+Click]  Add Point\n"
+                         "• [Ctrl+Click]  Add Point (+Shift = mask only)\n"
                          "• [RightClick] Delete / Toggle Visible\n"
                          "• [Shift+Drag] Move Point\n"
                          "• [A / D]       Next/Prev Frame\n"
