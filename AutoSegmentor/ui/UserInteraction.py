@@ -88,7 +88,16 @@ class UserInteractionHandler:
         occluded point, since its position isn't trustworthy enough to hand to
         SAM as a prompt. Call this any time a keypoint's position or visibility
         changes so the two stay consistent.
+
+        Mask-only points (added via Ctrl+Shift+Click, target_models=["sam"])
+        have no mirror entry in pose_click_coords, so they'd otherwise be
+        silently dropped every time this rebuild runs — preserve them.
         """
+        preserved = [
+            (pt, lbl, tg)
+            for pt, lbl, tg in zip(self.selected_points, self.selected_labels, self.selected_targets)
+            if "pose" not in tg
+        ]
         self.selected_points = []
         self.selected_labels = []
         self.selected_targets = []
@@ -100,6 +109,10 @@ class UserInteractionHandler:
                 self.selected_points.append([kp["x"], kp["y"]])
                 self.selected_labels.append(full_label)
                 self.selected_targets.append(["sam", "pose"])
+        for pt, lbl, tg in preserved:
+            self.selected_points.append(pt)
+            self.selected_labels.append(lbl)
+            self.selected_targets.append(tg)
 
     def change_class_label_pyqt(self, label):
         self.current_class_label = label

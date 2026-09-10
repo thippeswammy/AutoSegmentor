@@ -293,18 +293,25 @@ class AnnotationCanvas(QGraphicsView):
         self._overlay_items.clear()
         self._clear_skeleton()
 
-    def draw_annotations(self, points, labels, pose_keypoints=None, pose_coords=None, pose_config=None):
+    def draw_annotations(self, points, labels, pose_keypoints=None, pose_coords=None, pose_config=None, targets=None):
         """Draw annotation points with numbered badges and per-instance colors.
 
         In pose mode, points/labels only contain currently-visible keypoints
         (see UserInteractionHandler._sync_selected_from_pose_coords); occluded
         keypoints are drawn separately below as draggable "ghost" markers so a
         failed track can still be seen and corrected.
+
+        targets, when given, is the per-point list of target model names
+        (e.g. ["sam", "pose"] or ["sam"]) mirroring `points`/`labels` — used to
+        skip mask-only points (target ["sam"] alone) when walking pose_coords,
+        since they have no mirror entry there and would otherwise desync the
+        walk's positional matching for every pose point after them.
         """
         self._is_redrawing = True
         try:
             self.clear_annotations()
             pose_idx = 0
+            pose_idx_by_point = []
             for idx, (pt, lbl) in enumerate(zip(points, labels)):
                 x, y = pt[0], pt[1]
                 is_negative = lbl < 0
@@ -317,11 +324,13 @@ class AnnotationCanvas(QGraphicsView):
 
                 display_text = str(idx + 1)
                 matched_pose_idx = None
+                is_pose_point = targets is None or (idx < len(targets) and "pose" in targets[idx])
 
-                if pose_coords:
+                if pose_coords and is_pose_point:
                     # Find the next visible point in pose_coords — this walk stays
                     # in lockstep with `points` because both are built from the
-                    # same visible-filtered projection of pose_coords.
+                    # same visible-filtered projection of pose_coords (mask-only
+                    # points are skipped above so they can't shift this cursor).
                     while pose_idx < len(pose_coords) and not pose_coords[pose_idx].get('visible', True):
                         pose_idx += 1
                     if pose_idx < len(pose_coords):
@@ -336,6 +345,7 @@ class AnnotationCanvas(QGraphicsView):
                 item.pose_idx = matched_pose_idx
                 self._scene.addItem(item)
                 self._overlay_items.append(item)
+                pose_idx_by_point.append(matched_pose_idx)
 
             # Ghost markers: occluded/failed-tracking keypoints, shown at their
             # last-known position in a distinct color so they can be Shift+dragged
@@ -361,7 +371,7 @@ class AnnotationCanvas(QGraphicsView):
             # Draw skeleton connecting lines between consecutive annotation points.
             # Always shown when 2+ points exist so the user can see the structure.
             if len(points) > 1:
-                self._draw_skeleton(points, labels, pose_coords)
+                self._draw_skeleton(points, labels, pose_coords, targets, pose_idx_by_point)
         finally:
             self._is_redrawing = False
 
@@ -393,35 +403,52 @@ class AnnotationCanvas(QGraphicsView):
         elif chosen is action_delete:
             self.point_deleted.emit(item.idx)
 
-    def update_skeleton(self, points, labels=None, pose_coords=None):
+    def update_skeleton(self, points, labels=None, pose_coords=None, targets=None):
         """Optimized skeleton update that doesn't clear points."""
-        self._draw_skeleton(points, labels, pose_coords)
+        self._draw_skeleton(points, labels, pose_coords, targets)
 
-    def _draw_skeleton(self, points, labels, pose_coords=None):
+    def _draw_skeleton(self, points, labels, pose_coords=None, targets=None, pose_idx_map=None):
         """Draw connecting lines between annotation points of the same instance.
 
-        Points are GROUPED by label (class+instance) first, then consecutive
-        points within each group are connected. This means switching to another
-        class/instance and back will NOT break the skeleton chain.
+        Points are GROUPED by (label, is_pose_point) — label is class+instance,
+        so switching to another class/instance and back will NOT break the
+        chain. The is_pose_point split additionally keeps mask-only points
+        (added via Ctrl+Shift+Click, target ["sam"] alone) from ever chaining
+        into the pose skeleton for the same instance — they only connect to
+        other mask-only points sharing that same class+instance id.
+
+        targets, when given, is the per-point list of target model names
+        mirroring `points`/`labels` (see draw_annotations). pose_idx_map, when
+        given, is the per-point matched pose_coords index computed alongside
+        it (or None for a point with no match) — reused here instead of
+        re-deriving it so the visibility lookup below stays correctly aligned
+        even when mask-only points are interleaved with pose points.
         """
         self._clear_skeleton()
         if len(points) < 2:
             return
 
-        # 1. Collect positive points, tagged with their label and visibility
+        # 1. Collect positive points, tagged with their (label, is_pose) group and visibility
         from collections import defaultdict
-        groups = defaultdict(list)  # label -> list of {pt, vis}
+        groups = defaultdict(list)  # (label, is_pose) -> list of {pt, vis}
 
         for idx in range(len(points)):
             if labels and idx < len(labels) and labels[idx] < 0:
                 continue  # skip negative / background points
-            
+
             lbl = abs(labels[idx]) if labels else 1
-            vis = pose_coords[idx].get('visible', True) if pose_coords and idx < len(pose_coords) else True
-            groups[lbl].append({"pt": points[idx], "vis": vis})
+            is_pose_point = targets is None or (idx < len(targets) and "pose" in targets[idx])
+
+            vis = True
+            if is_pose_point and pose_coords:
+                p_idx = pose_idx_map[idx] if pose_idx_map and idx < len(pose_idx_map) else idx
+                if p_idx is not None and p_idx < len(pose_coords):
+                    vis = pose_coords[p_idx].get('visible', True)
+
+            groups[(lbl, is_pose_point)].append({"pt": points[idx], "vis": vis})
 
         # 2. Draw skeleton lines within each group
-        for lbl, group in groups.items():
+        for (lbl, _is_pose), group in groups.items():
             if len(group) < 2:
                 continue
 

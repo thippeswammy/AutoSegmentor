@@ -802,7 +802,8 @@ class AnnotationWindow(QDialog):
             self.canvas.update_skeleton(
                 self.handler.selected_points,
                 labels=self.handler.selected_labels,
-                pose_coords=self.handler.pose_click_coords if self.handler.pose_mode else None
+                pose_coords=self.handler.pose_click_coords if self.handler.pose_mode else None,
+                targets=self.handler.selected_targets
             )
             self.coord_label.setText(f" 📍 ({int(x)}, {int(y)})")
 
@@ -952,7 +953,8 @@ class AnnotationWindow(QDialog):
             self.handler.selected_labels,
             pose_keypoints=self.handler.pose_keypoints if self.handler.pose_mode else None,
             pose_coords=self.handler.pose_click_coords if self.handler.pose_mode else None,
-            pose_config=self.config.pose_config if self.handler.pose_mode else None
+            pose_config=self.config.pose_config if self.handler.pose_mode else None,
+            targets=self.handler.selected_targets
         )
         
     def _update_sidebar(self):
