@@ -34,6 +34,15 @@ class UserInteractionHandler:
         self.inference_state_temp = None
         self.window = None
 
+        # Set on any actual edit (point add/move/delete, pose correction — see
+        # MainWindow._on_undo_stack_changed) and cleared on save. Distinguishes
+        # "the user changed something on this frame" from "this frame's points
+        # are just what tracking/loading put there" — load_frame_for_ui only
+        # auto-saves on navigation when this is True, so merely scrolling
+        # through tracked frames doesn't freeze every one of them into a
+        # permanent manual override.
+        self._annotation_dirty = False
+
         # Pose Estimation State
         self.pose_mode = False
         self.pose_keypoints = []
@@ -221,6 +230,7 @@ class UserInteractionHandler:
             target_models=self.selected_targets,
             pose_keypoints=self.pose_click_coords if self.pose_mode else None
         )
+        self._annotation_dirty = False
 
     def load_frame_for_ui(self, frame_idx):
         if frame_idx >= len(self.frame_paths) or frame_idx < 0:
@@ -228,6 +238,23 @@ class UserInteractionHandler:
             return
 
         logger.debug(f"[UI] load_frame_for_ui: frame={frame_idx}  prev_frame={self.current_frame_idx}")
+
+        # Auto-save the OUTGOING frame's annotation before switching away from
+        # it, but only if the user actually changed something (_annotation_dirty).
+        # Without this, a correction (e.g. dragging a mis-tracked pose keypoint
+        # into place) that hadn't been explicitly Ctrl+S'd yet was silently
+        # discarded on navigation — load_frame_for_ui below wipes
+        # selected_points/pose_click_coords unconditionally and reloads from
+        # disk/tracked data, so coming back showed the original (uncorrected)
+        # keypoints with no trace of the fix. Gating on dirty (rather than just
+        # "has any points") matters because merely scrolling through frames
+        # populates selected_points from tracked data every time — saving
+        # unconditionally would freeze every viewed frame into a permanent
+        # manual override, blocking it from ever benefiting from a better
+        # re-track later.
+        if frame_idx != self.current_frame_idx and self._annotation_dirty and (self.selected_points or self.pose_click_coords):
+            logger.debug(f"[UI] load_frame_for_ui: auto-saving outgoing frame {self.current_frame_idx} before navigating to {frame_idx}")
+            self.save_current_annotation()
 
         # Clear the old inference state before loading a new frame
         self.inference_state_temp = None
@@ -265,6 +292,7 @@ class UserInteractionHandler:
         self.selected_targets = []
         self.pose_click_coords = []
         self.current_keypoint_index = 0
+        self._annotation_dirty = False
 
         # ── Store current frame path — inference_state_temp is initialized LAZILY ─
         # init_state is a GPU call. We must NOT call it on every frame navigation

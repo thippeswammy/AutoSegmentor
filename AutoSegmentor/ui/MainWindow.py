@@ -558,8 +558,11 @@ class AnnotationWindow(QDialog):
         QShortcut(QKeySequence("]"), self, self.btn_next_batch.animateClick)
 
         # Save / Export / Help / Quit
-        QShortcut(QKeySequence("Ctrl+S"), self, self._on_save_progress)
-        QShortcut(QKeySequence("Ctrl+E"), self, self._on_export_yolo)
+        # Ctrl+S and Ctrl+E are NOT bound here — the File menu's QActions
+        # (_build_menu) already register those shortcuts, and binding them
+        # again via QShortcut makes Qt see two active shortcuts for the same
+        # key sequence ("Ambiguous shortcut overload" warning), which disables
+        # BOTH until the ambiguity is resolved, so the key stops working at all.
         QShortcut(QKeySequence("Ctrl+W"), self, self.close)  # Standard Window Close
         QShortcut(QKeySequence("H"),      self, self._show_help_overlay)
 
@@ -898,6 +901,10 @@ class AnnotationWindow(QDialog):
 
     def _on_undo_stack_changed(self, idx):
         logger.debug(f"[UI] undo_stack index changed to {idx}  — triggering preview update")
+        # Any push/undo/redo is a real edit to the current frame's annotation —
+        # mark it dirty so load_frame_for_ui knows to auto-save before
+        # navigating away, instead of silently discarding the correction.
+        self.handler._annotation_dirty = True
         self._trigger_prompt_update()
 
     def _trigger_prompt_update(self):

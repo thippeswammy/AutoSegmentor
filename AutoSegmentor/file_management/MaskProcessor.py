@@ -181,7 +181,7 @@ class MaskProcessor:
                 # before the anchor anyway, so that box would just be wasted
                 # work (and would wrongly become the auto_prompt_encoding basis
                 # for a run that isn't actually reprocessing the whole batch).
-                logger.debug("[MaskProc] is_refinement — skipping auto_prompt_encoding")
+                logger.info(f"[MaskProc] Batch {batch_number}: is_refinement — skipping box auto_prompt_encoding")
             elif pose_active and is_prompted:
                 # CoTracker already carried a point-based prompt into this batch
                 # (its tracked keypoints, saved as this batch's frame-0 prompt
@@ -190,13 +190,13 @@ class MaskProcessor:
                 # could conflict with the point-derived object understanding.
                 # Only pure SAM-only workflows (no pose tracker) need the box
                 # to carry continuity across batches at all.
-                logger.debug("[MaskProc] pose tracker active and already prompted — skipping redundant auto_prompt_encoding")
+                logger.info(f"[MaskProc] Batch {batch_number}: pose tracker active and already prompted — skipping redundant box auto_prompt_encoding")
             elif self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
-                logger.debug(f"[MaskProc] last_mask is None — skipping auto_prompt_encoding")
+                logger.info(f"[MaskProc] Batch {batch_number}: last_mask is None — skipping box auto_prompt_encoding")
             else:
                 result = auto_prompt_encoding(inference_state)
                 is_prompted = (result is not None) or is_prompted
-                logger.debug(f"[MaskProc] auto_prompt_encoding result: is_prompted={is_prompted}")
+                logger.info(f"[MaskProc] Batch {batch_number}: running box auto_prompt_encoding (no pose tracker to carry continuity) — is_prompted={is_prompted}")
 
         if is_prompted:
             logger.debug(f"[MaskProc] Starting propagate_in_video for batch {batch_number}")
