@@ -25,6 +25,10 @@ python run_main.py --demo road
 | `cat` | `demo_session_state.json` | `videos/cat.mp4` | Classic segmentation + 6-point pose keypoint tracking |
 | `road` | `road_demo_session_state.json` | `videos/road_dashboard.mp4` | Segmentation/pose demo on a road scene recorded from a dashboard camera |
 
+`points_labels_cat_demo1.json` (also in this directory) holds the saved annotation
+prompts — the foreground/background points and labels — for the `cat` demo, so re-running
+it resumes from the same prompts instead of requiring re-annotation from scratch.
+
 ## Adding your own footage
 
 To demo on your own video:

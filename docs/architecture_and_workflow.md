@@ -1,167 +1,126 @@
 # AutoSegmentor: Architecture and Workflow Guide
 
-This document provides a comprehensive technical overview of the AutoSegmentor system, covering its modular architecture, async threading model, and end-to-end data workflow.
+This document is the single source of truth for how AutoSegmentor (v3.0.0) actually fits
+together — the real call path from launch to exported dataset, not a feature list. The
+top-level [`README.md`](../README.md) links here instead of duplicating this content.
 
 ---
 
-## 🏗️ System Architecture
+## End-to-End Call Flow
 
-AutoSegmentor is designed as a reactive, UI-driven desktop application. It transitions from a linear script-based pipeline to a modular, package-based architecture that separates the graphical interface from heavy machine learning computations.
+```
+run_main.py
+  → autosegmentor/tools/main_app.py :: start_application()
+      → (interactive)  ui/SetupDialog.py :: SetupDialog            — user picks video + config
+      → (--demo <name>) tools/demo_registry.py :: resolve_demo()   — loads demo/<name>_session_state.json
+    for each video:
+      → pipeline.py :: run_pipeline()
+          → core/AutoSegmentorEngine.py :: AutoSegmentorEngine(...)
+              builds AppConfig, runs FrameExtractor (video → JPEGs), constructs
+              AnnotationManager / MaskProcessor / UserInteractionHandler
+          → engine.run()
+              → ui/UserInteraction.py :: UserInteractionHandler.start_ui_loop()
+                  lazily imports and opens the real PyQt5 UI:
+                  → ui/MainWindow.py :: AnnotationWindow  (modal QDialog)
+                      user places SAM2 prompts, presses "Process Batch" (Enter)
+                      → BatchProcessorThread (background QThread)
+                          → MaskProcessor.generate_mask()       — SAM2 propagation
+                          → AutoSegmentorEngine._track_batch_cotracker()
+                              → models/Tracking/CoTrackerPredictor.py — CoTracker3 tracking
+          → (if pose enabled) file_management/PoseExporter.py :: process_masks()
+          → ImageOverlayProcessor / ImageCopier / VideoCreator   — QC overlays, verified
+            copies, reconstructed .mp4 outputs
+      → (user presses Ctrl+E, separately from the above) ui/ExportDialog.py
+          → DatasetManager/YolovDatasetManager/DatasetCreator.py :: YoloProcessor
+              — builds the YOLO dataset (detection + segmentation + pose)
+```
+
+Two things that are easy to miss from a diagram alone:
+
+- **The PyQt5 UI is not launched directly by `run_main.py` or `pipeline.py`.** It's opened
+  by `UserInteractionHandler.start_ui_loop()` (`ui/UserInteraction.py`), which lazily
+  imports `ui/MainWindow.py::AnnotationWindow` and runs it as a modal dialog. `pipeline.py`
+  only ever talks to `AutoSegmentorEngine`, never to the UI classes directly.
+- **YOLO export is a separate, user-triggered path**, not a pipeline stage. `pipeline.py`
+  never imports anything from `DatasetManager/`. Export only happens when the user presses
+  `Ctrl+E` in the UI, which opens `ExportDialog` and dynamically adds
+  `DatasetManager/YolovDatasetManager` to `sys.path` to import `YoloProcessor`.
 
 ### Master System Architecture
 
 ```mermaid
 flowchart TD
-    %% =========================================================
-    %% Swimlanes (vertical pipeline)
-    %% =========================================================
-
-    subgraph "User / HITL (Human-in-the-loop)"
+    subgraph "User / HITL"
         U["User / Annotator"]:::external
-        UI["PyQt5 MainWindow / UI\n(MainWindow.py)\npoints, zoom, sidepanel"]:::ui
+        UI["AnnotationWindow (PyQt5 UI)\n(ui/MainWindow.py)"]:::ui
         AM["AnnotationManager\nsave/load prompts, keypoints"]:::ui
-        LOG["Logging\n(logger_config.py)"]:::ui
         JP[("User Prompts JSON\npoints_labels_*.json")]:::store
     end
 
-    subgraph "Orchestration / Control Plane"
-        DRIVER["Main Entry\nrun_main.py"]:::orch
-        SETUP["Setup Dialog\n(SetupDialog.py)"]:::ui
-        PIPE["Pipeline Orchestrator\n(pipeline.py)\ncoordinates extraction+engine"]:::orch
-        ENGINE["AutoSegmentor Engine\n(AutoSegmentorEngine.py)\ncore processing logic"]:::orch
-        CFG["Runtime Config\n(default_config.yaml)\nvideo_range, batch, dirs"]:::doc
+    subgraph "Orchestration"
+        DRIVER["run_main.py"]:::orch
+        MAINAPP["main_app.py :: start_application"]:::orch
+        SETUP["SetupDialog.py"]:::ui
+        REG["demo_registry.py\n--demo CLI"]:::orch
+        PIPE["pipeline.py :: run_pipeline"]:::orch
+        ENGINE["AutoSegmentorEngine\n(core/AutoSegmentorEngine.py)"]:::orch
+        UIH["UserInteractionHandler\n(ui/UserInteraction.py)\nlaunches the real UI"]:::orch
+        CFG["default_config.yaml /\ndemo/*_session_state.json"]:::doc
+        S2CFG["AppConfig\n(models/SAM/AppConfig.py)"]:::ml
     end
 
-    subgraph "Input / Output Artifacts (Data Plane)"
-        VIN[("Video Inputs\nVideo*.mp4")]:::store
-        WDIR[("workspace/working_dir/\nimages, masks, overlap")]:::store
-        WOUT[("workspace/outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4")]:::store
-        OUTLOG[("outputs/logs/\nautosegmentor.log")]:::store
-        CKPT[("SAM2 Checkpoint\nsam2_hiera_large.pt")]:::store
-    end
-
-    subgraph "FileManagement (ETL stages)"
-        FM["FileManager\ndir lifecycle & paths"]:::fm
+    subgraph "FileManagement (ETL)"
         FE["FrameExtractor\nvideo->frames"]:::fm
-        MP["MaskProcessor\ncolor-encode, batch render"]:::fm
-        OVL["ImageOverlayProcessor\nmask-over-image blending"]:::fm
-        CP["ImageCopier\ncurate verified samples"]:::fm
-        VC["VideoCreator\nframes->mp4 assembly"]:::fm
+        MP["MaskProcessor\nSAM2 propagation, color masks"]:::fm
+        OVL["ImageOverlayProcessor"]:::fm
+        CP["ImageCopier"]:::fm
+        VC["VideoCreator"]:::fm
+        PTRACK["PoseExporter"]:::fm
     end
 
-    subgraph "Pose Estimation & Tracking"
-        PTRACK["Pose Exporter\n(PoseExporter.py)"]:::fm
-        CT["CoTracker Wrapper\n(CoTrackerPredictor.py)"]:::ml
-        LK["Optical Flow (LK)\n(LKKeypointTracker.py)"]:::ml
-        CT_LIB["CoTracker Library\n(external/co-tracker/)"]:::ml
-        CT_CKPT[("CoTracker Weights\nscaled_offline.pth")]:::store
+    subgraph "Model Runtime"
+        PVT["PreviewThread\n500ms debounce, single-frame SAM2"]:::ml
+        BPT["BatchProcessorThread\n(background QThread)"]:::ml
+        S2LIB["SAM2 (vendored, not a submodule)\nexternal/segment_anything_2/"]:::ml
+        CT["CoTrackerPredictor.py"]:::ml
+        CTLIB["CoTracker3 (git submodule)\nexternal/co-tracker/"]:::ml
+        GPU{{"PyTorch + CUDA"}}:::gpu
     end
 
-    subgraph "Model Runtime (SAM2 Inference)"
-        S2CFG["AppConfig\nbatch size, paths"]:::ml
-        S2M["SAM2Model\nload weights, device selection"]:::ml
-        PRED["sam2_video_predictor\nprompts+batch inference"]:::ml
-        S2LIB["SAM2 Library (vendored)\n(external/segment_anything_2/)"]:::ml
-        GPU{{"PyTorch + CUDA GPU Runtime"}}:::gpu
+    subgraph "Export (separate, user-triggered)"
+        EXPD["ExportDialog.py\nCtrl+E"]:::ds
+        YDC["YoloProcessor\n(DatasetManager/YolovDatasetManager/DatasetCreator.py)"]:::ds
+        YOLO[("YOLO Dataset\ntrain/valid/test + data.yaml")]:::store
     end
 
-    subgraph "Dataset Export (YOLO compatible)"
-        YDC["YOLO Dataset Builder\n(DatasetCreator.py)\npolygons, split, augment"]:::ds
-        YSTRUCT["YOLO Structure Creator\ncreate_yolo_structure.py"]:::ds
-        YDOC["Docs\nREADME.md"]:::doc
-        YOLO[("YOLO Dataset Folder\ntrain/valid/test\nlabels(polygons).txt")]:::store
-    end
+    U --> UI
+    UI -->|"save/load"| AM --> JP
+    DRIVER --> MAINAPP
+    MAINAPP -->|interactive| SETUP
+    MAINAPP -->|"--demo <name>"| REG
+    SETUP --> CFG
+    REG --> CFG
+    CFG --> PIPE
+    MAINAPP --> PIPE
+    PIPE --> ENGINE
+    ENGINE -->|"builds"| S2CFG
+    ENGINE --> FE
+    ENGINE --> UIH
+    UIH -->|"opens"| UI
+    UI -->|"point/skeleton edit, debounced"| PVT
+    UI -->|"Process Batch"| BPT
+    PVT -->|"single-frame preview"| MP
+    BPT --> MP
+    BPT --> CT
+    MP -->|"inference"| S2LIB
+    CT -->|"inference"| CTLIB
+    MP -->|"gpu"| GPU
+    CT -->|"gpu"| GPU
+    JP -->|"prompts"| MP
+    PIPE -->|"pose enabled"| PTRACK
+    PIPE --> OVL --> CP --> VC
+    UI -->|"Ctrl+E"| EXPD --> YDC --> YOLO
 
-    %% =========================================================
-    %% Control-plane flows
-    %% =========================================================
-    U -->|"interaction"| UI
-    UI -->|"update/save"| AM
-    AM -->|"persist"| JP
-    UI -->|"logs"| LOG
-
-    CFG -->|"load params"| PIPE
-    DRIVER -->|"launch"| UI
-    UI -->|"orchestrates"| PIPE
-
-    CFG -->|"model config"| S2CFG
-    CKPT -->|"weights"| S2M
-    S2CFG -->|"batch/paths"| PRED
-    S2M -->|"predictor init"| PRED
-    JP -->|"prompts"| PRED
-
-    %% =========================================================
-    %% Data-plane pipeline (ETL)
-    %% =========================================================
-    VIN -->|"mp4 source"| FE
-    PIPE -->|"triggers"| FM
-    PIPE -->|"triggers"| FE
-    PIPE -->|"triggers"| PRED
-    PIPE -->|"triggers"| MP
-    PIPE -->|"triggers"| OVL
-    PIPE -->|"triggers"| CP
-    PIPE -->|"triggers"| VC
-    PIPE -->|"triggers"| YDC
-
-    FE -->|"frames(jpeg)"| WDIR
-    FM -->|"lifecycle"| WDIR
-
-    WDIR -->|"images/masks"| PRED
-    PRED -->|"raw logits"| MP
-    MP -->|"color masks"| WDIR
-
-    WDIR -->|"images+render"| OVL
-    OVL -->|"overlap frames"| WDIR
-
-    WDIR -->|"verified curate"| CP
-    CP -->|"verified subset"| WDIR
-
-    WDIR -->|"assembly"| VC
-    VC -->|"mp4 outputs"| WOUT
-
-    WDIR -->|"verified export"| YDC
-    YDC -->|"builds"| YSTRUCT
-    YSTRUCT -->|"YOLO format"| YOLO
-
-    %% =========================================================
-    %% Pose Estimation Flows
-    %% =========================================================
-    WDIR -->|"frames"| PTRACK
-    PTRACK -->|"selects"| CT
-    PTRACK -->|"selects"| LK
-    CT -->|"imports"| CT_LIB
-    CT_CKPT -->|"loads"| CT
-    PTRACK -->|"pose data"| WDIR
-
-    %% =========================================================
-    %% Compute/resource dependencies
-    %% =========================================================
-    PRED -->|"inference"| S2LIB
-    PRED -->|"gpu tasks"| GPU
-
-    %% =========================================================
-    %% Click Events
-    %% =========================================================
-    click DRIVER "run_main.py" "Main Entry"
-    click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
-    click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
-    click CFG "workspace/inputs/config/default_config.yaml" "Config File"
-    click AM "autosegmentor/ui/AnnotationManager.py" "Annotation Manager"
-    click UI "autosegmentor/ui/MainWindow.py" "Main UI"
-    click FM "autosegmentor/file_management/FileManager.py" "File Manager"
-    click FE "autosegmentor/file_management/FrameExtractor.py" "Frame Extractor"
-    click MP "autosegmentor/file_management/MaskProcessor.py" "Mask Processor"
-    click OVL "autosegmentor/file_management/ImageOverlayProcessor.py" "Overlay Processor"
-    click VC "autosegmentor/file_management/VideoCreator.py" "Video Creator"
-    click CT "autosegmentor/models/Tracking/CoTrackerPredictor.py" "CoTracker"
-    click S2M "autosegmentor/models/SAM/SAM2Model.py" "SAM2 Model"
-    click YDC "DatasetManager/YolovDatasetManager/DatasetCreator.py" "Dataset Creator"
-    click S2LIB "https://github.com/facebookresearch/segment-anything-2" "SAM2 GitHub"
-    click CT_LIB "https://github.com/facebookresearch/co-tracker" "CoTracker GitHub"
-
-    %% =========================================================
-    %% Styles
-    %% =========================================================
     classDef orch fill:#1e88e5,stroke:#0d47a1,color:#ffffff,stroke-width:1px
     classDef ui fill:#43a047,stroke:#1b5e20,color:#ffffff,stroke-width:1px
     classDef ml fill:#fb8c00,stroke:#e65100,color:#ffffff,stroke-width:1px
@@ -170,126 +129,168 @@ flowchart TD
     classDef store fill:#90a4ae,stroke:#37474f,color:#0b0f12,stroke-width:1px
     classDef doc fill:#cfd8dc,stroke:#455a64,color:#0b0f12,stroke-width:1px
     classDef gpu fill:#6d4c41,stroke:#3e2723,color:#ffffff,stroke-width:1px
-    classDef tool fill:#546e7a,stroke:#263238,color:#ffffff,stroke-width:1px
     classDef external fill:#2b2b2b,stroke:#111111,color:#ffffff,stroke-width:1px
+
+    click DRIVER "run_main.py" "Main Entry"
+    click MAINAPP "autosegmentor/tools/main_app.py" "Bootstrap"
+    click REG "autosegmentor/tools/demo_registry.py" "Demo Registry"
+    click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
+    click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
+    click UIH "autosegmentor/ui/UserInteraction.py" "UI Launcher"
+    click AM "autosegmentor/ui/AnnotationManager.py" "Annotation Manager"
+    click UI "autosegmentor/ui/MainWindow.py" "Main UI"
+    click FE "autosegmentor/file_management/FrameExtractor.py" "Frame Extractor"
+    click MP "autosegmentor/file_management/MaskProcessor.py" "Mask Processor"
+    click PTRACK "autosegmentor/file_management/PoseExporter.py" "Pose Exporter"
+    click CT "autosegmentor/models/Tracking/CoTrackerPredictor.py" "CoTracker"
+    click EXPD "autosegmentor/ui/ExportDialog.py" "Export Dialog"
+    click YDC "DatasetManager/YolovDatasetManager/DatasetCreator.py" "Dataset Creator"
+    click S2LIB "https://github.com/facebookresearch/segment-anything-2" "SAM2 GitHub"
+    click CTLIB "https://github.com/facebookresearch/co-tracker" "CoTracker GitHub"
 ```
 
-### 1. Package Structure: `autosegmentor/`
+---
 
-The core logic is organized into specialized subpackages to maintain a clean separation of concerns:
+## 1. Package Structure
 
-| Component Category | Module | Responsibility |
-| :--- | :--- | :--- |
-| **UI Layer** | `MainWindow.py` | Primary PyQt5 hub. Manages toolbar, menus, status bar, and central splitter. |
-| | `AnnotationCanvas.py` | Handles image rendering, zoom/pan math, and vector drawing for annotations. |
-| | `SidePanel.py` | Reactive property panel for classes, instances, and keypoint visibility. |
-| | `NavigationManager.py` | Implements the **Command Pattern** for a robust Undo/Redo stack. |
-| **Logic Layer** | `pipeline.py` | Main orchestrator that coordinates extraction, engine initialization, and post-processing. |
-| | `AutoSegmentorEngine.py` | Core processing engine that manages the SAM2 state and UI interaction loops. |
-| | `main_app.py` | Bootstraps the application, launches the SetupDialog, and starts the pipeline. |
-| **Model Layer** | `SAM2Model.py` | Low-level wrapper for loading weights and managing SAM2 GPU inference state. |
-| | `CoTrackerPredictor.py` | Integration for temporal keypoint tracking across frame batches. |
-| | `LKKeypointTracker.py` | Fallback Lucas-Kanade optical flow implementation for simpler scenes. |
-| **Data Layer** | `FileManager.py` | Centralized utility for path resolution and directory lifecycle management. |
-| | `FrameExtractor.py` | Optimized video-to-image extraction using OpenCV. |
-| | `MaskProcessor.py` | Post-processes binary model logits into color-mapped, verifiable PNG masks. |
-| | `VideoCreator.py` | Multi-threaded assembly of processed frames into deliverable MP4 files. |
+| Directory | Role |
+| :--- | :--- |
+| `autosegmentor/core/` | `AutoSegmentorEngine.py` — the central orchestrator (subclasses `SAM2Model`); builds `AppConfig`, runs frame extraction, owns `MaskProcessor`/`AnnotationManager`/`UserInteractionHandler`. |
+| `autosegmentor/ui/` | PyQt5 layer: `MainWindow.py` (`AnnotationWindow`), `AnnotationCanvas.py`, `SidePanel.py` (incl. Model Routing widget), `NavigationManager.py` (undo/redo), `SetupDialog.py`, `ExportDialog.py`, `AnnotationManager.py`, `UserInteraction.py` (the actual UI launcher), `UITheme.py`. |
+| `autosegmentor/models/` | ML wrappers: `SAM/SAM2Model.py` + `AppConfig.py`, `Tracking/CoTrackerPredictor.py` + `LKKeypointTracker.py` (optical-flow fallback), `model_info.py` (checkpoint URLs/paths, shared by `install.py`). |
+| `autosegmentor/file_management/` | ETL: `FrameExtractor.py`, `FrameHandler.py`, `MaskProcessor.py`, `ImageOverlayProcessor.py`, `ImageCopier.py`, `VideoCreator.py`, `PoseExporter.py`, `FileManager.py`. |
+| `autosegmentor/tools/` | `main_app.py` (bootstrap), `demo_registry.py` (`--demo` CLI), `export_yolo_pose.py`, `visualize_pose_images.py` / `visualize_pose_video.py`. |
+| `autosegmentor/pipeline.py` | Module-level `run_pipeline()` — orchestrates engine → pose export → overlays → verified copy → video assembly, per video. |
+| `autosegmentor/tests/` | Test suite (pytest / pytest-qt). |
+| `DatasetManager/` | Post-annotation dataset-build suite, invoked separately from the main pipeline — see [§4](#4-downstream-dataset-export-separate-from-the-pipeline). |
+| `external/` | Vendored `segment_anything_2` (plain files, **not** a git submodule) and `co-tracker` (git submodule) — see `external/.gitmodules`. |
+| `demo/` | Bundled demo footage + session-state JSON configs, resolved by `demo_registry.py`. |
 
 ---
 
-## 🧵 The Async Threading Model
+## 2. The Async Threading Model
 
-To ensure a smooth user experience, AutoSegmentor utilizes a multi-threaded architecture. Heavy GPU and I/O tasks are offloaded from the Main UI thread using PyQt's `QThread` system.
+AutoSegmentor offloads heavy GPU/I-O work from the PyQt5 UI thread using two background
+`QThread`s in `ui/MainWindow.py`:
 
 ### `PreviewThread`
-- **Purpose**: Provides real-time visual feedback for the currently edited frame.
-- **Trigger**: Fired 500ms after a user stops navigating or immediately after a point is added/moved.
-- **Operation**: Runs a single-frame SAM2 inference and updates the `AnnotationCanvas` via `pyqtSignal`.
+- **Trigger**: a 500ms debounce timer (`_preview_debounce_timer`) that fires after the
+  user stops navigating frames or after a point/skeleton edit — not on every keystroke, so
+  holding A/D to scroll doesn't spam SAM2 inference.
+- **Operation**: runs a single-frame SAM2 mask preview (`handler.user_prompt_adder_pyqt()`)
+  off the main thread, then emits `preview_ready` → `AnnotationWindow._on_preview_ready`.
+  If another preview is requested while one is already running, it's queued
+  (`_preview_pending`) and re-run immediately after, so the UI always ends up showing the
+  latest state rather than a stale one.
 
 ### `BatchProcessorThread`
-- **Purpose**: Handles long-running propagation and tracking tasks.
-- **Trigger**: Fired when the user clicks "Process Batch" (or presses Enter).
-- **Operation**: 
-    1. Propagates the current frame's mask across the entire batch using SAM2.
-    2. Runs CoTracker to track keypoints across the temporal window.
-    3. Persists results to disk and updates the UI state once finished.
+- **Trigger**: user clicks "Process Batch" (or presses Enter) in `AnnotationWindow`.
+- **Operation**:
+    1. Propagates the current frame's mask across the batch via SAM2
+       (`MaskProcessor.generate_mask`).
+    2. Runs CoTracker3 across the same temporal window
+       (`AutoSegmentorEngine._track_batch_cotracker` → `CoTrackerPredictor`).
+    3. Persists results to disk and signals the UI to update once finished.
 
 ---
 
-## 🔄 The End-to-End Workflow
+## 3. Scalable Model Routing
 
-The journey from a raw video file to a verified training dataset follows a structured lifecycle.
+A per-point routing feature that lets the user decide, per annotation, whether it feeds
+SAM2, CoTracker3 (pose), or both — useful when a scene needs segmentation on some objects
+and only keypoint tracking on others.
 
-### 1. Project Initialization
-- **Entry Point**: `run_main.py`.
-- **Config**: Settings are loaded from `workspace/inputs/config/default_config.yaml`.
-- **Setup**: The user selects the target video and configures model parameters in the `SetupDialog`.
-
-### 2. Frame Extraction
-- The system uses `FrameExtractor` to decode the video into high-quality JPEG images.
-- Images are stored in `workspace/working_dir/images/` for random access by the UI.
-
-### 3. Interactive Annotation
-- The user navigates the video using **A/D** (single frame) or **Shift+A/D** (turbo-scroll).
-- **Prompts**: Visual prompts (foreground/background points) are captured by the `AnnotationCanvas`.
-- **Undo/Redo**: Every action is recorded in a `QUndoStack`, allowing for complex correction workflows.
-
-### 4. Background Propagation
-- Once prompts are set for a keyframe, the `BatchProcessorThread` extends the segmentation to surrounding frames.
-- **CoTracker** ensures that even small, fast-moving objects are tracked accurately, providing a robust base for the segmentation model.
-
-### 5. Verification and Export
-- Overlays are generated in real-time or batch mode for visual quality control.
-- **Export Dialog**: The user selects which classes and segments to export.
-- **Dataset Synthesis**: The `DatasetManager` takes over, converting masks into YOLO-format polygons and applying augmentations to generate a training-ready dataset.
+- UI: `SidePanel`'s `model_routing` widget (`ui/SidePanel.py`), toggled via `Shift+S`
+  (SAM) / `Shift+P` (pose) / `Shift+A` (select all) / `Shift+N` (select none) shortcuts
+  registered in `MainWindow.py`.
+- Wiring: `SidePanel.model_routing.routing_changed` → `MainWindow._on_routing_changed`,
+  which updates `handler.active_target_models`; `_toggle_sam_routing` /
+  `_toggle_pose_routing` flip individual targets. An "auto-shift" mode
+  (`auto_shift_toggled` → `_on_auto_shift_toggled`) can advance routing automatically
+  between prompts.
 
 ---
 
-## 📦 Output Specifications
+## 4. Downstream Dataset Export (separate from the pipeline)
 
-The pipeline generates several types of outputs, organized into intermediate working files and final deliverables.
+Export is **not** a pipeline stage — it's triggered manually from the UI:
 
-### 1. File Formats & Naming
-- **Images**: Standard `.jpg` or `.jpeg` extracted by `FrameExtractor`.
-    - Naming: `{prefix}{video_number}_{frame_index:05d}.jpeg`.
-- **Masks**: Color-mapped PNGs.
-    - These use a predefined palette to distinguish instances (up to 10 unique IDs).
-    - Generated by `MaskProcessor.binary_mask_2_color_mask`.
-- **Videos**: High-quality `.mp4` files encoded with the `mp4v` codec.
+1. User presses `Ctrl+E` (or the sidebar's export button) → `MainWindow._on_export_yolo`
+   opens `ui/ExportDialog.py`.
+2. `ExportDialog` dynamically inserts `DatasetManager/YolovDatasetManager` onto `sys.path`
+   and imports `DatasetCreator.py::YoloProcessor`.
+3. `YoloProcessor` consumes verified images/masks from the workspace, converts masks to
+   normalized polygons, applies augmentation, and writes a `train`/`valid`/`test` +
+   `data.yaml` YOLO dataset covering detection (bbox), instance segmentation, and pose
+   simultaneously.
 
-### 2. Directory Hierarchy
-- **`workspace/working_dir/`** (Intermediate):
-    - `images/`: Raw extracted frames.
-    - `render/`: Color segmentation masks.
-    - `overlap/`: Visualization overlays for quality control.
-    - `temp/`: Temporary batch staging area.
-- **`workspace/working_dir/verified/`** (Final):
-    - `images/`: Frames explicitly verified by the user.
-    - `mask/`: Corresponding verified masks.
-- **`workspace/outputs/`**: Reconstructed videos (`OrgVideo`, `MaskVideo`, `OverlappedVideo`).
-- **`outputs/logs/`**: System runtime logs (`autosegmentor.log`).
+### `DatasetManager/SyntheticEngine/` — a separate, offline tool
 
----
+`SyntheticEngine` is **not** invoked by the annotation pipeline or by `ExportDialog`. It's
+a standalone augmentation tool with its own `run.py`, used *after* export to multiply a
+small verified dataset via copy-paste augmentation, simulated occlusions, and synced
+geometric/photometric transforms across images, masks, and keypoints. Run it directly —
+see [`DatasetManager/SyntheticEngine/README.md`](../DatasetManager/SyntheticEngine/README.md).
 
-## 🚀 Downstream Integration: Dataset Creation
-
-Once the annotation pipeline is complete, the `DatasetManager` suite takes over to prepare data for model training.
-
-### `YolovDatasetManager` Workflow
-1. **Input**: Consumes verified images and masks from the workspace.
- 2. **Polygon Extraction**: Converts color masks into precise polygon coordinates normalized for YOLO format (0-1).
- 3. **Augmentation**: Applies transform operations (brightness, contrast, noise, blur) to multiply the dataset size (e.g., 10x per reference image).
- 4. **Export**: Generates a structured YOLO dataset with `train`, `valid`, `test` splits and a `data.yaml` configuration file.
+`DatasetManager/DatasetHandler/` holds lower-level, standalone preprocessing utilities
+(e.g. `Video2images.py`), also independent of the main pipeline.
 
 ---
 
-## 🛠️ Key Technical Mechanisms
+## 5. CLI Surface & Demos
 
-### Bounding Box Auto-Refinement
-To stabilize segmentation, the system calculates the bounding box of the current SAM2 mask and feeds it back into the model as a new prompt. This "self-correction" loop significantly improves mask consistency across difficult frames.
+- `python run_main.py` — interactive mode, opens `SetupDialog`.
+- `python run_main.py --version` — prints the version from `autosegmentor/_version.py`.
+- `python run_main.py --demo list` / `--demo` / `--demo <name>` — automated mode.
+  `autosegmentor/tools/demo_registry.py` discovers demos **by scanning
+  `demo/*_session_state.json` on disk** (no hardcoded list): each file's `demo.name` field
+  becomes the CLI name, so adding a new demo is just adding a new session-state JSON — no
+  code change needed. `default_demo_name()` returns `"cat"`.
 
-### Batch-Aware Memory Management
-Instead of loading the entire video into VRAM, AutoSegmentor processes frames in configurable batches (e.g., 24 or 48 frames). This allows it to handle very long videos (minutes or hours) on consumer-grade hardware.
+---
 
-### Keypoint Visibility Logic
-For pose estimation, the system tracks the visibility of each keypoint. If a keypoint is occluded by another object or leaves the frame, the `SyntheticEngine` automatically updates the visibility flags (0=hidden, 1=occluded, 2=visible) to maintain dataset integrity.
+## 6. Output Specifications
+
+### File formats & naming
+- **Images**: `.jpg`/`.jpeg`, named `{prefix}{video_number}_{frame_index:05d}.jpeg`
+  (`FrameExtractor`).
+- **Masks**: color-mapped PNGs, up to 10 distinguishable instance IDs
+  (`MaskProcessor.binary_mask_2_color_mask`).
+- **Videos**: `.mp4`, `mp4v` codec (`VideoCreator`).
+
+### Directory hierarchy
+- **`workspace/working_dir/<video>/`** (intermediate): `images/`, `render/` (masks),
+  `overlap/` (QC overlays), `temp/` (batch staging).
+- **`workspace/working_dir/<video>/verified/`**: `images/` + `mask/` — the user-verified
+  subset that everything downstream (pose export, video assembly, YOLO export) reads from.
+- **`workspace/outputs/`**: reconstructed `OrgVideo*.mp4` / `MaskVideo*.mp4` /
+  `OverlappedVideo*.mp4`.
+- **`outputs/logs/`**: `autosegmentor.log`.
+
+---
+
+## 7. Key Technical Mechanisms
+
+### Bounding-box auto-refinement
+The current SAM2 mask's bounding box is fed back into the model as a new prompt each
+batch — a self-correction loop that improves mask consistency across difficult frames.
+
+### Batch-aware memory management
+Frames are processed in configurable batches (e.g. 24–48) rather than loading an entire
+video into VRAM, so long videos run on consumer-grade hardware.
+
+### Keypoint visibility
+CoTracker3's model outputs a per-keypoint, per-frame `pred_visibility` boolean directly
+(`CoTrackerPredictor.py`) — this is CoTracker's own signal, not something AutoSegmentor
+computes separately. The UI keeps a keypoint's regressed position visible even when
+occluded (so it can be dragged back into place), and lets the user manually override
+visibility via the `SidePanel` keypoint-progress widget (`visibility_toggled` signal,
+`MainWindow.handle_visibility_toggled`). `PoseExporter` writes the resulting visibility
+flags into the exported pose labels.
+
+---
+
+## 8. Versioning
+
+`autosegmentor/_version.py` is the single source of truth (`__version__`), exposed via
+`autosegmentor/__init__.py` and printed by `python run_main.py --version`.

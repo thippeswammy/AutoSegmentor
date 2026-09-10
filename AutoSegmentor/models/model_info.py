@@ -21,7 +21,7 @@ COTRACKER_REPO = "https://github.com/facebookresearch/co-tracker"
 COTRACKER_REL_DIR = os.path.join("external", "co-tracker", "checkpoints")
 
 # --- Helpers ---------------------------------------------------------------
-DOWNLOAD_SCRIPT = "python scripts/download_checkpoints.py"
+DOWNLOAD_SCRIPT = "python install.py --checkpoints-only"
 
 
 def missing_model_message(name, tried_paths):

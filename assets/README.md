@@ -9,7 +9,7 @@ footage lives in [`demo/videos/`](../demo/videos/README.md); demo *output*
 | File | Used in | Description |
 | :--- | :--- | :--- |
 | `cat_full_pipeline.gif` | README hero image, "Full Pipeline Demo (v3)" | End-to-end walkthrough on the bundled `cat` clip — UI annotation, SAM2 + CoTracker auto-tracking, a live correction, and export to a YOLO dataset. 640×360, 8fps, ~16MB. |
-| `road_dashboard_1080.gif` | "Automated Demo" (road demo) | Segmentation + pose tracking on dashcam footage, from the `road` demo. |
+| `road_dashboard_1080.gif` | "Automated Demo" (road demo) | Segmentation + pose tracking on dashcam footage, from the `road` demo. ~45MB — see note below. |
 
 ## About the full pipeline demo
 
@@ -35,11 +35,16 @@ to the [`v3.0.0` release](https://github.com/thippeswammy/AutoSegmentor/releases
 
 ## Guidelines for adding media here
 
+- **Git LFS is required** for new media added to this repo: run `git lfs install`
+  once, then `.gitattributes` (repo root) automatically routes any new `.mp4`/`.gif`
+  through LFS instead of a plain git blob.
 - **GIFs**: short loops or downsampled full walkthroughs, kept well under
   the size of a typical page load — 30MB is a reasonable ceiling.
+  `road_dashboard_1080.gif` (~45MB) predates this guideline and LFS being set up; it's a
+  known exception, not a template to follow for new additions.
 - **Full-length video**: attach it as a GitHub Release asset (up to 2GB,
   no external dependency) rather than committing an `.mp4` to this folder
   or the repository's history.
-- Git has no meaningful diffing for binary media, so every file committed
-  here stays in the repository's history permanently — keep only what the
-  README actually displays.
+- Files already committed before LFS was configured (`cat_full_pipeline.gif`,
+  `road_dashboard_1080.gif`, and the clips under `demo/videos/`) remain plain git blobs —
+  LFS only applies going forward, to avoid rewriting published repository history.

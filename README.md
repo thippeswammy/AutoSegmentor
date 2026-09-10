@@ -27,111 +27,113 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
 
 ## 🔧 Setup & Installation
 
+Tested on **Windows 11** and **Ubuntu 22.04/24.04**.
+
 ### Prerequisites
 
 - **Python**: 3.10+ (3.10 recommended)
 - **GPU**: NVIDIA GPU with CUDA 12.x (required for SAM2/CoTracker performance)
 - **RAM**: 16GB+ recommended
-- **Git**: with `git LFS` support (for large media) or sufficient disk space (~20GB)
+- **Git**: with [Git LFS](https://git-lfs.com/) installed (`git lfs install`) — required for
+  contributors adding new demo videos/GIFs; not needed just to run the app
+- **Disk space**: ~20GB (checkpoints + working directories)
 
-### Installation Steps
+### 1. Clone the Repository
 
-1.  **Clone the Repository**
+Cloning with submodules fetches the vendored CoTracker3 dependency (SAM2 is vendored
+directly in the repo, not a submodule):
 
-    Cloning with submodules fetches the vendored CoTracker3 dependency (SAM2
-    is vendored directly in the repo):
+```bash
+git clone --recursive https://github.com/thippeswammy/AutoSegmentor.git
+cd AutoSegmentor
 
-    ```bash
-    git clone --recursive https://github.com/thippeswammy/AutoSegmentor.git
-    cd AutoSegmentor
+# If you cloned without --recursive, initialize submodules manually:
+# git submodule update --init --recursive
+```
 
-    # If you cloned without --recursive, initialize submodules manually:
-    # git submodule update --init --recursive
-    ```
+### 2. Create and Activate a Virtual Environment
 
-2.  **Environment Setup**
+| | Windows (PowerShell) | Ubuntu / Linux |
+| :--- | :--- | :--- |
+| Create | `python -m venv .venv` | `python3 -m venv .venv` |
+| Activate | `.\.venv\Scripts\Activate.ps1` | `source .venv/bin/activate` |
 
-    ```bash
-    python -m venv .venv
-    # Windows (PowerShell)
-    .\.venv\Scripts\Activate.ps1
-    # Windows (cmd)
-    .\.venv\Scripts\activate.bat
-    # Linux
-    source .venv/bin/activate
-    ```
+(Windows `cmd.exe` instead of PowerShell: `.\.venv\Scripts\activate.bat`)
 
-3.  **Install Python Dependencies**
+### 3. One-Shot Setup
 
-    ```bash
-    python -m pip install --upgrade pip
-    pip install -r requirements-core.txt
-    ```
+```bash
+python install.py
+```
 
-    > **Note on CoTracker3**: CoTracker3 is not installed via pip. It is vendored
-    > under `external/co-tracker/` (git submodule) and automatically added to
-    > `sys.path` at launch. Make sure submodules are initialized:
-    > `git submodule update --init --recursive`.
+This single cross-platform script (no separate `.bat`/`.sh` needed) does everything else:
+checks your Python version, initializes git submodules, installs
+`requirements-core.txt`, downloads the SAM2 + CoTracker3 checkpoints, and runs a GPU/CUDA
+diagnostic. Add `--cuda` to also install the optional `flash-attn` speedup (requires a
+matching CUDA build toolchain — more commonly available on Linux; skip it on Windows unless
+you already have that toolchain set up).
 
-4.  **Configure the Vendored SAM2 Library**
+Useful flags: `--skip-checkpoints` / `--skip-gpu-check` / `--skip-deps` /
+`--skip-submodules` to skip a step, or run just one part standalone:
 
-    SAM2 is bundled under `external/segment_anything_2/`. It does **not** need a
-    separate `pip install`: at launch `run_main.py` reads `external_libs` from
-    `workspace/inputs/config/default_config.yaml` and auto-adds
-    `external/segment_anything_2`, `external/segment_anything_2/sam2`, and
-    `external/co-tracker` to `sys.path`, so `sam2` imports resolve at runtime.
-    Just make sure the submodule/folder is present (the clone step fetches it).
+```bash
+python install.py --checkpoints-only            # download missing checkpoints
+python install.py --checkpoints-only --check    # verify presence only
+python install.py --gpu-check-only              # just the GPU/system diagnostic
+```
 
-5.  **Install AutoSegmentor (optional)**
+<details>
+<summary>Prefer to do it manually? (equivalent to what <code>install.py</code> automates)</summary>
 
-    ```bash
-    pip install -e .
-    ```
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements-core.txt
+```
 
-    This registers the `autosegmentor` package and the `autosegmentor` /
-    `autosegmentor-demo` console entry points.
+The app needs two weight files at runtime (not bundled in the repo for size reasons):
 
-6.  **Download Model Checkpoints**
+| Model | Checkpoint | Download from (original source) |
+| :--- | :--- | :--- |
+| SAM2 | `sam2_hiera_large.pt` | https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2_hiera_large.pt (repo: [facebookresearch/segment-anything-2](https://github.com/facebookresearch/segment-anything-2)) |
+| CoTracker3 | `scaled_offline.pth` | https://huggingface.co/facebook/cotracker3/resolve/main/scaled_offline.pth (repo: [facebookresearch/co-tracker](https://github.com/facebookresearch/co-tracker)) |
 
-    The app needs two weight files at runtime (they are **not** bundled in the
-    repo for size reasons):
+Place them at:
 
-    | Model | Checkpoint | Download from (original source) |
-    | :--- | :--- | :--- |
-    | SAM2 | `sam2_hiera_large.pt` | https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2_hiera_large.pt (repo: [facebookresearch/segment-anything-2](https://github.com/facebookresearch/segment-anything-2)) |
-    | CoTracker3 | `scaled_offline.pth` | https://huggingface.co/facebook/cotracker3/resolve/main/scaled_offline.pth (repo: [facebookresearch/co-tracker](https://github.com/facebookresearch/co-tracker)) |
+```bash
+external/segment_anything_2/checkpoints/sam2_hiera_large.pt
+external/co-tracker/checkpoints/scaled_offline.pth
+```
 
-    Place them at:
+Neither CoTracker3 nor SAM2 is `pip install`ed: both are vendored under `external/` and
+`run_main.py` adds them to `sys.path` at launch (reading `external_libs` from
+`workspace/inputs/config/default_config.yaml`), so just make sure the folders are present.
 
-    ```bash
-    external/segment_anything_2/checkpoints/sam2_hiera_large.pt
-    external/co-tracker/checkpoints/scaled_offline.pth
-    ```
+</details>
 
-    Or run the helper script (creates the folders and downloads both files):
+### 4. Install AutoSegmentor as a package (optional)
 
-    ```bash
-    python scripts/download_checkpoints.py
-    ```
+```bash
+pip install -e .
+```
 
-    Verify the checkpoints are present before launching:
+This registers the `autosegmentor` package and the `autosegmentor` /
+`autosegmentor-demo` console entry points.
 
-    ```bash
-    python scripts/download_checkpoints.py --check
-    ```
+### 5. Verify the installation
 
-    Or confirm your GPU/PyTorch/OpenCL setup is healthy (optional):
+```bash
+python run_main.py --version     # prints: AutoSegmentor 3.0.0
+python run_main.py --demo list   # lists the bundled demos
+```
 
-    ```bash
-    python scripts/gpu_diagnostic.py
-    ```
+### Linux troubleshooting: Qt platform plugin
 
-7.  **Verify the installation**
+On a minimal Ubuntu install, PyQt5 can fail to launch with
+`"could not load the Qt platform plugin xcb"`. Install the missing system libraries:
 
-    ```bash
-    python run_main.py --version     # prints: AutoSegmentor 3.0.0
-    python run_main.py --demo list   # lists the bundled demos
-    ```
+```bash
+sudo apt-get install libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0
+```
 
 ---
 
@@ -166,48 +168,18 @@ python run_main.py --demo road           # Road/dashcam demo
 
 ---
 
-## 🎬 Automated Demo
+## 🎬 Automated Demo & Full Pipeline Walkthrough
 
-AutoSegmentor ships with an automated demo pipeline that exercises the full
-auto-labeling flow (frame extraction → SAM2 prompting → CoTracker3 keypoint
-tracking → pose export) on a bundled clip — no manual configuration needed.
+The GIF at the top of this README is a real, unedited annotation session on the bundled
+`cat` clip (annotate → SAM2 auto-mask → CoTracker3 pose tracking → YOLO export) run via
+`python run_main.py --demo cat` (see the Usage Guide above for the full `--demo` command
+list). The `road` demo runs the same pipeline on a dashcam clip.
 
-```bash
-python run_main.py --demo list           # List available demos
-python run_main.py --demo                # Default (cat) demo
-python run_main.py --demo cat            # Cat demo
-python run_main.py --demo road           # Road/dashcam demo
-```
-
-The `cat` demo uses `demo/videos/cat.mp4` and the `road` demo uses
-`demo/videos/road_dashboard.mp4` (a road scene recorded from a dashboard
-camera — see the [road dashboard demo GIF](assets/road_dashboard_1080.gif)).
-See [`demo/README.md`](demo/README.md) for details, and
-[`demo/videos/README.md`](demo/videos/README.md) for footage attribution.
-
----
-
-## 🎬 What the Full Pipeline Looks Like
-
-The GIF at the top of this README is a real annotation session on the
-bundled `cat` clip, start to finish:
-
-1. Launch the annotation tool.
-2. Click 5 foreground + 2 background points on the cat in frame 1.
-3. Press Enter — SAM2 generates the mask, CoTracker starts tracking the pose
-   keypoints.
-4. Navigate forward across frames — mask and skeleton follow the cat
-   automatically, with a live correction (drag a drifted keypoint back).
-5. Process the next batch and keep navigating — tracking continues with no
-   extra manual prompts.
-6. `Ctrl+S` to save, `Ctrl+E` to export.
-7. Result: a YOLO dataset (`train` / `valid` / `test` + `data.yaml`) covering
-   **detection (bbox)**, **instance segmentation**, and **pose** in one
-   export — ready to train a model for any application.
-
-The full-length recording is published as an asset on the
-[`v3.0.0` release](https://github.com/thippeswammy/AutoSegmentor/releases).
-See [`assets/README.md`](assets/README.md) for the shot-by-shot breakdown.
+- [`demo/README.md`](demo/README.md) — what each demo is, session-state configs, adding
+  your own footage.
+- [`demo/videos/README.md`](demo/videos/README.md) — bundled footage and licensing.
+- [`assets/README.md`](assets/README.md) — shot-by-shot GIF breakdown and the full-length
+  narrated recording (published as a [`v3.0.0` release](https://github.com/thippeswammy/AutoSegmentor/releases) asset).
 
 ---
 
@@ -259,213 +231,38 @@ object — pallets, stillage, boxes, EPAL (euro-pallets), forklifts, etc.:
 
 ## 🏗️ System Architecture
 
-AutoSegmentor is designed as a reactive, UI-driven desktop application. It transitions from a linear script-based pipeline to a modular, package-based architecture that separates the graphical interface from heavy machine learning computations.
+AutoSegmentor is a reactive, UI-driven desktop application: a PyQt5 annotation UI drives a
+background engine that wraps SAM2 (mask propagation) and CoTracker3 (keypoint tracking),
+with a separate downstream toolchain (`DatasetManager/`) turning verified annotations into
+YOLO-format training data.
 
-### Master System Architecture
+For the full data/control-flow diagram, the real call path from `run_main.py` down to model
+inference, and a breakdown of every subpackage, see the
+**[System Architecture & Workflow Guide](./docs/architecture_and_workflow.md)** — that
+document is the single source of truth, kept in sync with the code (this README doesn't
+duplicate it).
 
-```mermaid
-flowchart TD
-    %% =========================================================
-    %% Swimlanes (vertical pipeline)
-    %% =========================================================
-
-    subgraph "User / HITL (Human-in-the-loop)"
-        U["User / Annotator"]:::external
-        UI["PyQt5 MainWindow / UI\n(MainWindow.py)\npoints, zoom, sidepanel"]:::ui
-        AM["AnnotationManager\nsave/load prompts, keypoints"]:::ui
-        LOG["Logging\n(logger_config.py)"]:::ui
-        JP[("User Prompts JSON\npoints_labels_*.json")]:::store
-    end
-
-    subgraph "Orchestration / Control Plane"
-        DRIVER["Main Entry\nrun_main.py"]:::orch
-        SETUP["Setup Dialog\n(SetupDialog.py)"]:::ui
-        PIPE["Pipeline Orchestrator\n(pipeline.py)\ncoordinates extraction+engine"]:::orch
-        ENGINE["AutoSegmentor Engine\n(AutoSegmentorEngine.py)\ncore processing logic"]:::orch
-        CFG["Runtime Config\n(default_config.yaml)\nvideo_range, batch, dirs"]:::doc
-    end
-
-    subgraph "Input / Output Artifacts (Data Plane)"
-        VIN[("Video Inputs\nVideo*.mp4")]:::store
-        WDIR[("workspace/working_dir/\nimages, masks, overlap")]:::store
-        WOUT[("workspace/outputs/\nOrgVideo*.mp4\nMaskVideo*.mp4")]:::store
-        OUTLOG[("outputs/logs/\nautosegmentor.log")]:::store
-        CKPT[("SAM2 Checkpoint\nsam2_hiera_large.pt")]:::store
-    end
-
-    subgraph "FileManagement (ETL stages)"
-        FM["FileManager\ndir lifecycle & paths"]:::fm
-        FE["FrameExtractor\nvideo->frames"]:::fm
-        MP["MaskProcessor\ncolor-encode, batch render"]:::fm
-        OVL["ImageOverlayProcessor\nmask-over-image blending"]:::fm
-        CP["ImageCopier\ncurate verified samples"]:::fm
-        VC["VideoCreator\nframes->mp4 assembly"]:::fm
-    end
-
-    subgraph "Pose Estimation & Tracking"
-        PTRACK["Pose Exporter\n(PoseExporter.py)"]:::fm
-        CT["CoTracker Wrapper\n(CoTrackerPredictor.py)"]:::ml
-        LK["Optical Flow (LK)\n(LKKeypointTracker.py)"]:::ml
-        CT_LIB["CoTracker Library\n(external/co-tracker/)"]:::ml
-        CT_CKPT[("CoTracker Weights\nscaled_offline.pth")]:::store
-    end
-
-    subgraph "Model Runtime (SAM2 Inference)"
-        S2CFG["AppConfig\nbatch size, paths"]:::ml
-        S2M["SAM2Model\nload weights, device selection"]:::ml
-        PRED["sam2_video_predictor\nprompts+batch inference"]:::ml
-        S2LIB["SAM2 Library (vendored)\n(external/segment_anything_2/)"]:::ml
-        GPU{{"PyTorch + CUDA GPU Runtime"}}:::gpu
-    end
-
-    subgraph "Dataset Export (YOLO compatible)"
-        YDC["YOLO Dataset Builder\n(DatasetCreator.py)\npolygons, split, augment"]:::ds
-        YSTRUCT["YOLO Structure Creator\ncreate_yolo_structure.py"]:::ds
-        YDOC["Docs\nREADME.md"]:::doc
-        YOLO[("YOLO Dataset Folder\ntrain/valid/test\nlabels(polygons).txt")]:::store
-    end
-
-    %% =========================================================
-    %% Control-plane flows
-    %% =========================================================
-    U -->|"interaction"| UI
-    UI -->|"update/save"| AM
-    AM -->|"persist"| JP
-    UI -->|"logs"| LOG
-
-    CFG -->|"load params"| PIPE
-    DRIVER -->|"launch"| UI
-    UI -->|"orchestrates"| PIPE
-
-    CFG -->|"model config"| S2CFG
-    CKPT -->|"weights"| S2M
-    S2CFG -->|"batch/paths"| PRED
-    S2M -->|"predictor init"| PRED
-    JP -->|"prompts"| PRED
-
-    %% =========================================================
-    %% Data-plane pipeline (ETL)
-    %% =========================================================
-    VIN -->|"mp4 source"| FE
-    PIPE -->|"triggers"| FM
-    PIPE -->|"triggers"| FE
-    PIPE -->|"triggers"| PRED
-    PIPE -->|"triggers"| MP
-    PIPE -->|"triggers"| OVL
-    PIPE -->|"triggers"| CP
-    PIPE -->|"triggers"| VC
-    PIPE -->|"triggers"| YDC
-
-    FE -->|"frames(jpeg)"| WDIR
-    FM -->|"lifecycle"| WDIR
-
-    WDIR -->|"images/masks"| PRED
-    PRED -->|"raw logits"| MP
-    MP -->|"color masks"| WDIR
-
-    WDIR -->|"images+render"| OVL
-    OVL -->|"overlap frames"| WDIR
-
-    WDIR -->|"verified curate"| CP
-    CP -->|"verified subset"| WDIR
-
-    WDIR -->|"assembly"| VC
-    VC -->|"mp4 outputs"| WOUT
-
-    WDIR -->|"verified export"| YDC
-    YDC -->|"builds"| YSTRUCT
-    YSTRUCT -->|"YOLO format"| YOLO
-
-    %% =========================================================
-    %% Pose Estimation Flows
-    %% =========================================================
-    WDIR -->|"frames"| PTRACK
-    PTRACK -->|"selects"| CT
-    PTRACK -->|"selects"| LK
-    CT -->|"imports"| CT_LIB
-    CT_CKPT -->|"loads"| CT
-    PTRACK -->|"pose data"| WDIR
-
-    %% =========================================================
-    %% Compute/resource dependencies
-    %% =========================================================
-    PRED -->|"inference"| S2LIB
-    PRED -->|"gpu tasks"| GPU
-
-    %% =========================================================
-    %% Click Events
-    %% =========================================================
-    click DRIVER "run_main.py" "Main Entry"
-    click PIPE "autosegmentor/pipeline.py" "Pipeline Orchestrator"
-    click ENGINE "autosegmentor/core/AutoSegmentorEngine.py" "Engine Core"
-    click CFG "workspace/inputs/config/default_config.yaml" "Config File"
-    click AM "autosegmentor/ui/AnnotationManager.py" "Annotation Manager"
-    click UI "autosegmentor/ui/MainWindow.py" "Main UI"
-    click FM "autosegmentor/file_management/FileManager.py" "File Manager"
-    click FE "autosegmentor/file_management/FrameExtractor.py" "Frame Extractor"
-    click MP "autosegmentor/file_management/MaskProcessor.py" "Mask Processor"
-    click OVL "autosegmentor/file_management/ImageOverlayProcessor.py" "Overlay Processor"
-    click VC "autosegmentor/file_management/VideoCreator.py" "Video Creator"
-    click CT "autosegmentor/models/Tracking/CoTrackerPredictor.py" "CoTracker"
-    click S2M "autosegmentor/models/SAM/SAM2Model.py" "SAM2 Model"
-    click YDC "DatasetManager/YolovDatasetManager/DatasetCreator.py" "Dataset Creator"
-    click S2LIB "https://github.com/facebookresearch/segment-anything-2" "SAM2 GitHub"
-    click CT_LIB "https://github.com/facebookresearch/co-tracker" "CoTracker GitHub"
-
-    %% =========================================================
-    %% Styles
-    %% =========================================================
-    classDef orch fill:#1e88e5,stroke:#0d47a1,color:#ffffff,stroke-width:1px
-    classDef ui fill:#43a047,stroke:#1b5e20,color:#ffffff,stroke-width:1px
-    classDef ml fill:#fb8c00,stroke:#e65100,color:#ffffff,stroke-width:1px
-    classDef fm fill:#26a69a,stroke:#004d40,color:#ffffff,stroke-width:1px
-    classDef ds fill:#8e24aa,stroke:#4a148c,color:#ffffff,stroke-width:1px
-    classDef store fill:#90a4ae,stroke:#37474f,color:#0b0f12,stroke-width:1px
-    classDef doc fill:#cfd8dc,stroke:#455a64,color:#0b0f12,stroke-width:1px
-    classDef gpu fill:#6d4c41,stroke:#3e2723,color:#ffffff,stroke-width:1px
-    classDef tool fill:#546e7a,stroke:#263238,color:#ffffff,stroke-width:1px
-    classDef external fill:#2b2b2b,stroke:#111111,color:#ffffff,stroke-width:1px
-```
-
-### High-Level Components
-
-| Component | Responsibility |
-| :--- | :--- |
-| **`MainWindow`** | The primary application hub; manages the event loop and component communication. |
-| **`AnnotationCanvas`** | Handles high-performance rendering of frames, masks, and interactive vector graphics. |
-| **`BatchProcessor`** | Background thread for running SAM2 propagation and CoTracker across frame windows. |
-| **`PreviewThread`** | Lightweight background task for instant SAM2 feedback on the current frame. |
-| **`SAM2Model`** | Managed wrapper for the SAM2 predictor, handling GPU memory and inference state. |
-| **`CoTracker`** | Advanced keypoint tracking engine for robust pose estimation. |
-| **`DatasetManager`** | Post-processing suite for YOLO conversion and synthetic data generation. |
-
-### ASCII Directory Map
+### Directory Map
 
 ```text
 AutoSegmentor/
-├── run_main.py               # MAIN ENTRY POINT
-├── autosegmentor/            # CORE APPLICATION PACKAGE
-│   ├── core/                 # Pipeline orchestration
-│   ├── ui/                   # PyQt5 Windows & Widgets
-│   ├── models/               # SAM2 & Tracker Wrappers
-│   ├── file_management/      # Disk ETL & Data Handling
-│   └── tools/                # App Bootstrap
-├── DatasetManager/           # Dataset Export & Synthesis (See READMEs below)
-│   ├── SyntheticEngine/      # Advanced Augmentation
-│   └── YolovDatasetManager/  # YOLO Format Creation
-├── workspace/                # PROJECT WORKSPACE
-│   ├── VideoInputs/          # Put your raw videos here
-│   ├── inputs/config/        # Configuration YAMLs
-│   ├── working_dir/          # Intermediate files (images, masks)
-│   └── outputs/              # Final Video Outputs (.mp4)
-├── DataStorage/              # Persistent data storage
-├── external/                 # Third-party libraries ([SAM2](https://github.com/facebookresearch/segment-anything-2), [CoTracker](https://github.com/facebookresearch/co-tracker))
-│   ├── segment_anything_2/checkpoints/ # SAM2 Weights
-│   └── co-tracker/checkpoints/ # CoTracker Weights
-├── assets/                   # Media assets for README
-├── scripts/                  # Utility scripts
-├── outputs/                  # logs outputs
-└── docs/                     # Detailed Technical Documentation
+├── run_main.py                # Main entry point
+├── install.py                 # One-shot setup (deps, submodules, checkpoints, GPU check)
+├── autosegmentor/              # Core application package
+│   ├── core/                  # Pipeline orchestration (AutoSegmentorEngine)
+│   ├── ui/                    # PyQt5 windows & widgets
+│   ├── models/                # SAM2 & CoTracker wrappers
+│   ├── file_management/       # Disk ETL & data handling
+│   └── tools/                 # App bootstrap, demo registry
+├── DatasetManager/             # Dataset export & synthesis (see READMEs below)
+│   ├── SyntheticEngine/        # Offline augmentation pipeline
+│   └── YolovDatasetManager/    # YOLO format creation
+├── workspace/                  # Project workspace (videos in, datasets/logs out)
+├── external/                   # Vendored SAM2 + CoTracker3 (see docs for details)
+├── assets/                     # Media assets for README
+├── demo/                       # Bundled demo footage + session configs
+├── outputs/                    # Logs
+└── docs/                       # Detailed technical documentation
 ```
 
 ---
