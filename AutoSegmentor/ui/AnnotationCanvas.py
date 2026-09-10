@@ -316,15 +316,20 @@ class AnnotationCanvas(QGraphicsView):
                 x, y = pt[0], pt[1]
                 is_negative = lbl < 0
                 class_id = abs(lbl) // 1000
+                is_pose_point = targets is None or (idx < len(targets) and "pose" in targets[idx])
 
-                # Color by CLASS (complement of mask color) — instances separated by skeleton grouping
-                color = get_class_point_color(class_id)
+                # Color by CLASS (complement of mask color) — instances separated by skeleton grouping.
+                # Mask-only points (Ctrl+Shift+Click, target ["sam"] alone) get a fixed
+                # distinct color instead, since they never join the class's skeleton chain.
+                if is_pose_point:
+                    color = get_class_point_color(class_id)
+                else:
+                    color = QColor(Colors.ACCENT_PURPLE)
                 if is_negative:
                     color = QColor(Colors.ACCENT_RED)
 
                 display_text = str(idx + 1)
                 matched_pose_idx = None
-                is_pose_point = targets is None or (idx < len(targets) and "pose" in targets[idx])
 
                 if pose_coords and is_pose_point:
                     # Find the next visible point in pose_coords — this walk stays
@@ -412,10 +417,9 @@ class AnnotationCanvas(QGraphicsView):
 
         Points are GROUPED by (label, is_pose_point) — label is class+instance,
         so switching to another class/instance and back will NOT break the
-        chain. The is_pose_point split additionally keeps mask-only points
-        (added via Ctrl+Shift+Click, target ["sam"] alone) from ever chaining
-        into the pose skeleton for the same instance — they only connect to
-        other mask-only points sharing that same class+instance id.
+        chain. Mask-only points (added via Ctrl+Shift+Click, target ["sam"]
+        alone) are independent SAM prompts, not skeleton keypoints — they are
+        never connected by lines, either to pose points or to each other.
 
         targets, when given, is the per-point list of target model names
         mirroring `points`/`labels` (see draw_annotations). pose_idx_map, when
@@ -447,9 +451,9 @@ class AnnotationCanvas(QGraphicsView):
 
             groups[(lbl, is_pose_point)].append({"pt": points[idx], "vis": vis})
 
-        # 2. Draw skeleton lines within each group
-        for (lbl, _is_pose), group in groups.items():
-            if len(group) < 2:
+        # 2. Draw skeleton lines within each group (mask-only points never get lines)
+        for (lbl, is_pose), group in groups.items():
+            if not is_pose or len(group) < 2:
                 continue
 
             class_id = lbl // 1000
