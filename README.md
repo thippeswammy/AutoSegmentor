@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
 [![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
 
-![road dashboard demo](./assets/road_dashboard_1080.gif)
+![AutoSegmentor full pipeline demo: UI annotation, CoTracker + SAM2 auto-tracking, and YOLO export](./assets/cat_full_pipeline.gif)
 
 _AutoSegmentor is a state-of-the-art auto-labeling ecosystem that bridges the gap between raw video footage and structured AI datasets. By integrating Meta AI's **Segment Anything Model 2 (SAM2)** with high-precision tracking like **CoTracker**, it enables users to generate pixel-perfect masks and pose estimation data for long, complex videos with minimal manual interaction._
 
@@ -185,19 +185,33 @@ python run_main.py --demo road           # Road/dashcam demo
 
 The `cat` demo uses `demo/videos/cat.mp4` and the `road` demo uses
 `demo/videos/road_dashboard.mp4` (a road scene recorded from a dashboard
-camera). See [`demo/README.md`](demo/README.md) for details, and
+camera — see the [road dashboard demo GIF](assets/road_dashboard_1080.gif)).
+See [`demo/README.md`](demo/README.md) for details, and
 [`demo/videos/README.md`](demo/videos/README.md) for footage attribution.
 
 ---
 
 ## 🎬 Full Pipeline Demo (v3)
 
-> **Coming soon** — a full walkthrough on the bundled `cat` clip: UI
-> annotation → CoTracker keypoint tracking → SAM2 mask propagation →
-> one-shot export to YOLO format for **detection (bbox)**, **instance
-> segmentation**, and **pose** models. See
-> [`assets/README.md`](assets/README.md) for the recording checklist and
-> where the finished clip/GIF goes.
+The GIF at the top of this README is the full walkthrough, on the bundled
+`cat` clip:
+
+1. Launch the annotation tool.
+2. Click 5 foreground + 2 background points on the cat in frame 1.
+3. Press Enter — SAM2 generates the mask, CoTracker starts tracking the pose
+   keypoints.
+4. Navigate forward across frames — mask + skeleton follow the cat
+   automatically, with a live correction (drag a drifted keypoint back).
+5. Process the next batch, keep navigating — tracking continues with zero
+   extra manual prompts.
+6. `Ctrl+S` to save, `Ctrl+E` to export.
+7. Result: a YOLO dataset (`train` / `valid` / `test` + `data.yaml`) covering
+   **detection (bbox)**, **instance segmentation**, and **pose** — ready to
+   train a model for any application.
+
+> Full-length narrated version: *(link pending — will be attached to the
+> [v3.0.0 GitHub Release](https://github.com/thippeswammy/AutoSegmentor/releases))*.
+> See [`assets/README.md`](assets/README.md) for how this clip was produced.
 
 ---
 

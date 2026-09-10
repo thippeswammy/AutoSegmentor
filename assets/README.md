@@ -9,44 +9,51 @@ display assets only (hero GIFs, badges' linked previews) — the actual demo
 
 | File | Used in | Notes |
 | :--- | :--- | :--- |
-| `road_dashboard_1080.gif` | README hero image | Looping preview of the `road` demo (segmentation + pose on dashcam footage). ~45MB — kept because Git LFS isn't set up; see size guidance below. |
-| `cat_full_pipeline.gif` *(pending)* | README "Full Pipeline Demo" section | **Not added yet.** See checklist below. |
+| `cat_full_pipeline.gif` | README hero image + "Full Pipeline Demo" section | Full v3 walkthrough on the `cat` clip (see shot list below). 640×360, 8fps, ~16MB. |
+| `road_dashboard_1080.gif` | "Automated Demo" section (road demo link) | Looping preview of the `road` demo (segmentation + pose on dashcam footage). ~45MB — kept because Git LFS isn't set up; see size guidance below. |
 
-## Adding the new v3 "full pipeline" demo (cat clip)
+## The v3 "full pipeline" demo (cat clip) — shot list
 
-This should show, in one pass: annotating the bundled `demo/videos/cat.mp4` in
-the UI → CoTracker keypoint tracking across frames → SAM2 mask propagation →
-exporting the verified session straight to YOLO format for **all three**
-target model types (detection/bbox, instance segmentation, pose), via
-`DatasetManager/YolovDatasetManager`.
+Source recording: 1920×1080, 30fps, 51s, captions burned in during editing.
+This is the exact sequence recorded; keep it as the reference if the clip is
+ever re-recorded.
 
-1. **Record** a screen capture running through:
-   - Launching `python run_main.py`, loading the `cat` demo (or a fresh
-     session on `demo/videos/cat.mp4`).
-   - A couple of manual annotation clicks (box/points), then CoTracker
-     picking up keypoints across the batch and SAM2 propagating the mask.
-   - `Ctrl+E` (export) producing the YOLO dataset folder, briefly showing the
-     `train/valid/test` structure and `data.yaml`.
-2. **Export two files**:
-   - A short (10–20s) looping **GIF** for the README hero/section —
-     name it `cat_full_pipeline.gif`, similar resolution/size to
-     `road_dashboard_1080.gif` (trim it further if possible; keep under ~30MB).
-   - The **full-length MP4** (with narration/captions if you have them) —
-     host it externally (YouTube, Google Drive, etc.) rather than committing
-     it here; the repo already links external video via the "Demo Video"
-     badge at the top of the README.
-3. **Drop the GIF** in this folder as `assets/cat_full_pipeline.gif`.
-4. **Update `README.md`**:
-   - Point the "🎬 Full Pipeline Demo" section's `![...]` image at the new
-     GIF.
-   - Replace/add a `Demo Video` shields.io badge pointing at the hosted
-     full-length video link.
-5. Update this table's "pending" row to reflect the real file.
+| # | On-screen caption | What it shows |
+| :-: | :--- | :--- |
+| 1 | Launch System | Launch AutoSegmentor |
+| 2 | Initial Prompt: 5 Foreground + 2 Background Points | Click 5 foreground + 2 background points on the cat in frame 1 |
+| 3 | Process Batch — SAM2 + CoTracker Take Over | Press Enter: SAM2 mask appears, CoTracker keypoints start tracking |
+| 4 | Auto-Tracking Across Frames | Navigate forward (D / Right) — mask + skeleton follow the cat automatically |
+| 4b | One-Click Correction | Drag a drifted keypoint back into place |
+| 5 | Process Next Batch | Press Enter again to process the next batch |
+| 6 | Keep Navigating — Still Tracking | Navigate forward through the remaining frames |
+| 7 | Save & Export | Ctrl+S to save, then Ctrl+E to export |
+| 8 | YOLO Dataset, Ready | Generated dataset: train / valid / test folders + data.yaml |
+| 9 | Ready to train — for any application. | Closing line |
+
+### Still open
+
+- The full-length source recording (`Video Project 24.mp4`, ~58MB, not
+  committed to the repo) should be attached as a **GitHub Release asset** on
+  the `v3.0.0` release rather than hosted externally — no repo bloat, no
+  third-party dependency, and GitHub Releases accept files up to 2GB.
+  Once the release is published, replace the "Demo Video" badge URL at the
+  top of `README.md` (currently an old Google Drive link) with the release
+  asset URL, and fill in the "link pending" note in the README's "Full
+  Pipeline Demo" section.
+
+## Regenerating the GIF
+
+No `ffmpeg` was available in this environment, so the GIF was built with
+OpenCV (frame decode/resize) + `imageio` (GIF encode) instead — downsampled
+from the 1920×1080/30fps source to 640×360/8fps. To reproduce or tune it,
+adjust `target_fps` / `target_width` and re-run the same decode → resize →
+`imageio.mimsave` steps against the source recording.
 
 ### Size guidance
 
 Git has no native diffing for binary media, so every GIF/video committed here
 permanently bloats the repo history. Prefer:
-- GIFs: short loops, trimmed/cropped to the relevant region, <30MB.
-- Full-length videos: host externally, link via badge — do not commit MP4s
-  to `assets/`.
+- GIFs: short loops or downsampled full walkthroughs, <30MB.
+- Full-length videos: attach as a GitHub Release asset (preferred) or host
+  externally and link via badge — do not commit MP4s to `assets/`.
