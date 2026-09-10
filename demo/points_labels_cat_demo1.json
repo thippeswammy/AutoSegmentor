@@ -3,24 +3,1086 @@
     "frame_idx": 0,
     "points": [
       [
-        139.57284545898438,
-        224.5673065185547
+        139.0,
+        223.0
       ],
       [
-        132.46627807617188,
-        204.1004180908203
+        131.0,
+        203.0
       ],
       [
-        110.29381561279297,
-        156.6285858154297
+        110.0,
+        155.0
       ],
       [
-        183.63351440429688,
-        134.17185974121094
+        184.0,
+        136.0
       ],
       [
-        161.46104431152344,
-        201.25778198242188
+        160.0,
+        200.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam"
+      ],
+      [
+        "sam"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 139,
+        "y": 223,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 131,
+        "y": 203,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 155,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 184,
+        "y": 136,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 160,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 1,
+    "points": [
+      [
+        138.0,
+        222.0
+      ],
+      [
+        130.0,
+        202.0
+      ],
+      [
+        110.0,
+        154.0
+      ],
+      [
+        184.0,
+        136.0
+      ],
+      [
+        159.0,
+        200.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 138,
+        "y": 222,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 130,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 154,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 184,
+        "y": 136,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 159,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 2,
+    "points": [
+      [
+        136.0,
+        222.0
+      ],
+      [
+        129.0,
+        201.0
+      ],
+      [
+        110.0,
+        152.0
+      ],
+      [
+        183.0,
+        135.0
+      ],
+      [
+        157.0,
+        199.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 136,
+        "y": 222,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 129,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 152,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 183,
+        "y": 135,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 157,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 3,
+    "points": [
+      [
+        135.0,
+        221.0
+      ],
+      [
+        128.0,
+        201.0
+      ],
+      [
+        110.0,
+        152.0
+      ],
+      [
+        182.0,
+        135.0
+      ],
+      [
+        156.0,
+        199.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 135,
+        "y": 221,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 128,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 152,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 182,
+        "y": 135,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 156,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 4,
+    "points": [
+      [
+        134.0,
+        220.0
+      ],
+      [
+        128.0,
+        200.0
+      ],
+      [
+        110.0,
+        151.0
+      ],
+      [
+        182.0,
+        134.0
+      ],
+      [
+        155.0,
+        198.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 134,
+        "y": 220,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 128,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 151,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 182,
+        "y": 134,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 155,
+        "y": 198,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 5,
+    "points": [
+      [
+        133.0,
+        219.0
+      ],
+      [
+        127.0,
+        199.0
+      ],
+      [
+        110.0,
+        150.0
+      ],
+      [
+        182.0,
+        133.0
+      ],
+      [
+        155.0,
+        197.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 133,
+        "y": 219,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 127,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 150,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 182,
+        "y": 133,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 155,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 6,
+    "points": [
+      [
+        133.0,
+        219.0
+      ],
+      [
+        127.0,
+        199.0
+      ],
+      [
+        110.0,
+        149.0
+      ],
+      [
+        183.0,
+        133.0
+      ],
+      [
+        155.0,
+        197.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 133,
+        "y": 219,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 127,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 183,
+        "y": 133,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 155,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 7,
+    "points": [
+      [
+        134.0,
+        220.0
+      ],
+      [
+        127.0,
+        199.0
+      ],
+      [
+        110.0,
+        149.0
+      ],
+      [
+        185.0,
+        135.0
+      ],
+      [
+        156.0,
+        198.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 134,
+        "y": 220,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 127,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 185,
+        "y": 135,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 156,
+        "y": 198,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 8,
+    "points": [
+      [
+        135.0,
+        220.0
+      ],
+      [
+        128.0,
+        199.0
+      ],
+      [
+        110.0,
+        149.0
+      ],
+      [
+        187.0,
+        135.0
+      ],
+      [
+        157.0,
+        198.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 135,
+        "y": 220,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 128,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 110,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 187,
+        "y": 135,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 157,
+        "y": 198,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 9,
+    "points": [
+      [
+        136.0,
+        221.0
+      ],
+      [
+        129.0,
+        200.0
+      ],
+      [
+        111.0,
+        149.0
+      ],
+      [
+        189.0,
+        136.0
+      ],
+      [
+        158.0,
+        199.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 136,
+        "y": 221,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 129,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 111,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 189,
+        "y": 136,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 158,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 10,
+    "points": [
+      [
+        137.0,
+        221.0
+      ],
+      [
+        130.0,
+        200.0
+      ],
+      [
+        111.0,
+        149.0
+      ],
+      [
+        192.0,
+        136.0
+      ],
+      [
+        159.0,
+        200.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 137,
+        "y": 221,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 130,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 111,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 192,
+        "y": 136,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 159,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 11,
+    "points": [
+      [
+        139.0,
+        222.0
+      ],
+      [
+        131.0,
+        200.0
+      ],
+      [
+        111.0,
+        149.0
+      ],
+      [
+        195.0,
+        136.0
+      ],
+      [
+        161.0,
+        200.0
       ]
     ],
     "labels": [
@@ -57,40 +1119,7204 @@
         "name": "p1",
         "point_id": 0,
         "x": 139,
-        "y": 224,
-        "visible": true,
+        "y": 222,
+        "visible": 2,
         "label": 1001
       },
       {
         "name": "p2",
         "point_id": 1,
-        "x": 132,
-        "y": 204,
-        "visible": true,
+        "x": 131,
+        "y": 200,
+        "visible": 2,
         "label": 1001
       },
       {
         "name": "p3",
         "point_id": 2,
-        "x": 110,
-        "y": 156,
-        "visible": true,
+        "x": 111,
+        "y": 149,
+        "visible": 2,
         "label": 1001
       },
       {
         "name": "p4",
         "point_id": 3,
-        "x": 183,
-        "y": 134,
-        "visible": true,
+        "x": 195,
+        "y": 136,
+        "visible": 2,
         "label": 1001
       },
       {
         "name": "p5",
         "point_id": 4,
         "x": 161,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 12,
+    "points": [
+      [
+        141.0,
+        223.0
+      ],
+      [
+        133.0,
+        201.0
+      ],
+      [
+        112.0,
+        149.0
+      ],
+      [
+        197.0,
+        137.0
+      ],
+      [
+        163.0,
+        201.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 141,
+        "y": 223,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 133,
         "y": 201,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 112,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 197,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 163,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 13,
+    "points": [
+      [
+        143.0,
+        223.0
+      ],
+      [
+        134.0,
+        201.0
+      ],
+      [
+        113.0,
+        149.0
+      ],
+      [
+        200.0,
+        137.0
+      ],
+      [
+        166.0,
+        202.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 143,
+        "y": 223,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 134,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 113,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 200,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 166,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 14,
+    "points": [
+      [
+        145.0,
+        224.0
+      ],
+      [
+        137.0,
+        201.0
+      ],
+      [
+        114.0,
+        148.0
+      ],
+      [
+        204.0,
+        138.0
+      ],
+      [
+        169.0,
+        202.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 145,
+        "y": 224,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 137,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 114,
+        "y": 148,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 204,
+        "y": 138,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 169,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 15,
+    "points": [
+      [
+        149.0,
+        223.0
+      ],
+      [
+        140.0,
+        201.0
+      ],
+      [
+        116.0,
+        147.0
+      ],
+      [
+        209.0,
+        139.0
+      ],
+      [
+        174.0,
+        202.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 149,
+        "y": 223,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 140,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 116,
+        "y": 147,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 209,
+        "y": 139,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 174,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 16,
+    "points": [
+      [
+        155.0,
+        222.0
+      ],
+      [
+        143.0,
+        199.0
+      ],
+      [
+        120.0,
+        144.0
+      ],
+      [
+        216.0,
+        138.0
+      ],
+      [
+        179.0,
+        201.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 155,
+        "y": 222,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 143,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 120,
+        "y": 144,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 216,
+        "y": 138,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 179,
+        "y": 201,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 17,
+    "points": [
+      [
+        161.0,
+        221.0
+      ],
+      [
+        148.0,
+        198.0
+      ],
+      [
+        125.0,
+        142.0
+      ],
+      [
+        222.0,
+        139.0
+      ],
+      [
+        185.0,
+        200.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 161,
+        "y": 221,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 148,
+        "y": 198,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 125,
+        "y": 142,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 222,
+        "y": 139,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 185,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 18,
+    "points": [
+      [
+        169.0,
+        220.0
+      ],
+      [
+        155.0,
+        197.0
+      ],
+      [
+        130.0,
+        140.0
+      ],
+      [
+        228.0,
+        141.0
+      ],
+      [
+        193.0,
+        199.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 169,
+        "y": 220,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 155,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 130,
+        "y": 140,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 228,
+        "y": 141,
         "visible": true,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 193,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 19,
+    "points": [
+      [
+        176.0,
+        219.0
+      ],
+      [
+        160.0,
+        195.0
+      ],
+      [
+        135.0,
+        138.0
+      ],
+      [
+        237.0,
+        140.0
+      ],
+      [
+        200.0,
+        199.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 176,
+        "y": 219,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 160,
+        "y": 195,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 135,
+        "y": 138,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 237,
+        "y": 140,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 200,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 20,
+    "points": [
+      [
+        182.0,
+        218.0
+      ],
+      [
+        165.0,
+        194.0
+      ],
+      [
+        139.0,
+        137.0
+      ],
+      [
+        241.0,
+        139.0
+      ],
+      [
+        205.0,
+        197.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 182,
+        "y": 218,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 165,
+        "y": 194,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 139,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 241,
+        "y": 139,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 205,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 21,
+    "points": [
+      [
+        186.0,
+        218.0
+      ],
+      [
+        168.0,
+        194.0
+      ],
+      [
+        142.0,
+        137.0
+      ],
+      [
+        244.0,
+        139.0
+      ],
+      [
+        208.0,
+        197.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 186,
+        "y": 218,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 168,
+        "y": 194,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 142,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 244,
+        "y": 139,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 208,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 22,
+    "points": [
+      [
+        188.0,
+        218.0
+      ],
+      [
+        169.0,
+        194.0
+      ],
+      [
+        142.0,
+        137.0
+      ],
+      [
+        244.0,
+        139.0
+      ],
+      [
+        210.0,
+        197.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 188,
+        "y": 218,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 169,
+        "y": 194,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 142,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 244,
+        "y": 139,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 210,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 23,
+    "points": [
+      [
+        189.0,
+        217.0
+      ],
+      [
+        170.0,
+        193.0
+      ],
+      [
+        142.0,
+        137.0
+      ],
+      [
+        244.0,
+        137.0
+      ],
+      [
+        211.0,
+        195.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 189,
+        "y": 217,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 170,
+        "y": 193,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 142,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 244,
+        "y": 137,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 211,
+        "y": 195,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 24,
+    "points": [
+      [
+        190.0,
+        214.0
+      ],
+      [
+        170.0,
+        191.0
+      ],
+      [
+        141.0,
+        134.0
+      ],
+      [
+        243.0,
+        135.0
+      ],
+      [
+        211.0,
+        192.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 190,
+        "y": 214,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 170,
+        "y": 191,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 141,
+        "y": 134,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 243,
+        "y": 135,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 211,
+        "y": 192,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 25,
+    "points": [
+      [
+        190.0,
+        210.0
+      ],
+      [
+        170.0,
+        187.0
+      ],
+      [
+        141.0,
+        131.0
+      ],
+      [
+        243.0,
+        130.0
+      ],
+      [
+        211.0,
+        188.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 190,
+        "y": 210,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 170,
+        "y": 187,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 141,
+        "y": 131,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 243,
+        "y": 130,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 211,
+        "y": 188,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 26,
+    "points": [
+      [
+        193.0,
+        205.0
+      ],
+      [
+        173.0,
+        182.0
+      ],
+      [
+        143.0,
+        127.0
+      ],
+      [
+        245.0,
+        126.0
+      ],
+      [
+        214.0,
+        183.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 193,
+        "y": 205,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 173,
+        "y": 182,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 143,
+        "y": 127,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 245,
+        "y": 126,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 214,
+        "y": 183,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 27,
+    "points": [
+      [
+        198.0,
+        202.0
+      ],
+      [
+        177.0,
+        179.0
+      ],
+      [
+        148.0,
+        123.0
+      ],
+      [
+        248.0,
+        123.0
+      ],
+      [
+        218.0,
+        181.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 198,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 177,
+        "y": 179,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 148,
+        "y": 123,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 248,
+        "y": 123,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 218,
+        "y": 181,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 28,
+    "points": [
+      [
+        204.0,
+        200.0
+      ],
+      [
+        183.0,
+        177.0
+      ],
+      [
+        153.0,
+        122.0
+      ],
+      [
+        255.0,
+        121.0
+      ],
+      [
+        225.0,
+        179.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 204,
+        "y": 200,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 183,
+        "y": 177,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 153,
+        "y": 122,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 255,
+        "y": 121,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 225,
+        "y": 179,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 29,
+    "points": [
+      [
+        211.0,
+        196.0
+      ],
+      [
+        190.0,
+        174.0
+      ],
+      [
+        161.0,
+        118.0
+      ],
+      [
+        263.0,
+        119.0
+      ],
+      [
+        232.0,
+        176.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 211,
+        "y": 196,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 190,
+        "y": 174,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 161,
+        "y": 118,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 263,
+        "y": 119,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 232,
+        "y": 176,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 30,
+    "points": [
+      [
+        219.0,
+        194.0
+      ],
+      [
+        197.0,
+        172.0
+      ],
+      [
+        168.0,
+        116.0
+      ],
+      [
+        271.0,
+        118.0
+      ],
+      [
+        240.0,
+        174.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 219,
+        "y": 194,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 197,
+        "y": 172,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 168,
+        "y": 116,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 271,
+        "y": 118,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 240,
+        "y": 174,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 31,
+    "points": [
+      [
+        228.0,
+        193.0
+      ],
+      [
+        206.0,
+        171.0
+      ],
+      [
+        177.0,
+        116.0
+      ],
+      [
+        280.0,
+        118.0
+      ],
+      [
+        249.0,
+        173.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 228,
+        "y": 193,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 206,
+        "y": 171,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 177,
+        "y": 116,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 280,
+        "y": 118,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 249,
+        "y": 173,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 32,
+    "points": [
+      [
+        239.0,
+        191.0
+      ],
+      [
+        216.0,
+        170.0
+      ],
+      [
+        186.0,
+        115.0
+      ],
+      [
+        289.0,
+        117.0
+      ],
+      [
+        259.0,
+        172.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 239,
+        "y": 191,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 216,
+        "y": 170,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 186,
+        "y": 115,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 289,
+        "y": 117,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 259,
+        "y": 172,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 33,
+    "points": [
+      [
+        246.0,
+        188.0
+      ],
+      [
+        223.0,
+        166.0
+      ],
+      [
+        192.0,
+        111.0
+      ],
+      [
+        296.0,
+        114.0
+      ],
+      [
+        267.0,
+        169.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 246,
+        "y": 188,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 223,
+        "y": 166,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 192,
+        "y": 111,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 296,
+        "y": 114,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 267,
+        "y": 169,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 34,
+    "points": [
+      [
+        253.0,
+        184.0
+      ],
+      [
+        229.0,
+        163.0
+      ],
+      [
+        198.0,
+        107.0
+      ],
+      [
+        303.0,
+        111.0
+      ],
+      [
+        273.0,
+        165.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 253,
+        "y": 184,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 229,
+        "y": 163,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 198,
+        "y": 107,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 303,
+        "y": 111,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 273,
+        "y": 165,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 35,
+    "points": [
+      [
+        260.0,
+        181.0
+      ],
+      [
+        235.0,
+        159.0
+      ],
+      [
+        205.0,
+        104.0
+      ],
+      [
+        311.0,
+        108.0
+      ],
+      [
+        280.0,
+        162.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 260,
+        "y": 181,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 235,
+        "y": 159,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 205,
+        "y": 104,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 311,
+        "y": 108,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 280,
+        "y": 162,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 36,
+    "points": [
+      [
+        264.0,
+        180.0
+      ],
+      [
+        240.0,
+        157.0
+      ],
+      [
+        210.0,
+        102.0
+      ],
+      [
+        316.0,
+        107.0
+      ],
+      [
+        285.0,
+        161.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 264,
+        "y": 180,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 240,
+        "y": 157,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 210,
+        "y": 102,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 316,
+        "y": 107,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 285,
+        "y": 161,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 37,
+    "points": [
+      [
+        269.0,
+        179.0
+      ],
+      [
+        245.0,
+        157.0
+      ],
+      [
+        215.0,
+        101.0
+      ],
+      [
+        322.0,
+        107.0
+      ],
+      [
+        291.0,
+        160.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 269,
+        "y": 179,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 245,
+        "y": 157,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 215,
+        "y": 101,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 322,
+        "y": 107,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 291,
+        "y": 160,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 38,
+    "points": [
+      [
+        273.0,
+        179.0
+      ],
+      [
+        249.0,
+        156.0
+      ],
+      [
+        218.0,
+        101.0
+      ],
+      [
+        326.0,
+        107.0
+      ],
+      [
+        294.0,
+        160.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 273,
+        "y": 179,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 249,
+        "y": 156,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 218,
+        "y": 101,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 326,
+        "y": 107,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 294,
+        "y": 160,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 39,
+    "points": [
+      [
+        273.0,
+        177.0
+      ],
+      [
+        248.0,
+        154.0
+      ],
+      [
+        217.0,
+        98.0
+      ],
+      [
+        325.0,
+        105.0
+      ],
+      [
+        294.0,
+        158.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 273,
+        "y": 177,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 248,
+        "y": 154,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 217,
+        "y": 98,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 325,
+        "y": 105,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 294,
+        "y": 158,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 40,
+    "points": [
+      [
+        273.0,
+        175.0
+      ],
+      [
+        249.0,
+        152.0
+      ],
+      [
+        217.0,
+        96.0
+      ],
+      [
+        325.0,
+        103.0
+      ],
+      [
+        294.0,
+        156.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 273,
+        "y": 175,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 249,
+        "y": 152,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 217,
+        "y": 96,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 325,
+        "y": 103,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 294,
+        "y": 156,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 41,
+    "points": [
+      [
+        274.0,
+        173.0
+      ],
+      [
+        250.0,
+        150.0
+      ],
+      [
+        218.0,
+        95.0
+      ],
+      [
+        326.0,
+        102.0
+      ],
+      [
+        295.0,
+        154.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 274,
+        "y": 173,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 250,
+        "y": 150,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 218,
+        "y": 95,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 326,
+        "y": 102,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 295,
+        "y": 154,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 42,
+    "points": [
+      [
+        248.0,
+        148.0
+      ],
+      [
+        217.0,
+        93.0
+      ],
+      [
+        325.0,
+        101.0
+      ],
+      [
+        294.0,
+        153.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 273,
+        "y": 172,
+        "visible": 0,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 248,
+        "y": 148,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 217,
+        "y": 93,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 325,
+        "y": 101,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 294,
+        "y": 153,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 43,
+    "points": [
+      [
+        246.0,
+        146.0
+      ],
+      [
+        214.0,
+        91.0
+      ],
+      [
+        323.0,
+        97.0
+      ],
+      [
+        292.0,
+        150.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 271,
+        "y": 169,
+        "visible": 0,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 246,
+        "y": 146,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 214,
+        "y": 91,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 323,
+        "y": 97,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 292,
+        "y": 150,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 44,
+    "points": [
+      [
+        246.0,
+        145.0
+      ],
+      [
+        213.0,
+        91.0
+      ],
+      [
+        323.0,
+        96.0
+      ],
+      [
+        292.0,
+        149.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 270,
+        "y": 168,
+        "visible": 0,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 246,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 213,
+        "y": 91,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 323,
+        "y": 96,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 292,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 45,
+    "points": [
+      [
+        245.0,
+        145.0
+      ],
+      [
+        212.0,
+        90.0
+      ],
+      [
+        324.0,
+        95.0
+      ],
+      [
+        291.0,
+        149.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 269,
+        "y": 168,
+        "visible": 0,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 245,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 212,
+        "y": 90,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 324,
+        "y": 95,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 291,
+        "y": 149,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 46,
+    "points": [
+      [
+        268.0,
+        167.0
+      ],
+      [
+        244.0,
+        144.0
+      ],
+      [
+        211.0,
+        88.0
+      ],
+      [
+        324.0,
+        94.0
+      ],
+      [
+        291.0,
+        148.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 268,
+        "y": 167,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 244,
+        "y": 144,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 211,
+        "y": 88,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 324,
+        "y": 94,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 291,
+        "y": 148,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 47,
+    "points": [
+      [
+        269.0,
+        166.0
+      ],
+      [
+        244.0,
+        143.0
+      ],
+      [
+        211.0,
+        87.0
+      ],
+      [
+        326.0,
+        92.0
+      ],
+      [
+        292.0,
+        147.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 269,
+        "y": 166,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 244,
+        "y": 143,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 211,
+        "y": 87,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 326,
+        "y": 92,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 292,
+        "y": 147,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 48,
+    "points": [
+      [
+        269.0,
+        164.0
+      ],
+      [
+        244.0,
+        141.0
+      ],
+      [
+        211.0,
+        85.0
+      ],
+      [
+        328.0,
+        90.0
+      ],
+      [
+        293.0,
+        145.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 269,
+        "y": 164,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 244,
+        "y": 141,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 211,
+        "y": 85,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 328,
+        "y": 90,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 293,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 49,
+    "points": [
+      [
+        269.0,
+        164.0
+      ],
+      [
+        244.0,
+        141.0
+      ],
+      [
+        211.0,
+        84.0
+      ],
+      [
+        329.0,
+        89.0
+      ],
+      [
+        293.0,
+        145.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 269,
+        "y": 164,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 244,
+        "y": 141,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 211,
+        "y": 84,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 329,
+        "y": 89,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 293,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 50,
+    "points": [
+      [
+        268.0,
+        165.0
+      ],
+      [
+        242.0,
+        141.0
+      ],
+      [
+        209.0,
+        83.0
+      ],
+      [
+        329.0,
+        88.0
+      ],
+      [
+        293.0,
+        145.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 268,
+        "y": 165,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 242,
+        "y": 141,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 209,
+        "y": 83,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 329,
+        "y": 88,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 293,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 51,
+    "points": [
+      [
+        267.0,
+        165.0
+      ],
+      [
+        241.0,
+        142.0
+      ],
+      [
+        207.0,
+        83.0
+      ],
+      [
+        330.0,
+        86.0
+      ],
+      [
+        292.0,
+        145.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 267,
+        "y": 165,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 241,
+        "y": 142,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 207,
+        "y": 83,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 330,
+        "y": 86,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 292,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 52,
+    "points": [
+      [
+        265.0,
+        168.0
+      ],
+      [
+        238.0,
+        144.0
+      ],
+      [
+        205.0,
+        85.0
+      ],
+      [
+        329.0,
+        87.0
+      ],
+      [
+        291.0,
+        147.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 265,
+        "y": 168,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 238,
+        "y": 144,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 205,
+        "y": 85,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 329,
+        "y": 87,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 291,
+        "y": 147,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 53,
+    "points": [
+      [
+        261.0,
+        171.0
+      ],
+      [
+        234.0,
+        147.0
+      ],
+      [
+        201.0,
+        87.0
+      ],
+      [
+        328.0,
+        88.0
+      ],
+      [
+        288.0,
+        150.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 261,
+        "y": 171,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 234,
+        "y": 147,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 201,
+        "y": 87,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 328,
+        "y": 88,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 288,
+        "y": 150,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 54,
+    "points": [
+      [
+        257.0,
+        175.0
+      ],
+      [
+        231.0,
+        150.0
+      ],
+      [
+        197.0,
+        91.0
+      ],
+      [
+        327.0,
+        89.0
+      ],
+      [
+        286.0,
+        153.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 257,
+        "y": 175,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 231,
+        "y": 150,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 197,
+        "y": 91,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 327,
+        "y": 89,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 286,
+        "y": 153,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 55,
+    "points": [
+      [
+        254.0,
+        178.0
+      ],
+      [
+        228.0,
+        153.0
+      ],
+      [
+        193.0,
+        94.0
+      ],
+      [
+        325.0,
+        90.0
+      ],
+      [
+        283.0,
+        155.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 254,
+        "y": 178,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 228,
+        "y": 153,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 193,
+        "y": 94,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 325,
+        "y": 90,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 283,
+        "y": 155,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 56,
+    "points": [
+      [
+        248.0,
+        180.0
+      ],
+      [
+        221.0,
+        156.0
+      ],
+      [
+        186.0,
+        97.0
+      ],
+      [
+        318.0,
+        91.0
+      ],
+      [
+        278.0,
+        157.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 248,
+        "y": 180,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 221,
+        "y": 156,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 186,
+        "y": 97,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 318,
+        "y": 91,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 278,
+        "y": 157,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 57,
+    "points": [
+      [
+        242.0,
+        184.0
+      ],
+      [
+        215.0,
+        160.0
+      ],
+      [
+        178.0,
+        100.0
+      ],
+      [
+        311.0,
+        92.0
+      ],
+      [
+        272.0,
+        160.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 242,
+        "y": 184,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 215,
+        "y": 160,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 178,
+        "y": 100,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 311,
+        "y": 92,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 272,
+        "y": 160,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 58,
+    "points": [
+      [
+        237.0,
+        188.0
+      ],
+      [
+        209.0,
+        164.0
+      ],
+      [
+        171.0,
+        103.0
+      ],
+      [
+        305.0,
+        93.0
+      ],
+      [
+        267.0,
+        163.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 237,
+        "y": 188,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 209,
+        "y": 164,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 171,
+        "y": 103,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 305,
+        "y": 93,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 267,
+        "y": 163,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 59,
+    "points": [
+      [
+        231.0,
+        191.0
+      ],
+      [
+        202.0,
+        167.0
+      ],
+      [
+        163.0,
+        105.0
+      ],
+      [
+        298.0,
+        92.0
+      ],
+      [
+        260.0,
+        165.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 231,
+        "y": 191,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 202,
+        "y": 167,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 163,
+        "y": 105,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 298,
+        "y": 92,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 260,
+        "y": 165,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 60,
+    "points": [
+      [
+        223.0,
+        194.0
+      ],
+      [
+        193.0,
+        170.0
+      ],
+      [
+        151.0,
+        108.0
+      ],
+      [
+        288.0,
+        90.0
+      ],
+      [
+        252.0,
+        166.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 223,
+        "y": 194,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 193,
+        "y": 170,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 151,
+        "y": 108,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 288,
+        "y": 90,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 252,
+        "y": 166,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 61,
+    "points": [
+      [
+        216.0,
+        194.0
+      ],
+      [
+        185.0,
+        170.0
+      ],
+      [
+        142.0,
+        108.0
+      ],
+      [
+        279.0,
+        86.0
+      ],
+      [
+        244.0,
+        164.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 216,
+        "y": 194,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 185,
+        "y": 170,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 142,
+        "y": 108,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 279,
+        "y": 86,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 244,
+        "y": 164,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 62,
+    "points": [
+      [
+        208.0,
+        193.0
+      ],
+      [
+        177.0,
+        170.0
+      ],
+      [
+        134.0,
+        109.0
+      ],
+      [
+        271.0,
+        82.0
+      ],
+      [
+        237.0,
+        162.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 208,
+        "y": 193,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 177,
+        "y": 170,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 134,
+        "y": 109,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 271,
+        "y": 82,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 237,
+        "y": 162,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 63,
+    "points": [
+      [
+        198.0,
+        193.0
+      ],
+      [
+        168.0,
+        170.0
+      ],
+      [
+        126.0,
+        110.0
+      ],
+      [
+        261.0,
+        79.0
+      ],
+      [
+        228.0,
+        162.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 198,
+        "y": 193,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 168,
+        "y": 170,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 126,
+        "y": 110,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 261,
+        "y": 79,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 228,
+        "y": 162,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 64,
+    "points": [
+      [
+        182.0,
+        193.0
+      ],
+      [
+        155.0,
+        172.0
+      ],
+      [
+        114.0,
+        112.0
+      ],
+      [
+        247.0,
+        76.0
+      ],
+      [
+        213.0,
+        162.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 182,
+        "y": 193,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 155,
+        "y": 172,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 114,
+        "y": 112,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 247,
+        "y": 76,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 213,
+        "y": 162,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 65,
+    "points": [
+      [
+        168.0,
+        196.0
+      ],
+      [
+        145.0,
+        174.0
+      ],
+      [
+        105.0,
+        116.0
+      ],
+      [
+        232.0,
+        73.0
+      ],
+      [
+        200.0,
+        162.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 168,
+        "y": 196,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 145,
+        "y": 174,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 105,
+        "y": 116,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 232,
+        "y": 73,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 200,
+        "y": 162,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 66,
+    "points": [
+      [
+        157.0,
+        199.0
+      ],
+      [
+        136.0,
+        177.0
+      ],
+      [
+        99.0,
+        120.0
+      ],
+      [
+        220.0,
+        74.0
+      ],
+      [
+        189.0,
+        164.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 157,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 136,
+        "y": 177,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 99,
+        "y": 120,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 220,
+        "y": 74,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 189,
+        "y": 164,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 67,
+    "points": [
+      [
+        146.0,
+        203.0
+      ],
+      [
+        127.0,
+        182.0
+      ],
+      [
+        93.0,
+        124.0
+      ],
+      [
+        208.0,
+        77.0
+      ],
+      [
+        178.0,
+        168.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 146,
+        "y": 203,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 127,
+        "y": 182,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 93,
+        "y": 124,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 208,
+        "y": 77,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 178,
+        "y": 168,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 68,
+    "points": [
+      [
+        136.0,
+        207.0
+      ],
+      [
+        119.0,
+        185.0
+      ],
+      [
+        86.0,
+        127.0
+      ],
+      [
+        197.0,
+        78.0
+      ],
+      [
+        168.0,
+        172.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 136,
+        "y": 207,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 119,
+        "y": 185,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 86,
+        "y": 127,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 197,
+        "y": 78,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 168,
+        "y": 172,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 69,
+    "points": [
+      [
+        127.0,
+        210.0
+      ],
+      [
+        112.0,
+        187.0
+      ],
+      [
+        80.0,
+        128.0
+      ],
+      [
+        188.0,
+        82.0
+      ],
+      [
+        159.0,
+        174.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 127,
+        "y": 210,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 112,
+        "y": 187,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 80,
+        "y": 128,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 188,
+        "y": 82,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 159,
+        "y": 174,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 70,
+    "points": [
+      [
+        121.0,
+        216.0
+      ],
+      [
+        107.0,
+        192.0
+      ],
+      [
+        76.0,
+        133.0
+      ],
+      [
+        182.0,
+        87.0
+      ],
+      [
+        153.0,
+        180.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 121,
+        "y": 216,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 107,
+        "y": 192,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 76,
+        "y": 133,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 182,
+        "y": 87,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 153,
+        "y": 180,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 71,
+    "points": [
+      [
+        118.0,
+        222.0
+      ],
+      [
+        105.0,
+        197.0
+      ],
+      [
+        75.0,
+        138.0
+      ],
+      [
+        179.0,
+        93.0
+      ],
+      [
+        150.0,
+        186.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 118,
+        "y": 222,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 105,
+        "y": 197,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 75,
+        "y": 138,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 179,
+        "y": 93,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 150,
+        "y": 186,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 72,
+    "points": [
+      [
+        117.0,
+        224.0
+      ],
+      [
+        104.0,
+        199.0
+      ],
+      [
+        74.0,
+        141.0
+      ],
+      [
+        178.0,
+        97.0
+      ],
+      [
+        148.0,
+        188.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 117,
+        "y": 224,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 104,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 74,
+        "y": 141,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 178,
+        "y": 97,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 148,
+        "y": 188,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 73,
+    "points": [
+      [
+        117.0,
+        227.0
+      ],
+      [
+        103.0,
+        202.0
+      ],
+      [
+        71.0,
+        145.0
+      ],
+      [
+        177.0,
+        100.0
+      ],
+      [
+        148.0,
+        191.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 117,
+        "y": 227,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 103,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 71,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 177,
+        "y": 100,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 148,
+        "y": 191,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 74,
+    "points": [
+      [
+        118.0,
+        227.0
+      ],
+      [
+        102.0,
+        203.0
+      ],
+      [
+        67.0,
+        146.0
+      ],
+      [
+        176.0,
+        100.0
+      ],
+      [
+        149.0,
+        190.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 118,
+        "y": 227,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 102,
+        "y": 203,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 67,
+        "y": 146,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 176,
+        "y": 100,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 149,
+        "y": 190,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 75,
+    "points": [
+      [
+        121.0,
+        224.0
+      ],
+      [
+        102.0,
+        202.0
+      ],
+      [
+        62.0,
+        145.0
+      ],
+      [
+        177.0,
+        99.0
+      ],
+      [
+        152.0,
+        188.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 121,
+        "y": 224,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 102,
+        "y": 202,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 62,
+        "y": 145,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 177,
+        "y": 99,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 152,
+        "y": 188,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 76,
+    "points": [
+      [
+        125.0,
+        220.0
+      ],
+      [
+        102.0,
+        198.0
+      ],
+      [
+        59.0,
+        141.0
+      ],
+      [
+        180.0,
+        97.0
+      ],
+      [
+        155.0,
+        184.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 125,
+        "y": 220,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 102,
+        "y": 198,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 59,
+        "y": 141,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 180,
+        "y": 97,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 155,
+        "y": 184,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 77,
+    "points": [
+      [
+        126.0,
+        213.0
+      ],
+      [
+        100.0,
+        192.0
+      ],
+      [
+        55.0,
+        135.0
+      ],
+      [
+        179.0,
+        92.0
+      ],
+      [
+        154.0,
+        178.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 126,
+        "y": 213,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 100,
+        "y": 192,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 55,
+        "y": 135,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 179,
+        "y": 92,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 154,
+        "y": 178,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 78,
+    "points": [
+      [
+        127.0,
+        206.0
+      ],
+      [
+        99.0,
+        184.0
+      ],
+      [
+        49.0,
+        127.0
+      ],
+      [
+        178.0,
+        87.0
+      ],
+      [
+        154.0,
+        172.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 127,
+        "y": 206,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 99,
+        "y": 184,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 49,
+        "y": 127,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 178,
+        "y": 87,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 154,
+        "y": 172,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 79,
+    "points": [
+      [
+        133.0,
+        199.0
+      ],
+      [
+        101.0,
+        178.0
+      ],
+      [
+        49.0,
+        121.0
+      ],
+      [
+        180.0,
+        83.0
+      ],
+      [
+        158.0,
+        165.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 133,
+        "y": 199,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 101,
+        "y": 178,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 49,
+        "y": 121,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 180,
+        "y": 83,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 158,
+        "y": 165,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 80,
+    "points": [
+      [
+        142.0,
+        193.0
+      ],
+      [
+        107.0,
+        172.0
+      ],
+      [
+        52.0,
+        115.0
+      ],
+      [
+        183.0,
+        83.0
+      ],
+      [
+        164.0,
+        161.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 142,
+        "y": 193,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 107,
+        "y": 172,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 52,
+        "y": 115,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 183,
+        "y": 83,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 164,
+        "y": 161,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 81,
+    "points": [
+      [
+        151.0,
+        189.0
+      ],
+      [
+        114.0,
+        169.0
+      ],
+      [
+        57.0,
+        111.0
+      ],
+      [
+        187.0,
+        82.0
+      ],
+      [
+        169.0,
+        158.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 151,
+        "y": 189,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 114,
+        "y": 169,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 57,
+        "y": 111,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 187,
+        "y": 82,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 169,
+        "y": 158,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 82,
+    "points": [
+      [
+        157.0,
+        186.0
+      ],
+      [
+        120.0,
+        166.0
+      ],
+      [
+        62.0,
+        109.0
+      ],
+      [
+        189.0,
+        81.0
+      ],
+      [
+        174.0,
+        156.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 157,
+        "y": 186,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 120,
+        "y": 166,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 62,
+        "y": 109,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 189,
+        "y": 81,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 174,
+        "y": 156,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 83,
+    "points": [
+      [
+        164.0,
+        184.0
+      ],
+      [
+        125.0,
+        164.0
+      ],
+      [
+        66.0,
+        107.0
+      ],
+      [
+        193.0,
+        80.0
+      ],
+      [
+        179.0,
+        154.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 164,
+        "y": 184,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 125,
+        "y": 164,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 66,
+        "y": 107,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 193,
+        "y": 80,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 179,
+        "y": 154,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 84,
+    "points": [
+      [
+        169.0,
+        182.0
+      ],
+      [
+        130.0,
+        163.0
+      ],
+      [
+        70.0,
+        106.0
+      ],
+      [
+        195.0,
+        79.0
+      ],
+      [
+        183.0,
+        153.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 169,
+        "y": 182,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 130,
+        "y": 163,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 70,
+        "y": 106,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 195,
+        "y": 79,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 183,
+        "y": 153,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 85,
+    "points": [
+      [
+        173.0,
+        183.0
+      ],
+      [
+        133.0,
+        163.0
+      ],
+      [
+        73.0,
+        107.0
+      ],
+      [
+        198.0,
+        80.0
+      ],
+      [
+        186.0,
+        153.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 173,
+        "y": 183,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 133,
+        "y": 163,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 73,
+        "y": 107,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 198,
+        "y": 80,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 186,
+        "y": 153,
+        "visible": 2,
+        "label": 1001
+      }
+    ]
+  },
+  {
+    "frame_idx": 86,
+    "points": [
+      [
+        181.0,
+        186.0
+      ],
+      [
+        142.0,
+        168.0
+      ],
+      [
+        82.0,
+        112.0
+      ],
+      [
+        205.0,
+        84.0
+      ],
+      [
+        194.0,
+        157.0
+      ]
+    ],
+    "labels": [
+      1001,
+      1001,
+      1001,
+      1001,
+      1001
+    ],
+    "target_models": [
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ],
+      [
+        "sam",
+        "pose"
+      ]
+    ],
+    "pose_keypoints": [
+      {
+        "name": "p1",
+        "point_id": 0,
+        "x": 181,
+        "y": 186,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p2",
+        "point_id": 1,
+        "x": 142,
+        "y": 168,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p3",
+        "point_id": 2,
+        "x": 82,
+        "y": 112,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p4",
+        "point_id": 3,
+        "x": 205,
+        "y": 84,
+        "visible": 2,
+        "label": 1001
+      },
+      {
+        "name": "p5",
+        "point_id": 4,
+        "x": 194,
+        "y": 157,
+        "visible": 2,
         "label": 1001
       }
     ]
