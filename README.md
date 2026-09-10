@@ -1,6 +1,7 @@
 # AutoSegmentor
 
 [![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
+[![PyPI](https://img.shields.io/pypi/v/autosegmentor)](https://pypi.org/project/autosegmentor/)
 [![Docs](https://img.shields.io/badge/docs-site-blue)](https://thippeswammy.github.io/AutoSegmentor/)
 [![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
 
@@ -40,6 +41,11 @@ python run_main.py --demo cat
 `install.py` is a single cross-platform script that installs dependencies, initializes
 submodules, downloads the SAM2 + CoTracker3 checkpoints, and runs a GPU diagnostic — see
 `python install.py --help` for flags to skip or isolate individual steps.
+
+Just want the annotation engine — SAM2 masks **and** CoTracker3 pose tracking — without
+cloning the repo? `pip install autosegmentor` pulls both straight from PyPI. Demos and the
+Dataset Manager / Synthetic Engine tooling are still git-clone-only for now — planned for a
+future release.
 
 ## 🎬 Demos
 

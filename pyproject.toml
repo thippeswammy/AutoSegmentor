@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autosegmentor"
-version = "3.0.0"
+version = "3.0.1"
 description = "Auto-labeling ecosystem converting raw video into YOLO-ready datasets using SAM2 + CoTracker3."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -82,3 +82,4 @@ autosegmentor = [
 ]
 sam2_configs = ["*.yaml"]
 sam2 = ["*.md", "*.pyd", "*.so", "csrc/*"]
+cotracker = ["evaluation/configs/*.yaml"]

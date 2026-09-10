@@ -12,6 +12,24 @@ Tested on **Windows 11** and **Ubuntu 22.04 / 24.04**.
 | Disk | ~20GB (model checkpoints + working directories) |
 | Git | [Git LFS](https://git-lfs.com/) — only needed if you plan to contribute new demo footage |
 
+## Quick install from PyPI
+
+For the full annotation engine — SAM2 mask generation **and** CoTracker3 pose tracking —
+without cloning the repo:
+
+```bash
+pip install autosegmentor
+```
+
+Both SAM2 and CoTracker3 are bundled as real packages (no `external/` checkout needed).
+Model checkpoints are never part of the package regardless of install method; download them
+with `python install.py --checkpoints-only` (covered further down), which now defaults to a
+user cache directory rather than a path inside a checkout.
+
+The rest of this page — the full git clone workflow — is what you want if you plan to run
+the demos, use the Dataset Manager, the Synthetic Engine, or contribute changes. Bundling
+those into the PyPI package too is planned for a future release.
+
 ## 1. Clone the repository
 
 Cloning with `--recursive` fetches the vendored CoTracker3 submodule. (SAM2 is vendored
@@ -75,7 +93,7 @@ python install.py --gpu-check-only              # just the GPU/system diagnostic
 ## 4. Verify
 
 ```bash
-python run_main.py --version     # AutoSegmentor 3.0.0
+python run_main.py --version     # AutoSegmentor 3.0.1
 python run_main.py --demo list   # cat, road
 ```
 
@@ -112,9 +130,13 @@ python -m pip install --upgrade pip
 pip install -r requirements-core.txt
 ```
 
-Neither SAM2 nor CoTracker3 is `pip install`ed — both are vendored under `external/`, and
-`run_main.py` adds them to `sys.path` at launch. You just need the folders present (the
-clone step above handles that).
+SAM2 and CoTracker3 aren't listed in `requirements-core.txt` as separate dependencies —
+both live under `external/` in the checkout. If you just run `python run_main.py` without
+also installing the `autosegmentor` package itself, `run_main.py` adds them to `sys.path`
+at launch and you only need the folders present (the clone step above handles that). If you
+do run `pip install -e .` (see below), they're picked up as real installed packages
+instead — the same `sam2`/`cotracker` packages that ship on PyPI, just sourced from your
+checkout.
 
 Download the two checkpoints manually if you'd rather not run the script:
 
