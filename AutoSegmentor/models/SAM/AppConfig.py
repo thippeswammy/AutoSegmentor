@@ -1,7 +1,7 @@
 import os
 from ...file_management.FileManager import get_resource_path, ensure_directory
 from ...ui.logger_config import logger
-from ..model_info import missing_model_message
+from ..model_info import missing_model_message, checkpoints_dir
 
 
 class AppConfig:
@@ -62,7 +62,12 @@ class AppConfig:
             logger.warning(f"SAM2 checkpoint not found at {self.checkpoint_path}; trying fallback {fallback}")
             self.checkpoint_path = fallback
             if not os.path.exists(self.checkpoint_path):
-                logger.error(missing_model_message(
-                    "SAM2",
-                    [os.path.normpath(os.path.join(base_path, checkpoint_raw)), fallback],
-                ))
+                # No external/ checkout at all (e.g. a plain pip install) — fall
+                # back to the shared user cache dir install.py downloads into.
+                cache_fallback = os.path.join(checkpoints_dir(), os.path.basename(checkpoint_raw))
+                tried = [os.path.normpath(os.path.join(base_path, checkpoint_raw)), fallback]
+                if os.path.exists(cache_fallback):
+                    self.checkpoint_path = cache_fallback
+                else:
+                    tried.append(cache_fallback)
+                    logger.error(missing_model_message("SAM2", tried))

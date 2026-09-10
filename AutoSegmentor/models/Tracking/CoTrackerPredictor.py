@@ -34,11 +34,16 @@ def _project_root():
 def _candidate_checkpoints(checkpoint):
     """Return a list of plausible checkpoint locations for CoTracker weights.
 
-    The canonical location bundled with the app is the CoTracker3 checkout
-    (``external/co-tracker/checkpoints/``), but the vendored SAM2 bundle also
-    carries a copy (``external/segment_anything_2/checkpoints/``). Try them all
-    so runtime does not depend on which folder a user placed the weights in.
+    The canonical location bundled with a git checkout is the CoTracker3
+    checkout (``external/co-tracker/checkpoints/``), and the vendored SAM2
+    bundle also carries a copy (``external/segment_anything_2/checkpoints/``).
+    Neither exists in a plain `pip install` (no ``external/`` tree), so the
+    shared user cache dir (``model_info.checkpoints_dir()``) is checked too.
+    Try them all so runtime does not depend on which location a user's
+    weights ended up in.
     """
+    from ...models.model_info import checkpoints_dir
+
     root = _project_root()
     raw = os.path.basename(checkpoint) or 'scaled_offline.pth'
     candidates = []
@@ -49,6 +54,7 @@ def _candidate_checkpoints(checkpoint):
         root, 'external', 'co-tracker', 'checkpoints', raw)))
     candidates.append(os.path.normpath(os.path.join(
         root, 'external', 'segment_anything_2', 'checkpoints', raw)))
+    candidates.append(os.path.join(checkpoints_dir(), raw))
     return candidates
 
 

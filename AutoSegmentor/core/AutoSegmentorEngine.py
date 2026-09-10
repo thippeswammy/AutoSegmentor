@@ -383,18 +383,10 @@ class AutoSegmentorEngine(SAM2Model):
                             curr_idx = batch_number * self.config.batch_size
 
                             try:
-                                from ..models.Tracking.CoTrackerPredictor import track_between_frames
+                                from ..models.Tracking.CoTrackerPredictor import track_between_frames, resolve_cotracker_checkpoint
                                 ct_cfg = pose_cfg.get('cotracker', {})
-                                checkpoint_raw = ct_cfg.get('checkpoint') or 'external/co-tracker/checkpoints/scaled_offline.pth'
-                                import os as _os
-                                base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
-                                checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint_raw))
-                                
-                                # Fallback to external/segment_anything_2/checkpoints if not found in co-tracker
-                                if not _os.path.exists(checkpoint):
-                                    alt_path = _os.path.normpath(_os.path.join(base_path, 'external', 'segment_anything_2', 'checkpoints', 'scaled_offline.pth'))
-                                    if _os.path.exists(alt_path):
-                                        checkpoint = alt_path
+                                checkpoint_raw = ct_cfg.get('checkpoint') or 'scaled_offline.pth'
+                                checkpoint = resolve_cotracker_checkpoint(checkpoint_raw) or checkpoint_raw
                                 window_len = ct_cfg.get('window_len', 60)
 
                                 tracked_gap = track_between_frames(
@@ -442,18 +434,10 @@ class AutoSegmentorEngine(SAM2Model):
         )
 
         try:
-            from ..models.Tracking.CoTrackerPredictor import CoTrackerPredictor
+            from ..models.Tracking.CoTrackerPredictor import CoTrackerPredictor, resolve_cotracker_checkpoint
             ct_cfg = pose_cfg.get('cotracker', {})
-            checkpoint_raw = ct_cfg.get('checkpoint') or 'external/co-tracker/checkpoints/scaled_offline.pth'
-            import os as _os
-            base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
-            checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint_raw))
-
-            # Fallback to external/segment_anything_2/checkpoints if not found in co-tracker
-            if not _os.path.exists(checkpoint):
-                alt_path = _os.path.normpath(_os.path.join(base_path, 'external', 'segment_anything_2', 'checkpoints', 'scaled_offline.pth'))
-                if _os.path.exists(alt_path):
-                    checkpoint = alt_path
+            checkpoint_raw = ct_cfg.get('checkpoint') or 'scaled_offline.pth'
+            checkpoint = resolve_cotracker_checkpoint(checkpoint_raw) or checkpoint_raw
             window_len = ct_cfg.get('window_len', 60)
 
             classes = pose_cfg.get('classes', [])

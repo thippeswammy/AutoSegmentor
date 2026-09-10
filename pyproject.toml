@@ -9,9 +9,11 @@ description = "Auto-labeling ecosystem converting raw video into YOLO-ready data
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "AutoSegmentor Contributors" }]
+authors = [{ name = "Thippeswamy", email = "thippeswamy636408@gmai.com" }]
 keywords = ["computer-vision", "sam2", "cotracker", "yolo", "segmentation", "pose", "auto-labeling"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -41,7 +43,13 @@ dependencies = [
     "onnxruntime-gpu>=1.18",
     "hydra-core>=1.1",
     "omegaconf>=2.1",
+    "platformdirs>=4.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/thippeswammy/AutoSegmentor"
+Repository = "https://github.com/thippeswammy/AutoSegmentor"
+Issues = "https://github.com/thippeswammy/AutoSegmentor/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -62,9 +70,9 @@ autosegmentor-demo = "run_main:main"
 
 [tool.setuptools]
 py-modules = ["run_main"]
-
-[tool.setuptools.packages.find]
-include = ["autosegmentor*"]
+# `packages` and `package-dir` are supplied dynamically by setup.py: sam2/sam2_configs
+# live under external/segment_anything_2/ (left there on purpose — see setup.py) and
+# can't be expressed with a single declarative [tool.setuptools.packages.find] root.
 
 [tool.setuptools.package-data]
 autosegmentor = [
@@ -72,3 +80,5 @@ autosegmentor = [
     "ui/**/*.png",
     "ui/**/*.ico",
 ]
+sam2_configs = ["*.yaml"]
+sam2 = ["*.md", "*.pyd", "*.so", "csrc/*"]

@@ -44,11 +44,11 @@ class PoseExporter:
 
     def _get_cotracker_config(self):
         """Extract CoTracker config from pose_config."""
+        from ..models.Tracking.CoTrackerPredictor import resolve_cotracker_checkpoint
+
         ct_cfg = self.config.pose_config.get('cotracker', {})
-        # Resolve checkpoint path relative to AutoSegmentor directory
-        checkpoint = ct_cfg.get('checkpoint', 'external/co-tracker/checkpoints/scaled_offline.pth')
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        checkpoint = os.path.normpath(os.path.join(base_path, checkpoint))
+        checkpoint_raw = ct_cfg.get('checkpoint', 'scaled_offline.pth')
+        checkpoint = resolve_cotracker_checkpoint(checkpoint_raw) or checkpoint_raw
         window_len = ct_cfg.get('window_len', 60)
         return checkpoint, window_len
 

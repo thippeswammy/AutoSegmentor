@@ -38,6 +38,12 @@ def _setup_sys_path():
 
     for lib in external_libs:
         lib_path = os.path.abspath(os.path.join(ROOT_DIR, lib))
+        if not os.path.isdir(lib_path):
+            # Expected for a plain `pip install` with no external/ checkout —
+            # sam2 packages properly and doesn't need this, and co-tracker is
+            # an optional plugin that may simply not be present.
+            logger.info(f"Skipping missing external library path: {lib_path}")
+            continue
         logger.info(f"Adding external library to sys.path: {lib_path}")
         if lib_path not in sys.path:
             sys.path.insert(0, lib_path)

@@ -8,6 +8,11 @@ weights no matter which loader first hits the problem.
 
 import os
 
+try:
+    from platformdirs import user_cache_dir
+except ImportError:  # pragma: no cover - platformdirs is a core dependency
+    user_cache_dir = None
+
 # --- SAM2 ------------------------------------------------------------------
 SAM2_CHECKPOINT = "sam2_hiera_large.pt"
 SAM2_URL = "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2_hiera_large.pt"
@@ -22,6 +27,19 @@ COTRACKER_REL_DIR = os.path.join("external", "co-tracker", "checkpoints")
 
 # --- Helpers ---------------------------------------------------------------
 DOWNLOAD_SCRIPT = "python install.py --checkpoints-only"
+
+
+def checkpoints_dir():
+    """Directory where downloaded checkpoints should live when there's no
+    repo checkout to place them next to (e.g. a plain `pip install`).
+
+    Callers that care about a git-checkout layout should keep checking their
+    existing SAM2_REL_DIR/COTRACKER_REL_DIR candidates first and only fall
+    back to this location.
+    """
+    if user_cache_dir is None:
+        return os.path.join(os.path.expanduser("~"), ".cache", "autosegmentor", "checkpoints")
+    return os.path.join(user_cache_dir("autosegmentor"), "checkpoints")
 
 
 def missing_model_message(name, tried_paths):

@@ -469,14 +469,12 @@ class UserInteractionHandler:
                 tracker_type = self.config.pose_config.get('tracker', 'lk').lower() if self.config.pose_config else 'lk'
                 if tracker_type == 'cotracker' and batch > 0 and prev_frame_idx is not None:
                     try:
-                        from ..models.Tracking.CoTrackerPredictor import track_between_frames
+                        from ..models.Tracking.CoTrackerPredictor import track_between_frames, resolve_cotracker_checkpoint
                         if 0 <= prev_frame_idx < len(self.frame_paths):
                             prev_frame_path = self.frame_paths[prev_frame_idx]
                             ct_cfg = self.config.pose_config.get('cotracker', {})
-                            checkpoint = ct_cfg.get('checkpoint', 'external/co-tracker/checkpoints/scaled_offline.pth')
-                            import os as _os
-                            base_path = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..'))
-                            checkpoint = _os.path.normpath(_os.path.join(base_path, checkpoint))
+                            checkpoint_raw = ct_cfg.get('checkpoint', 'scaled_offline.pth')
+                            checkpoint = resolve_cotracker_checkpoint(checkpoint_raw) or checkpoint_raw
                             window_len = ct_cfg.get('window_len', 60)
                             result = track_between_frames(prev_kps, prev_frame_path, frame_path, checkpoint, window_len)
                             if result: tracked_kps = result

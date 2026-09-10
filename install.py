@@ -8,7 +8,9 @@ Assumes you already created and activated a virtual environment (see the
 "Setup & Installation" section of README.md). This script then:
 
     1. Checks the Python version.
-    2. Initializes git submodules (external/co-tracker, external/segment_anything_2).
+    2. Initializes the co-tracker git submodule (external/co-tracker). SAM2
+       (external/segment_anything_2) is bundled directly in the repo, not a
+       submodule, so it needs no init step.
     3. Installs Python dependencies from requirements-core.txt.
     4. Downloads the SAM2 + CoTracker3 checkpoints (skips files already present).
     5. Runs a GPU/CUDA diagnostic.
@@ -57,7 +59,9 @@ def check_python_version():
 
 
 def init_submodules():
-    print("\n== Git submodules (external/co-tracker, external/segment_anything_2) ==")
+    print("\n== Git submodule (external/co-tracker) ==")
+    print("(SAM2 at external/segment_anything_2 is bundled directly in the repo, "
+          "not a submodule — nothing to initialize there.)")
     try:
         subprocess.run(
             ["git", "submodule", "update", "--init", "--recursive"],
@@ -66,7 +70,7 @@ def init_submodules():
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         print(f"WARNING: could not run 'git submodule update': {e}", file=sys.stderr)
         print("If this checkout isn't a git clone, make sure external/co-tracker "
-              "and external/segment_anything_2 are populated some other way.")
+              "is populated some other way.")
 
 
 def install_dependencies(cuda_extra):
@@ -86,11 +90,16 @@ def install_dependencies(cuda_extra):
 
 from autosegmentor.models.model_info import (
     SAM2_CHECKPOINT, SAM2_URL, SAM2_REPO, COTRACKER_CHECKPOINT, COTRACKER_URL, COTRACKER_REPO,
+    checkpoints_dir,
 )
 
 SAM2_SHA256 = "7442e4e9b732a508f80e141e7c2913437a3610ee0c77381a66658c3a445df87b"
 COTRACKER_SHA256 = None  # upstream does not publish a stable hash
 
+# "dest" is where new downloads land (a user cache dir — works whether AutoSegmentor
+# is run from a git checkout or a plain `pip install`). "legacy_dest" is the old
+# repo-relative location; if a checkpoint is already there from before this change,
+# it's used as-is instead of re-downloading into the cache dir.
 CHECKPOINT_TARGETS = [
     {
         "name": "SAM2 (sam2_hiera_large.pt)",
@@ -98,7 +107,8 @@ CHECKPOINT_TARGETS = [
         "url": SAM2_URL,
         "repo": SAM2_REPO,
         "sha256": SAM2_SHA256,
-        "dest": os.path.join(ROOT, "external", "segment_anything_2", "checkpoints", SAM2_CHECKPOINT),
+        "dest": os.path.join(checkpoints_dir(), SAM2_CHECKPOINT),
+        "legacy_dest": os.path.join(ROOT, "external", "segment_anything_2", "checkpoints", SAM2_CHECKPOINT),
     },
     {
         "name": "CoTracker3 (scaled_offline.pth)",
@@ -106,7 +116,8 @@ CHECKPOINT_TARGETS = [
         "url": COTRACKER_URL,
         "repo": COTRACKER_REPO,
         "sha256": COTRACKER_SHA256,
-        "dest": os.path.join(ROOT, "external", "co-tracker", "checkpoints", COTRACKER_CHECKPOINT),
+        "dest": os.path.join(checkpoints_dir(), COTRACKER_CHECKPOINT),
+        "legacy_dest": os.path.join(ROOT, "external", "co-tracker", "checkpoints", COTRACKER_CHECKPOINT),
     },
 ]
 
@@ -119,14 +130,26 @@ def _sha256_of(path):
     return h.hexdigest()
 
 
-def _checkpoint_valid(target):
-    if not os.path.exists(target["dest"]):
+def _valid_at(path, sha256):
+    if not os.path.exists(path):
         return False
-    if os.path.getsize(target["dest"]) == 0:
+    if os.path.getsize(path) == 0:
         return False
-    if target["sha256"] and _sha256_of(target["dest"]) != target["sha256"]:
+    if sha256 and _sha256_of(path) != sha256:
         return False
     return True
+
+
+def _resolved_dest(target):
+    """Which path to treat as this checkpoint's location: the legacy repo
+    path if a valid file is already there, otherwise the cache dir."""
+    if _valid_at(target["legacy_dest"], target["sha256"]):
+        return target["legacy_dest"]
+    return target["dest"]
+
+
+def _checkpoint_valid(target):
+    return _valid_at(_resolved_dest(target), target["sha256"])
 
 
 def _download_checkpoint(target):
@@ -152,23 +175,24 @@ def handle_checkpoints(check_only=False, force=False):
     all_ok = True
     for target in CHECKPOINT_TARGETS:
         present = _checkpoint_valid(target)
+        resolved = _resolved_dest(target)
         if present and not force:
-            size_mb = os.path.getsize(target["dest"]) / (1024 * 1024)
-            print(f"[OK]   {target['name']} present ({size_mb:.1f} MB)")
+            size_mb = os.path.getsize(resolved) / (1024 * 1024)
+            print(f"[OK]   {target['name']} present ({size_mb:.1f} MB) at {resolved}")
             continue
         if check_only:
             print(f"[MISS] {target['name']} not present")
             all_ok = False
             continue
         if present and force:
-            os.remove(target["dest"])
+            os.remove(resolved)
         if not _download_checkpoint(target):
             all_ok = False
 
     print()
     print("Checkpoint locations:")
     for target in CHECKPOINT_TARGETS:
-        print(f"  {target['dest']}")
+        print(f"  {_resolved_dest(target)}")
     return all_ok
 
 

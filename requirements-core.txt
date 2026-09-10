@@ -25,6 +25,7 @@ onnx>=1.16
 onnxruntime-gpu>=1.18
 hydra-core>=1.1
 omegaconf>=2.1
+platformdirs>=4.0
 
 # CoTracker3 is not installed via pip: it is vendored as the `external/co-tracker`
 # git submodule and added to sys.path at launch. Run:
