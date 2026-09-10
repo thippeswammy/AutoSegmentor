@@ -20,7 +20,7 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
 - **Advanced Tracking (CoTracker)**: Integrated CoTracker support for tracking keypoints across frames with high accuracy—a robust alternative to Optical Flow for complex scenes.
 - **Real-time Mask Propagation**: Propagate annotations across batches of frames using SAM2's temporal memory.
 - **Async Processing Engine**: Background execution of GPU tasks ensures the UI remains responsive even during heavy inference.
-- **YOLO Dataset Creation**: Seamless conversion of verified masks into YOLOv8/v11 formats with integrated data augmentation (blur, noise, color jitter).
+- **YOLO Dataset Creation**: Seamless conversion of verified masks into YOLOv8/v11 formats for **object detection (bbox)**, **instance segmentation**, and **pose estimation** simultaneously, with integrated data augmentation (blur, noise, color jitter).
 - **Comprehensive Workspace Management**: Smart handling of project lifecycles, from raw input to verified output, with automatic directory cleanup.
 
 ---
@@ -187,6 +187,17 @@ The `cat` demo uses `demo/videos/cat.mp4` and the `road` demo uses
 `demo/videos/road_dashboard.mp4` (a road scene recorded from a dashboard
 camera). See [`demo/README.md`](demo/README.md) for details, and
 [`demo/videos/README.md`](demo/videos/README.md) for footage attribution.
+
+---
+
+## 🎬 Full Pipeline Demo (v3)
+
+> **Coming soon** — a full walkthrough on the bundled `cat` clip: UI
+> annotation → CoTracker keypoint tracking → SAM2 mask propagation →
+> one-shot export to YOLO format for **detection (bbox)**, **instance
+> segmentation**, and **pose** models. See
+> [`assets/README.md`](assets/README.md) for the recording checklist and
+> where the finished clip/GIF goes.
 
 ---
 

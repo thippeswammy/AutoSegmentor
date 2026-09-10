@@ -38,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `run_main.py` refactored into a callable `main()`.
 - `--demo` now accepts an optional demo name for selecting scenarios.
 - Demo session-state configs carry a `demo` metadata block (name, description, license).
+- README clarifies that YOLO export covers detection (bbox), instance
+  segmentation, and pose simultaneously.
+
+### Fixed
+
+- `demo/road_demo_session_state.json` was accidentally deleted in a later
+  refactor commit even though `--demo road` remained documented everywhere;
+  restored so `python run_main.py --demo road` works again.
 
 ### Notes
 
