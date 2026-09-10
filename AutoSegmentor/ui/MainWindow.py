@@ -62,8 +62,18 @@ class BatchProcessorThread(QThread):
         copy_frames = max(min(cfg.batch_size, total_frames - batch_start), 0)
         plan = [{"key": "copy", "label": "Copy frames", "frames": copy_frames}]
 
+        query_rel_idx = (self.query_frame_idx - batch_start) if self.query_frame_idx is not None else 0
+        is_refinement = 0 < query_rel_idx < copy_frames
+
         if cfg.sam_enabled:
-            plan.append({"key": "sam2", "label": "SAM2 mask generation", "frames": copy_frames})
+            # Mirrors MaskProcessor.generate_mask's own refinement scoping: a
+            # mid-batch reprocess only propagates from the anchor frame onward
+            # (or backward), not the whole batch.
+            if is_refinement:
+                sam_frames = (query_rel_idx + 1) if self.backward_tracking else (copy_frames - query_rel_idx)
+            else:
+                sam_frames = copy_frames
+            plan.append({"key": "sam2", "label": "SAM2 mask generation", "frames": sam_frames})
 
         run_cotracker = bool(
             cfg.pose_config and cfg.pose_config.get('enabled')
@@ -72,7 +82,6 @@ class BatchProcessorThread(QThread):
         if run_cotracker:
             overflow = 1 if cfg.batch_size > 1 else 0
             batch_end = min(batch_start + cfg.batch_size + overflow, total_frames)
-            query_rel_idx = (self.query_frame_idx - batch_start) if self.query_frame_idx is not None else 0
             ct_start = batch_start + query_rel_idx if (not self.backward_tracking and query_rel_idx > 0) else batch_start
             ct_frames = max(batch_end - ct_start, 0)
             plan.append({"key": "cotracker", "label": "CoTracker point tracking", "frames": ct_frames})
@@ -107,7 +116,9 @@ class BatchProcessorThread(QThread):
                     auto_prompt_encoding=processor.auto_prompt_encoding,
                     predictor_lock=processor._predictor_lock,
                     starting_frame_idx=batch_index,
-                    on_frame_done=lambda done, total: self.frame_progress.emit("sam2", done, total)
+                    on_frame_done=lambda done, total: self.frame_progress.emit("sam2", done, total),
+                    query_frame_idx=self.query_frame_idx,
+                    backward_tracking=self.backward_tracking
                 )
                 self.stage_finished.emit("sam2", time.perf_counter() - t0)
                 logger.debug(f"[BatchThread] Batch {self.batch}: SAM2 done.")

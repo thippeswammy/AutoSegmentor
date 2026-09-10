@@ -62,8 +62,16 @@ class MaskProcessor:
         return boxes
 
     def binary_mask_2_color_mask(self, out_frame_idx, frame_filenames, video_segments, present_count, temp_directory,
-                                 save=True):
-        """Convert binary mask to color mask."""
+                                 save=True, last_frame_idx=None):
+        """Convert binary mask to color mask.
+
+        last_frame_idx, when given, is the batch's true last frame index
+        (len(frame_file_names) - 1) — used to decide whether THIS frame is the
+        one whose mask should carry forward as next batch's auto-prompt seed.
+        Defaults to len(video_segments) - 1 for backward compatibility, which
+        is only correct when video_segments covers the whole batch contiguously
+        from frame 0 (a mid-batch refinement's video_segments does not).
+        """
         if save:
             frame_path = os.path.join(temp_directory, frame_filenames[out_frame_idx])
         else:
@@ -90,7 +98,8 @@ class MaskProcessor:
             mask_condition = (out_mask_resized > 0) & (full_mask == 0)
             full_mask[mask_condition] = abs(out_obj_id // 1000)
             temp[mask_condition] = abs(out_obj_id)
-        if save and out_frame_idx == len(video_segments) - 1:
+        true_last_idx = last_frame_idx if last_frame_idx is not None else len(video_segments) - 1
+        if save and out_frame_idx == true_last_idx:
             self.last_mask = temp.copy()
         color_mask_image = self.mask2colorMaskImg(full_mask)
         if save:
@@ -105,14 +114,22 @@ class MaskProcessor:
             return color_mask_image
         return present_count + 1
 
-    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None, starting_frame_idx=None, on_frame_done=None):
+    def generate_mask(self, batch_number, sam2_predictor, temp_directory, prompt_encoding, auto_prompt_encoding, predictor_lock=None, starting_frame_idx=None, on_frame_done=None, query_frame_idx=None, backward_tracking=False):
         """Generate masks for a batch of frames.
 
         on_frame_done, if given, is called as on_frame_done(frames_done, total_frames)
         once per frame as SAM2's propagate_in_video loop below yields — used by the
         UI to show real per-frame progress for this stage.
+
+        query_frame_idx/backward_tracking mirror the same params CoTracker's
+        batch tracking already takes (AutoSegmentorEngine._track_batch_cotracker):
+        when reprocessing starting mid-batch (not the batch's first frame), only
+        propagate from that anchor frame onward (or backward), instead of always
+        recomputing the whole batch from a fresh frame-0 box prompt — otherwise
+        SAM2 silently redoes frames CoTracker considers already-settled on every
+        mid-batch refinement, and the two trackers drift out of step over time.
         """
-        logger.debug(f"[MaskProc] generate_mask: batch={batch_number}  temp_dir={temp_directory}  starting_frame_idx={starting_frame_idx}")
+        logger.debug(f"[MaskProc] generate_mask: batch={batch_number}  temp_dir={temp_directory}  starting_frame_idx={starting_frame_idx}  query_frame_idx={query_frame_idx}  backward_tracking={backward_tracking}")
         frame_file_names = sorted(
             [p for p in os.listdir(temp_directory) if os.path.splitext(p)[-1].lower() in [".jpg", ".jpeg", ".png"]],
             key=lambda p: int(os.path.splitext(p)[0]) if p[:-4].isdigit() else float('inf')
@@ -125,6 +142,12 @@ class MaskProcessor:
             def __exit__(self, *args): pass
         
         lock = predictor_lock if predictor_lock else DummyLock()
+
+        total_frames = len(frame_file_names)
+        batch_start = starting_frame_idx if starting_frame_idx is not None else 0
+        anchor_rel = (query_frame_idx - batch_start) if query_frame_idx is not None else None
+        is_refinement = anchor_rel is not None and 0 < anchor_rel < total_frames
+        logger.debug(f"[MaskProc] generate_mask: anchor_rel={anchor_rel}  is_refinement={is_refinement}")
 
         with lock:
             if not frame_file_names:
@@ -140,7 +163,14 @@ class MaskProcessor:
                 return
 
             is_prompted = False
-            if self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
+            if is_refinement:
+                # Refining from a mid-batch anchor: don't reseed frame 0 with a
+                # fresh box prompt — propagation below never revisits frames
+                # before the anchor anyway, so that box would just be wasted
+                # work (and would wrongly become the auto_prompt_encoding basis
+                # for a run that isn't actually reprocessing the whole batch).
+                logger.debug("[MaskProc] is_refinement — skipping auto_prompt_encoding")
+            elif self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
                 logger.debug(f"[MaskProc] last_mask is None — skipping auto_prompt_encoding")
             else:
                 result = auto_prompt_encoding(inference_state)
@@ -155,24 +185,30 @@ class MaskProcessor:
             video_segments = {}
             # Granular propagation: propagate one frame at a time if possible, or release lock between batches
             # SAM2 propagate_in_video is a generator, we can wrap each step
-            total_frames = len(frame_file_names)
-            for out_frame_idx, out_obj_ids, out_mask_logits in sam2_predictor.propagate_in_video(inference_state):
+            if is_refinement:
+                propagate_kwargs = {"start_frame_idx": anchor_rel, "reverse": backward_tracking}
+                progress_total = (anchor_rel + 1) if backward_tracking else (total_frames - anchor_rel)
+            else:
+                propagate_kwargs = {}
+                progress_total = total_frames
+            for out_frame_idx, out_obj_ids, out_mask_logits in sam2_predictor.propagate_in_video(inference_state, **propagate_kwargs):
                 with lock:
                     video_segments[out_frame_idx] = {
                         out_obj_id: (out_mask_logits[i] > 0.0).cpu().numpy()
                         for i, out_obj_id in enumerate(out_obj_ids)
                     }
                 if on_frame_done:
-                    on_frame_done(len(video_segments), total_frames)
+                    on_frame_done(len(video_segments), progress_total)
             logger.debug(f"[MaskProc] propagate_in_video done: {len(video_segments)} segment(s) produced")
-            
-            present_count = starting_frame_idx if starting_frame_idx is not None else self.image_counter
+
             with ThreadPoolExecutor(max_workers=os.cpu_count() - 2) as executor:
                 futures = [
                     executor.submit(self.binary_mask_2_color_mask, out_frame_idx, frame_file_names,
-                                    video_segments, present_count + i, temp_directory)
-                    for i, out_frame_idx in enumerate(sorted(video_segments.keys()))
+                                    video_segments, batch_start + out_frame_idx, temp_directory,
+                                    True, total_frames - 1)
+                    for out_frame_idx in sorted(video_segments.keys())
                 ]
+                present_count = batch_start
                 for future in futures:
                     present_count = max(present_count, future.result())
             self.image_counter = present_count
