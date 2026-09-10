@@ -162,7 +162,19 @@ class MaskProcessor:
                 logger.error(f"[MaskGen] Failed to initialize inference state: {e}")
                 return
 
-            is_prompted = False
+            # Manual/tracked point prompts first (pose keypoints carried forward
+            # by CoTracker land here too, once saved via save_current_annotation)
+            # so the box-seed decision below can see whether they already cover
+            # this batch before deciding whether a box is even needed.
+            manual_result = prompt_encoding(inference_state, batch_number)
+            is_prompted = manual_result is not None
+            logger.debug(f"[MaskProc] prompt_encoding: is_prompted={is_prompted}")
+
+            pose_active = bool(
+                self.config.pose_config and self.config.pose_config.get('enabled')
+                and self.config.pose_config.get('tracker', 'lk').lower() == 'cotracker'
+            )
+
             if is_refinement:
                 # Refining from a mid-batch anchor: don't reseed frame 0 with a
                 # fresh box prompt — propagation below never revisits frames
@@ -170,15 +182,21 @@ class MaskProcessor:
                 # work (and would wrongly become the auto_prompt_encoding basis
                 # for a run that isn't actually reprocessing the whole batch).
                 logger.debug("[MaskProc] is_refinement — skipping auto_prompt_encoding")
+            elif pose_active and is_prompted:
+                # CoTracker already carried a point-based prompt into this batch
+                # (its tracked keypoints, saved as this batch's frame-0 prompt
+                # when Process Batch was clicked) — an additional box-based
+                # auto_prompt_encoding on the same frame would be redundant and
+                # could conflict with the point-derived object understanding.
+                # Only pure SAM-only workflows (no pose tracker) need the box
+                # to carry continuity across batches at all.
+                logger.debug("[MaskProc] pose tracker active and already prompted — skipping redundant auto_prompt_encoding")
             elif self.last_mask is None or isinstance(self.last_mask, (tuple, list)) and self.last_mask in [(None,), [None]]:
                 logger.debug(f"[MaskProc] last_mask is None — skipping auto_prompt_encoding")
             else:
                 result = auto_prompt_encoding(inference_state)
-                is_prompted = result is not None
+                is_prompted = (result is not None) or is_prompted
                 logger.debug(f"[MaskProc] auto_prompt_encoding result: is_prompted={is_prompted}")
-            manual_result = prompt_encoding(inference_state, batch_number)
-            is_prompted = (manual_result is not None) or is_prompted
-            logger.debug(f"[MaskProc] After prompt_encoding: is_prompted={is_prompted}")
 
         if is_prompted:
             logger.debug(f"[MaskProc] Starting propagate_in_video for batch {batch_number}")
