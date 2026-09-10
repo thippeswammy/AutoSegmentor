@@ -1,6 +1,4 @@
 # Core runtime dependencies for AutoSegmentor 3.0.0.
-# For a fully pinned environment (exact versions already installed by the
-# author) see `requriments_i_used.txt`.
 
 numpy>=1.24
 opencv-python>=4.8
@@ -21,7 +19,11 @@ onnx>=1.16
 onnxruntime-gpu>=1.18
 hydra-core>=1.1
 omegaconf>=2.1
-flash-attn>=2.0
 
-# CoTracker3 (pinned development build used by this project)
--e git+https://github.com/thippeswammy/co-tracker.git#egg=cotracker
+# CoTracker3 is not installed via pip: it is vendored as the `external/co-tracker`
+# git submodule and added to sys.path at launch. Run:
+#   git submodule update --init --recursive
+
+# Optional — CUDA speedup only, requires a matching CUDA toolchain/build tools.
+# Also available as the `cuda` extra in pyproject.toml.
+flash-attn>=2.0

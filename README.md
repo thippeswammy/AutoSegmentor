@@ -68,14 +68,10 @@ Build an end-to-end auto-labeling pipeline that converts raw videos into structu
     pip install -r requirements-core.txt
     ```
 
-    > **Note on CoTracker3**: `requirements-core.txt` installs the `cotracker`
-    > package from the pinned fork that this project is tested against. The same
-    > source is also vendored under `external/co-tracker/` (git submodule) and is
-    > automatically added to `sys.path` at launch, so the app works even if the
-    > editable install fails due to network restrictions.
-    >
-    > A fully frozen environment (exact versions used during development) is in
-    > `requriments_i_used.txt`.
+    > **Note on CoTracker3**: CoTracker3 is not installed via pip. It is vendored
+    > under `external/co-tracker/` (git submodule) and automatically added to
+    > `sys.path` at launch. Make sure submodules are initialized:
+    > `git submodule update --init --recursive`.
 
 4.  **Configure the Vendored SAM2 Library**
 

@@ -35,6 +35,12 @@ dependencies = [
     "scipy>=1.10",
     "matplotlib>=3.7",
     "GPUtil>=1.4",
+    "google-genai>=1.0",
+    "google-generativeai>=0.8",
+    "onnx>=1.16",
+    "onnxruntime-gpu>=1.18",
+    "hydra-core>=1.1",
+    "omegaconf>=2.1",
 ]
 
 [project.optional-dependencies]

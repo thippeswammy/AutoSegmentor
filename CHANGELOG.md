@@ -22,8 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     `python run_main.py --demo list` to enumerate demos.
 - **Packaging / distribution**
   - New `pyproject.toml`, `setup.py`, and `MANIFEST` configuration.
-  - Clean `requirements-core.txt` (in addition to the frozen
-    `requriments_i_used.txt`).
+  - Clean `requirements-core.txt`.
   - `packaging/auto-segmentor.spec` + `build_windows.bat` / `build_linux.sh`
     for PyInstaller Windows and Linux builds.
   - `autosegmentor` and `autosegmentor-demo` console entry points.
@@ -46,6 +45,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Demo session-state configs carry a `demo` metadata block (name, description, license).
 - README clarifies that YOLO export covers detection (bbox), instance
   segmentation, and pose simultaneously.
+- `pyproject.toml` and `requirements-core.txt` dependency lists reconciled so
+  `pip install .` and `pip install -r requirements-core.txt` produce the same
+  environment.
+
+### Removed
+
+- `requriments_i_used.txt`, a personal `pip freeze` dump of the author's local
+  environment — not release material.
+- The editable `cotracker` pip install from `requirements-core.txt`. CoTracker3
+  is only ever loaded from the vendored `external/co-tracker` submodule (added
+  to `sys.path` at launch), so the pip install was unused dead weight.
 
 ### Fixed
 
