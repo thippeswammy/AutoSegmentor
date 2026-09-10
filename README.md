@@ -4,7 +4,9 @@
 [![Docs](https://img.shields.io/badge/docs-site-blue)](https://thippeswammy.github.io/AutoSegmentor/)
 [![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
 
-![AutoSegmentor full pipeline demo: UI annotation, SAM2 auto-tracking, and YOLO export](./assets/cat_full_pipeline.gif)
+<video controls preload="metadata" width="720" poster="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/cat_poster.jpg">
+  <source src="https://media.githubusercontent.com/media/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" type="video/mp4">
+</video>
 
 _AutoSegmentor is a state-of-the-art auto-labeling ecosystem that bridges the gap between raw video footage and structured AI datasets. By integrating Meta AI's **Segment Anything Model 2 (SAM2)** with high-precision tracking like **CoTracker3**, it enables users to generate pixel-perfect masks and pose estimation data for long, complex videos with minimal manual interaction._
 
@@ -47,13 +49,12 @@ python run_main.py --demo cat
 python run_main.py --demo road
 ```
 
-See **[Demos →](https://thippeswammy.github.io/AutoSegmentor/demos/)** for a shot-by-shot
-walkthrough of the GIF above and what each bundled demo shows.
+See **[Demos →](https://thippeswammy.github.io/AutoSegmentor/demos/)** for what each bundled
+demo shows. The `road` demo (SAM2 segmentation only, no pose tracking):
 
-**▶ Watch the full recordings** (full quality, longer than the GIF above):
-
-<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" controls width="480"></video>
-<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterRoad.mp4" controls width="480"></video>
+<video controls preload="metadata" width="720" poster="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/road_poster.jpg">
+  <source src="https://media.githubusercontent.com/media/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterRoad.mp4" type="video/mp4">
+</video>
 
 **Using your own video?** Drop it in `workspace/VideoInputs/` and just run
 `python run_main.py` (no `--demo`) — a Setup Dialog opens where you pick the video and

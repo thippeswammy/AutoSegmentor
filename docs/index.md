@@ -3,7 +3,9 @@
 **Turn raw video into a YOLO-ready dataset — with a handful of mouse clicks, not
 frame-by-frame labeling.**
 
-![AutoSegmentor: click a few points, SAM2 and CoTracker3 do the rest](https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/cat_full_pipeline.gif)
+<video controls preload="metadata" width="720" poster="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/cat_poster.jpg">
+  <source src="https://media.githubusercontent.com/media/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" type="video/mp4">
+</video>
 
 AutoSegmentor bridges raw footage and structured training data. Point at an object once —
 Meta AI's **[Segment Anything Model 2 (SAM2)](https://github.com/facebookresearch/segment-anything-2)**

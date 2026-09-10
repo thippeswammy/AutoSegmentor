@@ -31,12 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `README.md` "Automated Demo" and "Material Handling & Industrial
     Automation" sections.
   - `demo/README.md` and `demo/videos/README.md` with footage attribution.
-  - `assets/cat_full_pipeline.gif`: full README walkthrough of the `cat`
-    demo — UI annotation, SAM2/CoTracker auto-tracking, correction, and
-    export to YOLO (detection + segmentation + pose) — plus a new "Full
-    Pipeline Demo (v3)" README section. See `assets/README.md` for the
-    shot list and the plan to attach the full narrated recording as a
-    GitHub Release asset.
+  - `assets/AutoSegmenterCat.mp4` / `AutoSegmenterRoad.mp4`: full-quality
+    showcase recordings (via Git LFS) embedded directly in the README and
+    docs site, with poster thumbnails — full README walkthrough of the `cat`
+    demo: UI annotation, SAM2/CoTracker auto-tracking, correction, and
+    export to YOLO (detection + segmentation + pose). See `assets/README.md`.
 
 ### Changed
 

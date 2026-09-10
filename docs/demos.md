@@ -13,7 +13,9 @@ python run_main.py --demo road
 
 ## What a full run looks like
 
-![Full AutoSegmentor pipeline: annotate, auto-track, export](https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/cat_full_pipeline.gif)
+<video controls preload="metadata" width="720" poster="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/cat_poster.jpg">
+  <source src="https://media.githubusercontent.com/media/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" type="video/mp4">
+</video>
 
 This is a real, unedited session on the `cat` demo, start to finish:
 
@@ -27,10 +29,6 @@ This is a real, unedited session on the `cat` demo, start to finish:
 7. Result: a YOLO dataset (`train` / `valid` / `test` + `data.yaml`) with detection,
    instance segmentation, and pose labels, all from the same handful of clicks.
 
-**▶ Watch the full recording** (full quality, longer than the GIF above):
-
-<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" controls width="600"></video>
-
 ## The two bundled demos
 
 | Demo | Footage | Shows off |
@@ -38,11 +36,9 @@ This is a real, unedited session on the `cat` demo, start to finish:
 | `cat` (default) | Full-HD clip of a cat | Full pipeline: single-subject segmentation + 5-point CoTracker3 pose tracking. |
 | `road` | Dashcam recording | SAM2 segmentation **only** — no pose tracking. Carried over from v1/v2; never updated to the full v3 SAM2+CoTracker pipeline. |
 
-![Road dashcam demo: SAM2 segmentation on a moving camera](https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/road_dashboard_1080.gif)
-
-**▶ Watch the full recording:**
-
-<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterRoad.mp4" controls width="600"></video>
+<video controls preload="metadata" width="720" poster="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/road_poster.jpg">
+  <source src="https://media.githubusercontent.com/media/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterRoad.mp4" type="video/mp4">
+</video>
 
 Each demo is just a session-state JSON file under `demo/` — the app discovers demos by
 scanning that directory, so there's no hardcoded list to update when a new one is added.
