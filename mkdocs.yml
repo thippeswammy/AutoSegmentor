@@ -1,0 +1,57 @@
+site_name: AutoSegmentor
+use_directory_urls: true
+site_description: Auto-labeling ecosystem that turns raw video into YOLO-ready datasets using SAM2 + CoTracker3.
+site_url: https://thippeswammy.github.io/AutoSegmentor/
+repo_url: https://github.com/thippeswammy/AutoSegmentor
+repo_name: thippeswammy/AutoSegmentor
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Demos: demos.md
+  - Architecture: architecture.md
+  - Dataset Manager: dataset-manager.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/thippeswammy/AutoSegmentor

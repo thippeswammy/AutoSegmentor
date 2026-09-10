@@ -1,8 +1,11 @@
-# AutoSegmentor: Architecture and Workflow Guide
+# Architecture
 
-This document is the single source of truth for how AutoSegmentor (v3.0.0) actually fits
-together — the real call path from launch to exported dataset, not a feature list. The
-top-level [`README.md`](../README.md) links here instead of duplicating this content.
+AutoSegmentor is a desktop app, not a script: a PyQt5 annotation window drives a background
+engine that wraps two ML models — [SAM2](https://github.com/facebookresearch/segment-anything-2)
+for mask propagation and [CoTracker3](https://github.com/facebookresearch/co-tracker) for
+keypoint tracking — and a separate downstream tool turns the verified result into a
+YOLO-ready training set. This page walks through how those pieces actually talk to each
+other, end to end, on version 3.0.0.
 
 ---
 
@@ -230,7 +233,9 @@ Export is **not** a pipeline stage — it's triggered manually from the UI:
 a standalone augmentation tool with its own `run.py`, used *after* export to multiply a
 small verified dataset via copy-paste augmentation, simulated occlusions, and synced
 geometric/photometric transforms across images, masks, and keypoints. Run it directly —
-see [`DatasetManager/SyntheticEngine/README.md`](../DatasetManager/SyntheticEngine/README.md).
+see the [Dataset Manager](dataset-manager.md) page, or
+[`DatasetManager/SyntheticEngine/README.md`](https://github.com/thippeswammy/AutoSegmentor/blob/master/DatasetManager/SyntheticEngine/README.md)
+in the repo.
 
 `DatasetManager/DatasetHandler/` holds lower-level, standalone preprocessing utilities
 (e.g. `Video2images.py`), also independent of the main pipeline.

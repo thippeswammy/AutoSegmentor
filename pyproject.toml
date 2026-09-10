@@ -52,6 +52,9 @@ dev = [
 cuda = [
     "flash-attn>=2.0",
 ]
+docs = [
+    "mkdocs-material>=9.0",
+]
 
 [project.scripts]
 autosegmentor = "run_main:main"

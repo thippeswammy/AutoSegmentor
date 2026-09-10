@@ -76,6 +76,9 @@ system.md
 .ipynb_checkpoints/
 *-checkpoint.ipynb
 
+# ─── Docs site build output (built by CI, not committed) ────────────────────
+/site/
+
 # Added by code-review-graph
 .code-review-graph/
 .claude/
