@@ -177,13 +177,18 @@ class AutoSegmentorEngine(SAM2Model):
                 self.sam2_predictor.reset_state(inference_state)
                 self.is_prompted = False
                 box_points = None
-                if not (self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
+                # Points first (the user's own clicks on this frame) — same
+                # simple rule as the batch path: a box prompt only exists to
+                # carry continuity when nothing else is here yet, so skip it
+                # once real points already cover this frame.
+                logger.debug("[Engine] user_prompt_adder: running prompt_encoding")
+                self.prompt_encoding(inference_state)  # batch_number=-1 → single-frame mode
+                if not self.is_prompted and not (
+                        self.mask_processor.last_mask is None or isinstance(self.mask_processor.last_mask, (
                         tuple, list)) and self.mask_processor.last_mask in [(None,), [None]]):
                     logger.debug("[Engine] user_prompt_adder: running auto_prompt_encoding from last_mask")
                     box_points = self.auto_prompt_encoding(inference_state)
                     logger.debug(f"[Engine] user_prompt_adder: auto_prompt_encoding done  box_points={box_points is not None}")
-                logger.debug("[Engine] user_prompt_adder: running prompt_encoding")
-                self.prompt_encoding(inference_state)  # batch_number=-1 → single-frame mode
                 logger.debug(f"[Engine] user_prompt_adder: is_prompted={self.is_prompted}")
                 if self.is_prompted:
                     video_segments = {}
