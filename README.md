@@ -191,27 +191,27 @@ See [`demo/README.md`](demo/README.md) for details, and
 
 ---
 
-## 🎬 Full Pipeline Demo (v3)
+## 🎬 What the Full Pipeline Looks Like
 
-The GIF at the top of this README is the full walkthrough, on the bundled
-`cat` clip:
+The GIF at the top of this README is a real annotation session on the
+bundled `cat` clip, start to finish:
 
 1. Launch the annotation tool.
 2. Click 5 foreground + 2 background points on the cat in frame 1.
 3. Press Enter — SAM2 generates the mask, CoTracker starts tracking the pose
    keypoints.
-4. Navigate forward across frames — mask + skeleton follow the cat
+4. Navigate forward across frames — mask and skeleton follow the cat
    automatically, with a live correction (drag a drifted keypoint back).
-5. Process the next batch, keep navigating — tracking continues with zero
+5. Process the next batch and keep navigating — tracking continues with no
    extra manual prompts.
 6. `Ctrl+S` to save, `Ctrl+E` to export.
 7. Result: a YOLO dataset (`train` / `valid` / `test` + `data.yaml`) covering
-   **detection (bbox)**, **instance segmentation**, and **pose** — ready to
-   train a model for any application.
+   **detection (bbox)**, **instance segmentation**, and **pose** in one
+   export — ready to train a model for any application.
 
-> Full-length narrated version: *(link pending — will be attached to the
-> [v3.0.0 GitHub Release](https://github.com/thippeswammy/AutoSegmentor/releases))*.
-> See [`assets/README.md`](assets/README.md) for how this clip was produced.
+The full-length recording is published as an asset on the
+[`v3.0.0` release](https://github.com/thippeswammy/AutoSegmentor/releases).
+See [`assets/README.md`](assets/README.md) for the shot-by-shot breakdown.
 
 ---
 
