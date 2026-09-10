@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/github/stars/thippeswammy/AutoSegmentor?style=social)](https://github.com/thippeswammy/AutoSegmentor)
 [![Demo Video](https://img.shields.io/badge/Demo-Video-blue)](https://drive.google.com/file/d/1Y19lwf_IIuzwVe-3j9vX0uicV_iWbrHZ/view?usp=sharing)
 
-![AutoSegmentor full pipeline demo: UI annotation, CoTracker + SAM2 auto-tracking, and YOLO export](./assets/cat_full_pipeline.gif)
+![AutoSegmentor full pipeline demo: UI annotation, SAM2 auto-tracking, and YOLO export](./assets/cat_full_pipeline.gif)
 
 _AutoSegmentor is a state-of-the-art auto-labeling ecosystem that bridges the gap between raw video footage and structured AI datasets. By integrating Meta AI's **Segment Anything Model 2 (SAM2)** with high-precision tracking like **CoTracker**, it enables users to generate pixel-perfect masks and pose estimation data for long, complex videos with minimal manual interaction._
 
