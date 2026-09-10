@@ -409,8 +409,26 @@ class AnnotationCanvas(QGraphicsView):
             self.point_deleted.emit(item.idx)
 
     def update_skeleton(self, points, labels=None, pose_coords=None, targets=None):
-        """Optimized skeleton update that doesn't clear points."""
-        self._draw_skeleton(points, labels, pose_coords, targets)
+        """Optimized skeleton update that doesn't clear points.
+
+        Reuses the pose_coords index each existing point item was matched to
+        during the last full draw_annotations() (item.pose_idx), rather than
+        assuming `points[idx]` aligns positionally with `pose_coords[idx]` —
+        that assumption breaks as soon as an earlier keypoint is occluded
+        (occluded keypoints are filtered out of `points`, shortening it
+        relative to `pose_coords`), which previously caused visibility/line
+        style to be read from the wrong pose_coords entry for every point
+        after the first occlusion.
+        """
+        pose_idx_map = None
+        if pose_coords:
+            # _overlay_items also holds ghost markers for occluded keypoints
+            # (appended after all "sam"-kind items) — filter them out so this
+            # lines up with `points`/`selected_points`, which never include ghosts.
+            sam_items = [item for item in self._overlay_items if item.kind == "sam"]
+            if len(sam_items) == len(points):
+                pose_idx_map = [item.pose_idx for item in sam_items]
+        self._draw_skeleton(points, labels, pose_coords, targets, pose_idx_map)
 
     def _draw_skeleton(self, points, labels, pose_coords=None, targets=None, pose_idx_map=None):
         """Draw connecting lines between annotation points of the same instance.
