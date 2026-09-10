@@ -1,8 +1,8 @@
 # Demos
 
-AutoSegmentor ships with two bundled demos that run the entire pipeline — frame extraction,
-SAM2 prompting, CoTracker3 keypoint tracking, pose export, YOLO export — on real footage,
-with no configuration required.
+AutoSegmentor ships with two bundled demos, no configuration required. `cat` runs the full
+pipeline (SAM2 + CoTracker3 + pose export + YOLO export); `road` is a segmentation-only demo
+carried over from earlier versions — see the table below.
 
 ```bash
 python run_main.py --demo list           # cat, road
@@ -27,22 +27,36 @@ This is a real, unedited session on the `cat` demo, start to finish:
 7. Result: a YOLO dataset (`train` / `valid` / `test` + `data.yaml`) with detection,
    instance segmentation, and pose labels, all from the same handful of clicks.
 
-The full-length narrated recording is published as a
-[GitHub Release](https://github.com/thippeswammy/AutoSegmentor/releases) asset.
+**▶ Watch the full recording** (full quality, longer than the GIF above):
+
+<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" controls width="600"></video>
 
 ## The two bundled demos
 
 | Demo | Footage | Shows off |
 | :--- | :--- | :--- |
-| `cat` (default) | Close-up clip of a cat | Classic single-subject segmentation + 6-point pose tracking. |
-| `road` | Dashcam recording | Segmentation and pose tracking on a moving-camera outdoor scene. |
+| `cat` (default) | Full-HD clip of a cat | Full pipeline: single-subject segmentation + 5-point CoTracker3 pose tracking. |
+| `road` | Dashcam recording | SAM2 segmentation **only** — no pose tracking. Carried over from v1/v2; never updated to the full v3 SAM2+CoTracker pipeline. |
 
-![Road dashcam demo: segmentation and pose tracking from a moving camera](https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/road_dashboard_1080.gif)
+![Road dashcam demo: SAM2 segmentation on a moving camera](https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/road_dashboard_1080.gif)
+
+**▶ Watch the full recording:**
+
+<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterRoad.mp4" controls width="600"></video>
 
 Each demo is just a session-state JSON file under `demo/` — the app discovers demos by
 scanning that directory, so there's no hardcoded list to update when a new one is added.
 
 ## Running it on your own video
+
+For everyday use on your own footage, skip demos entirely: drop it in
+`workspace/VideoInputs/` and run `python run_main.py` (no `--demo`) — see
+[Running on your own video](installation.md#running-on-your-own-video-not-a-demo) for what
+the Setup Dialog that opens lets you configure.
+
+The steps below are for turning your footage into a **named, repeatable demo** instead
+(useful for sharing a fixed showcase, like the bundled `cat`/`road` demos, rather than a
+one-off run):
 
 1. Drop your video into `demo/videos/`.
 2. Duplicate an existing `*_session_state.json` in `demo/` and point its

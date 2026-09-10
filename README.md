@@ -48,8 +48,19 @@ python run_main.py --demo road
 ```
 
 See **[Demos →](https://thippeswammy.github.io/AutoSegmentor/demos/)** for a shot-by-shot
-walkthrough of the GIF above, what each bundled demo shows, and how to run the pipeline on
-your own footage.
+walkthrough of the GIF above and what each bundled demo shows.
+
+**▶ Watch the full recordings** (full quality, longer than the GIF above):
+
+<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterCat.mp4" controls width="480"></video>
+<video src="https://raw.githubusercontent.com/thippeswammy/AutoSegmentor/master/assets/AutoSegmenterRoad.mp4" controls width="480"></video>
+
+**Using your own video?** Drop it in `workspace/VideoInputs/` and just run
+`python run_main.py` (no `--demo`) — a Setup Dialog opens where you pick the video and
+configure SAM2/CoTracker3, run mode, and pose classes, then the same annotation workflow
+as the demos takes over. See the
+**[Installation guide →](https://thippeswammy.github.io/AutoSegmentor/installation/#running-on-your-own-video-not-a-demo)**
+for details.
 
 ## ⌨️ Annotation Controls
 

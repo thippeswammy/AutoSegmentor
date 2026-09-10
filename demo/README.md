@@ -22,12 +22,8 @@ python run_main.py --demo road
 
 | Name | Config file | Footage | What it showcases |
 | :--- | :--- | :--- | :--- |
-| `cat` | `demo_session_state.json` | `videos/cat.mp4` | Classic segmentation + 6-point pose keypoint tracking |
-| `road` | `road_demo_session_state.json` | `videos/road_dashboard.mp4` | Segmentation/pose demo on a road scene recorded from a dashboard camera |
-
-`points_labels_cat_demo1.json` (also in this directory) holds the saved annotation
-prompts — the foreground/background points and labels — for the `cat` demo, so re-running
-it resumes from the same prompts instead of requiring re-annotation from scratch.
+| `cat` | `demo_session_state.json` | `videos/cat.mp4` | Full pipeline: SAM2 segmentation + 5-point CoTracker3 pose tracking |
+| `road` | `road_demo_session_state.json` | `videos/road_dashboard.mp4` | SAM2 segmentation **only** — no CoTracker pose tracking. Kept from the v1/v2 lineup; it was never updated to the full v3 SAM2+CoTracker pipeline. |
 
 ## Adding your own footage
 

@@ -81,6 +81,28 @@ python run_main.py --demo list   # cat, road
 
 If that prints a version and two demo names, you're ready — head to [Demos](demos.md).
 
+## Running on your own video (not a demo)
+
+The bundled demos (`--demo cat` / `--demo road`) are a fixed showcase. For your own
+footage, it's just as simple:
+
+1. Drop your video(s) into `workspace/VideoInputs/`.
+2. Run:
+
+   ```bash
+   python run_main.py
+   ```
+
+That's it. With no `--demo` flag, this opens the **Setup Dialog** — a full configuration
+window where you pick which video(s) to process, toggle SAM2 mask generation and CoTracker3
+pose tracking on/off, set the run mode (full pipeline / mask-only / pose-only), batch size,
+and pose keypoint classes. Confirm your settings there and the annotation window opens next
+— click points, `Enter` to propagate, `Ctrl+S` to save, `Ctrl+E` to export, same as the
+demos.
+
+(The Setup Dialog reads/writes `workspace/inputs/config/default_config.yaml` — editing that
+file directly works too, if you'd rather script it than click through the dialog each time.)
+
 ## Doing it by hand
 
 Everything `install.py` automates, spelled out, in case you want full control:
